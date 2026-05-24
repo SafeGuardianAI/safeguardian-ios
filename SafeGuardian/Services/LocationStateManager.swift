@@ -105,6 +105,9 @@ final class LocationStateManager: NSObject, CLLocationManagerDelegate, Observabl
     private var refreshTimer: Timer?
     private var isGeocoding: Bool = false
 
+    /// Most recent GPS fix, published so observers (e.g. NovaBroadcaster) can track location age.
+    @Published private(set) var currentLocation: CLLocation?
+
     // MARK: - Persistence Keys
 
     private let selectedChannelKey = "locationChannel.selected"
@@ -386,6 +389,7 @@ final class LocationStateManager: NSObject, CLLocationManagerDelegate, Observabl
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let loc = locations.last else { return }
         lastLocation = loc
+        Task { @MainActor in self.currentLocation = loc }
         computeChannels(from: loc.coordinate)
         reverseGeocodeLocation(loc)
     }

@@ -166,6 +166,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     let unifiedPeerService: UnifiedPeerService
     let autocompleteService: AutocompleteService
     let deduplicationService: MessageDeduplicationService  // internal for test access
+    let novaBroadcaster: NovaBroadcaster
     
     // Computed properties for compatibility
     @MainActor
@@ -444,6 +445,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         self.unifiedPeerService.messageRouter = self.messageRouter
         self.autocompleteService = AutocompleteService()
         self.deduplicationService = MessageDeduplicationService()
+        self.novaBroadcaster = NovaBroadcaster(peerService: self.unifiedPeerService)
 
         // Wire up dependencies
         self.commandProcessor.contextProvider = self

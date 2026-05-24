@@ -350,8 +350,8 @@ struct CommandProcessorTests {
         }
     }
 
-    private func makeMessage(sender: String, content: String) -> BitchatMessage {
-        BitchatMessage(
+    private func makeMessage(sender: String, content: String) -> SafeGuardianMessage {
+        SafeGuardianMessage(
             sender: sender,
             content: content,
             timestamp: Date(timeIntervalSince1970: 1_700_000_000),
@@ -365,7 +365,7 @@ private final class MockCommandContextProvider: CommandContextProvider {
     var nickname: String
     var selectedPrivateChatPeer: PeerID?
     var blockedUsers: Set<String> = []
-    var privateChats: [PeerID: [BitchatMessage]] = [:]
+    var privateChats: [PeerID: [SafeGuardianMessage]] = [:]
     let idBridge: NostrIdentityBridge
 
     var nicknameToPeerID: [String: PeerID] = [:]

@@ -13,13 +13,13 @@ import BitFoundation
 @MainActor
 private final class TestPipelineDelegate: PublicMessagePipelineDelegate {
     private let dedupService = MessageDeduplicationService()
-    var messages: [BitchatMessage] = []
+    var messages: [SafeGuardianMessage] = []
 
-    func pipelineCurrentMessages(_ pipeline: PublicMessagePipeline) -> [BitchatMessage] {
+    func pipelineCurrentMessages(_ pipeline: PublicMessagePipeline) -> [SafeGuardianMessage] {
         messages
     }
 
-    func pipeline(_ pipeline: PublicMessagePipeline, setMessages messages: [BitchatMessage]) {
+    func pipeline(_ pipeline: PublicMessagePipeline, setMessages messages: [SafeGuardianMessage]) {
         self.messages = messages
     }
 
@@ -37,7 +37,7 @@ private final class TestPipelineDelegate: PublicMessagePipelineDelegate {
 
     func pipelineTrimMessages(_ pipeline: PublicMessagePipeline) {}
 
-    func pipelinePrewarmMessage(_ pipeline: PublicMessagePipeline, message: BitchatMessage) {}
+    func pipelinePrewarmMessage(_ pipeline: PublicMessagePipeline, message: SafeGuardianMessage) {}
 
     func pipelineSetBatchingState(_ pipeline: PublicMessagePipeline, isBatching: Bool) {}
 }
@@ -53,14 +53,14 @@ struct PublicMessagePipelineTests {
         let earlier = Date().addingTimeInterval(-10)
         let later = Date()
 
-        let messageA = BitchatMessage(
+        let messageA = SafeGuardianMessage(
             id: "a",
             sender: "A",
             content: "Later",
             timestamp: later,
             isRelay: false
         )
-        let messageB = BitchatMessage(
+        let messageB = SafeGuardianMessage(
             id: "b",
             sender: "A",
             content: "Earlier",
@@ -82,14 +82,14 @@ struct PublicMessagePipelineTests {
         pipeline.delegate = delegate
 
         let now = Date()
-        let messageA = BitchatMessage(
+        let messageA = SafeGuardianMessage(
             id: "a",
             sender: "A",
             content: "Same",
             timestamp: now,
             isRelay: false
         )
-        let messageB = BitchatMessage(
+        let messageB = SafeGuardianMessage(
             id: "b",
             sender: "A",
             content: "Same",
@@ -113,14 +113,14 @@ struct PublicMessagePipelineTests {
         pipeline.updateActiveChannel(.mesh)
 
         let base = Date()
-        let newer = BitchatMessage(
+        let newer = SafeGuardianMessage(
             id: "new",
             sender: "A",
             content: "New",
             timestamp: base,
             isRelay: false
         )
-        let older = BitchatMessage(
+        let older = SafeGuardianMessage(
             id: "old",
             sender: "A",
             content: "Old",
@@ -143,14 +143,14 @@ struct PublicMessagePipelineTests {
         pipeline.updateActiveChannel(.location(GeohashChannel(level: .city, geohash: "u4pruydq")))
 
         let base = Date()
-        let newer = BitchatMessage(
+        let newer = SafeGuardianMessage(
             id: "new",
             sender: "A",
             content: "New",
             timestamp: base,
             isRelay: false
         )
-        let older = BitchatMessage(
+        let older = SafeGuardianMessage(
             id: "old",
             sender: "A",
             content: "Old",

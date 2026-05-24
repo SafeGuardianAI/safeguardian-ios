@@ -13,7 +13,7 @@ struct TextMessageView: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @EnvironmentObject private var viewModel: ChatViewModel
     
-    let message: BitchatMessage
+    let message: SafeGuardianMessage
     @State private var expandedMessageIDs: Set<String> = []
     
     var body: some View {
@@ -45,7 +45,7 @@ struct TextMessageView: View {
                     if isExpanded { expandedMessageIDs.remove(message.id) }
                     else { expandedMessageIDs.insert(message.id) }
                 }
-                .font(.bitchatSystem(size: 11, weight: .medium, design: .monospaced))
+                .font(.safeguardianSystem(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(Color.blue)
                 .padding(.top, 4)
             }

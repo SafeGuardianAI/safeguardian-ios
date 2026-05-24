@@ -92,7 +92,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         let (viewModel, _) = makeTestableViewModel()
         let peerID = PeerID(str: "SENDER_001")
         
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "msg-1",
             sender: "Sender",
             content: "Private Content",
@@ -120,7 +120,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         let (viewModel, _) = makeTestableViewModel()
         let peerID = PeerID(str: "SENDER_001")
         
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "msg-1",
             sender: "Sender",
             content: "Content",
@@ -144,7 +144,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         // Set as currently viewing
         viewModel.selectedPrivateChatPeer = peerID
         
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "msg-1",
             sender: "Sender",
             content: "Content",
@@ -168,7 +168,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         let fingerprint = "fp_123"
         
         // Setup old chat
-        let oldMessage = BitchatMessage(
+        let oldMessage = SafeGuardianMessage(
             id: "msg-old",
             sender: "User",
             content: "Old message",
@@ -237,7 +237,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         let geoPeerID = PeerID(nostr_: hexPubkey)
         viewModel.nostrKeyMapping[geoPeerID] = hexPubkey
         
-        let geoMessage = BitchatMessage(
+        let geoMessage = SafeGuardianMessage(
             id: "msg-geo-blocked",
             sender: "BlockedGeoUser",
             content: "Spam",
@@ -445,7 +445,7 @@ struct ChatViewModelNostrExtensionTests {
         let messageID = "geo-ack-delivered"
 
         viewModel.privateChats[convKey] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: messageID,
                 sender: viewModel.nickname,
                 content: "Hello",
@@ -483,7 +483,7 @@ struct ChatViewModelNostrExtensionTests {
         let messageID = "geo-ack-read"
 
         viewModel.privateChats[convKey] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: messageID,
                 sender: viewModel.nickname,
                 content: "Hello",
@@ -579,7 +579,7 @@ struct ChatViewModelNostrExtensionTests {
         let messageID = "gift-delivered"
 
         viewModel.privateChats[convKey] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: messageID,
                 sender: viewModel.nickname,
                 content: "Hello",
@@ -958,7 +958,7 @@ struct ChatViewModelMediaTransferTests {
         let fileURL = try mediaFileURL(subdirectory: "voicenotes/outgoing", fileName: fileName)
         try Data("cancel me".utf8).write(to: fileURL, options: .atomic)
 
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "cancel-msg",
             sender: viewModel.nickname,
             content: "[voice] \(fileName)",
@@ -987,7 +987,7 @@ struct ChatViewModelMediaTransferTests {
         let fileURL = try mediaFileURL(subdirectory: "images/outgoing", fileName: fileName)
         try Data("image bytes".utf8).write(to: fileURL, options: .atomic)
 
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "delete-msg",
             sender: viewModel.nickname,
             content: "[image] \(fileName)",

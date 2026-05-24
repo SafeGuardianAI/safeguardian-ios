@@ -61,13 +61,13 @@ struct VoiceNoteView: View {
             )
 
             Text(playbackLabel)
-                .font(.bitchatSystem(size: 13, design: .monospaced))
+                .font(.safeguardianSystem(size: 13, design: .monospaced))
                 .foregroundColor(Color.secondary)
 
             if let onCancel = onCancel, isSending {
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
-                        .font(.bitchatSystem(size: 12, weight: .bold))
+                        .font(.safeguardianSystem(size: 12, weight: .bold))
                         .frame(width: 28, height: 28)
                         .background(Circle().fill(Color.red.opacity(0.9)))
                         .foregroundColor(.white)

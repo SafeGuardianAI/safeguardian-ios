@@ -95,7 +95,7 @@ struct ChatViewModelRefactoringTests {
         let senderID = PeerID(str: "sender_1")
 
         // Setup
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "msg_1",
             sender: "bob",
             content: "Secret",

@@ -20,7 +20,7 @@ struct MeshPeerList: View {
 
     var body: some View {
         let myPeerID = viewModel.meshService.myPeerID
-        let mapped: [(peer: BitchatPeer, isMe: Bool, hasUnread: Bool, enc: EncryptionStatus)] = viewModel.allPeers.map { peer in
+        let mapped: [(peer: SafeGuardianPeer, isMe: Bool, hasUnread: Bool, enc: EncryptionStatus)] = viewModel.allPeers.map { peer in
             let isMe = peer.peerID == myPeerID
             let hasUnread = viewModel.hasUnreadMessages(for: peer.peerID)
             let enc = viewModel.getEncryptionStatus(for: peer.peerID)
@@ -29,14 +29,14 @@ struct MeshPeerList: View {
         // Stable visual order without mutating state here
         let currentIDs = mapped.map { $0.peer.peerID.id }
         let displayIDs = orderedIDs.filter { currentIDs.contains($0) } + currentIDs.filter { !orderedIDs.contains($0) }
-        let peers: [(peer: BitchatPeer, isMe: Bool, hasUnread: Bool, enc: EncryptionStatus)] = displayIDs.compactMap { id in
+        let peers: [(peer: SafeGuardianPeer, isMe: Bool, hasUnread: Bool, enc: EncryptionStatus)] = displayIDs.compactMap { id in
             mapped.first(where: { $0.peer.peerID.id == id })
         }
         
         if viewModel.allPeers.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(Strings.noneNearby)
-                    .font(.bitchatSystem(size: 14, design: .monospaced))
+                    .font(.safeguardianSystem(size: 14, design: .monospaced))
                     .foregroundColor(secondaryTextColor)
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -52,27 +52,27 @@ struct MeshPeerList: View {
                         let baseColor = isMe ? Color.orange : assigned
                         if isMe {
                             Image(systemName: "person.fill")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isConnected {
                             // Mesh-connected peer: radio icon
                             Image(systemName: "antenna.radiowaves.left.and.right")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isReachable {
                             // Mesh-reachable (relayed): point.3 icon
                             Image(systemName: "point.3.filled.connected.trianglepath.dotted")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isMutualFavorite {
                             // Mutual favorite reachable via Nostr: globe icon (purple)
                             Image(systemName: "globe")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(.purple)
                         } else {
                             // Fallback icon for others (dimmed)
                             Image(systemName: "person")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(secondaryTextColor)
                         }
 
@@ -80,19 +80,19 @@ struct MeshPeerList: View {
                         let (base, suffix) = displayName.splitSuffix()
                         HStack(spacing: 0) {
                             Text(base)
-                                .font(.bitchatSystem(size: 14, design: .monospaced))
+                                .font(.safeguardianSystem(size: 14, design: .monospaced))
                                 .foregroundColor(baseColor)
                             if !suffix.isEmpty {
                                 let suffixColor = isMe ? Color.orange.opacity(0.6) : baseColor.opacity(0.6)
                                 Text(suffix)
-                                    .font(.bitchatSystem(size: 14, design: .monospaced))
+                                    .font(.safeguardianSystem(size: 14, design: .monospaced))
                                     .foregroundColor(suffixColor)
                             }
                         }
 
                         if !isMe, viewModel.isPeerBlocked(peer.peerID) {
                             Image(systemName: "nosign")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(.red)
                                 .help(Strings.blockedTooltip)
                         }
@@ -101,7 +101,7 @@ struct MeshPeerList: View {
                             if peer.isConnected {
                                 if let icon = item.enc.icon {
                                     Image(systemName: icon)
-                                        .font(.bitchatSystem(size: 10))
+                                        .font(.safeguardianSystem(size: 10))
                                         .foregroundColor(baseColor)
                                 }
                             } else {
@@ -109,12 +109,12 @@ struct MeshPeerList: View {
                                 if let fp = viewModel.getFingerprint(for: peer.peerID),
                                    viewModel.verifiedFingerprints.contains(fp) {
                                     Image(systemName: "checkmark.seal.fill")
-                                        .font(.bitchatSystem(size: 10))
+                                        .font(.safeguardianSystem(size: 10))
                                         .foregroundColor(baseColor)
                                 } else if let icon = item.enc.icon {
                                     // Fallback to whatever status says (likely lock if we had a past session)
                                     Image(systemName: icon)
-                                        .font(.bitchatSystem(size: 10))
+                                        .font(.safeguardianSystem(size: 10))
                                         .foregroundColor(baseColor)
                                 }
                             }
@@ -125,7 +125,7 @@ struct MeshPeerList: View {
                         // Unread message indicator for this peer
                         if !isMe, item.hasUnread {
                             Image(systemName: "envelope.fill")
-                                .font(.bitchatSystem(size: 10))
+                                .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(.orange)
                                 .help(Strings.newMessagesTooltip)
                         }
@@ -133,7 +133,7 @@ struct MeshPeerList: View {
                         if !isMe {
                             Button(action: { onToggleFavorite(peer.peerID) }) {
                                 Image(systemName: (peer.favoriteStatus?.isFavorite ?? false) ? "star.fill" : "star")
-                                    .font(.bitchatSystem(size: 12))
+                                    .font(.safeguardianSystem(size: 12))
                                     .foregroundColor((peer.favoriteStatus?.isFavorite ?? false) ? .yellow : secondaryTextColor)
                             }
                             .buttonStyle(.plain)

@@ -3,8 +3,8 @@ import Testing
 import BitFoundation
 @testable import bitchat
 
-@Suite("BitchatPeer Tests")
-struct BitchatPeerTests {
+@Suite("SafeGuardianPeer Tests")
+struct SafeGuardianPeerTests {
     typealias FavoriteRelationship = FavoritesPersistenceService.FavoriteRelationship
 
     @Test("Connection state prioritizes bluetooth, mesh, nostr, then offline")
@@ -13,11 +13,11 @@ struct BitchatPeerTests {
         let noiseKey = Data((0..<32).map(UInt8.init))
         let mutual = makeRelationship(isFavorite: true, theyFavoritedUs: true)
 
-        let bluetooth = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: true, isReachable: true)
-        let mesh = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: true)
-        var nostr = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: false)
+        let bluetooth = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: true, isReachable: true)
+        let mesh = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: true)
+        var nostr = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: false)
         nostr.favoriteStatus = mutual
-        let offline = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: false)
+        let offline = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "A", isConnected: false, isReachable: false)
 
         #expect(bluetooth.connectionState == .bluetoothConnected)
         #expect(mesh.connectionState == .meshReachable)
@@ -29,7 +29,7 @@ struct BitchatPeerTests {
     func displayNameAndOfflineIconUseDerivedState() {
         let peerID = PeerID(str: "fedcba9876543210")
         let noiseKey = Data((32..<64).map(UInt8.init))
-        var peer = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "", isConnected: false, isReachable: false)
+        var peer = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "", isConnected: false, isReachable: false)
         peer.favoriteStatus = makeRelationship(isFavorite: false, theyFavoritedUs: true)
 
         #expect(peer.displayName == String(peerID.id.prefix(8)))
@@ -40,7 +40,7 @@ struct BitchatPeerTests {
     func mutualFavoriteOfflinePeerShowsNostrIcon() {
         let peerID = PeerID(str: "0011223344556677")
         let noiseKey = Data((64..<96).map(UInt8.init))
-        var peer = BitchatPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "Peer", isConnected: false, isReachable: false)
+        var peer = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "Peer", isConnected: false, isReachable: false)
         peer.favoriteStatus = makeRelationship(isFavorite: true, theyFavoritedUs: true)
 
         #expect(peer.statusIcon == "🌐")
@@ -52,14 +52,14 @@ struct BitchatPeerTests {
     @Test("Equality is based only on peer ID")
     func equalityUsesPeerIDOnly() {
         let peerID = PeerID(str: "8899aabbccddeeff")
-        let first = BitchatPeer(
+        let first = SafeGuardianPeer(
             peerID: peerID,
             noisePublicKey: Data(repeating: 1, count: 32),
             nickname: "First",
             isConnected: false,
             isReachable: false
         )
-        let second = BitchatPeer(
+        let second = SafeGuardianPeer(
             peerID: peerID,
             noisePublicKey: Data(repeating: 2, count: 32),
             nickname: "Second",

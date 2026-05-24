@@ -19,7 +19,7 @@ struct PrivateChatManagerTests {
         let peerID = PeerID(str: "00000000000000AA")
 
         manager.privateChats[peerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "pm-1",
                 sender: "Peer",
                 content: "Hi",
@@ -50,7 +50,7 @@ struct PrivateChatManagerTests {
         transport.reachablePeers.insert(peerID)
 
         manager.privateChats[peerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "pm-2",
                 sender: "Peer",
                 content: "Hi",
@@ -78,7 +78,7 @@ struct PrivateChatManagerTests {
         let peerID = PeerID(str: "00000000000000CC")
 
         manager.privateChats[peerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "pm-fallback",
                 sender: "Peer",
                 content: "Hi",
@@ -121,7 +121,7 @@ struct PrivateChatManagerTests {
         try? await Task.sleep(nanoseconds: 50_000_000)
 
         manager.privateChats[stablePeerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "stable-msg",
                 sender: "Alice",
                 content: "Hello from stable",
@@ -151,7 +151,7 @@ struct PrivateChatManagerTests {
         let tempPeerID = PeerID(nostr_: "0000000000000000000000000000000000000000000000000000000000000042")
 
         manager.privateChats[tempPeerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "geo-msg",
                 sender: "Alice",
                 content: "Geo hello",
@@ -181,7 +181,7 @@ struct PrivateChatManagerTests {
         let peerID = PeerID(str: "00000000000000DD")
 
         manager.privateChats[peerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "sent-read",
                 sender: "Me",
                 content: "One",
@@ -192,7 +192,7 @@ struct PrivateChatManagerTests {
                 senderPeerID: transport.myPeerID,
                 deliveryStatus: .read(by: "Peer", at: Date())
             ),
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "sent-delivered",
                 sender: "Me",
                 content: "Two",
@@ -203,7 +203,7 @@ struct PrivateChatManagerTests {
                 senderPeerID: transport.myPeerID,
                 deliveryStatus: .delivered(to: "Peer", at: Date())
             ),
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "sent-failed",
                 sender: "Me",
                 content: "Three",
@@ -231,7 +231,7 @@ struct PrivateChatManagerTests {
         let base = Date(timeIntervalSince1970: 10)
 
         manager.privateChats[peerID] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "same",
                 sender: "Peer",
                 content: "Older",
@@ -241,7 +241,7 @@ struct PrivateChatManagerTests {
                 recipientNickname: "Me",
                 senderPeerID: peerID
             ),
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "first",
                 sender: "Peer",
                 content: "First",
@@ -251,7 +251,7 @@ struct PrivateChatManagerTests {
                 recipientNickname: "Me",
                 senderPeerID: peerID
             ),
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "same",
                 sender: "Peer",
                 content: "Newest",

@@ -64,20 +64,20 @@ struct DeliveryStatusView: View {
         switch status {
         case .sending:
             Image(systemName: "circle")
-                .font(.bitchatSystem(size: 10))
+                .font(.safeguardianSystem(size: 10))
                 .foregroundColor(secondaryTextColor.opacity(0.6))
             
         case .sent:
             Image(systemName: "checkmark")
-                .font(.bitchatSystem(size: 10))
+                .font(.safeguardianSystem(size: 10))
                 .foregroundColor(secondaryTextColor.opacity(0.6))
             
         case .delivered(let nickname, _):
             HStack(spacing: -2) {
                 Image(systemName: "checkmark")
-                    .font(.bitchatSystem(size: 10))
+                    .font(.safeguardianSystem(size: 10))
                 Image(systemName: "checkmark")
-                    .font(.bitchatSystem(size: 10))
+                    .font(.safeguardianSystem(size: 10))
             }
             .foregroundColor(textColor.opacity(0.8))
             .help(Strings.delivered(to: nickname))
@@ -85,25 +85,25 @@ struct DeliveryStatusView: View {
         case .read(let nickname, _):
             HStack(spacing: -2) {
                 Image(systemName: "checkmark")
-                    .font(.bitchatSystem(size: 10, weight: .bold))
+                    .font(.safeguardianSystem(size: 10, weight: .bold))
                 Image(systemName: "checkmark")
-                    .font(.bitchatSystem(size: 10, weight: .bold))
+                    .font(.safeguardianSystem(size: 10, weight: .bold))
             }
             .foregroundColor(Color(red: 0.0, green: 0.478, blue: 1.0))  // Bright blue
             .help(Strings.read(by: nickname))
             
         case .failed(let reason):
             Image(systemName: "exclamationmark.triangle")
-                .font(.bitchatSystem(size: 10))
+                .font(.safeguardianSystem(size: 10))
                 .foregroundColor(Color.red.opacity(0.8))
                 .help(Strings.failed(reason))
             
         case .partiallyDelivered(let reached, let total):
             HStack(spacing: 1) {
                 Image(systemName: "checkmark")
-                    .font(.bitchatSystem(size: 10))
+                    .font(.safeguardianSystem(size: 10))
                 Text(verbatim: "\(reached)/\(total)")
-                    .font(.bitchatSystem(size: 10, design: .monospaced))
+                    .font(.safeguardianSystem(size: 10, design: .monospaced))
             }
             .foregroundColor(secondaryTextColor.opacity(0.6))
             .help(Strings.deliveredToMembers(reached, total))

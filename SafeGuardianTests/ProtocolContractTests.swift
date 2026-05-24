@@ -5,8 +5,8 @@ import CoreBluetooth
 import BitFoundation
 @testable import bitchat
 
-private final class DefaultDelegateProbe: BitchatDelegate {
-    func didReceiveMessage(_ message: BitchatMessage) {}
+private final class DefaultDelegateProbe: SafeGuardianDelegate {
+    func didReceiveMessage(_ message: SafeGuardianMessage) {}
     func didConnectToPeer(_ peerID: PeerID) {}
     func didDisconnectFromPeer(_ peerID: PeerID) {}
     func didUpdatePeerList(_ peers: [PeerID]) {}
@@ -14,7 +14,7 @@ private final class DefaultDelegateProbe: BitchatDelegate {
 }
 
 private final class DefaultTransportProbe: Transport {
-    weak var delegate: BitchatDelegate?
+    weak var delegate: SafeGuardianDelegate?
     weak var peerEventsDelegate: TransportPeerEventsDelegate?
 
     let subject = CurrentValueSubject<[TransportPeerSnapshot], Never>([])
@@ -85,7 +85,7 @@ struct ProtocolContractTests {
     func transportDefaults_forwardOrNoOp() {
         let probe = DefaultTransportProbe()
         let peerID = PeerID(str: "0123456789abcdef")
-        let filePacket = BitchatFilePacket(
+        let filePacket = SafeGuardianFilePacket(
             fileName: "voice.m4a",
             fileSize: 4,
             mimeType: "audio/mp4",
@@ -107,7 +107,7 @@ struct ProtocolContractTests {
 
     @Test
     func previewMessage_exposesStableSampleShape() {
-        let preview = BitchatMessage.preview
+        let preview = SafeGuardianMessage.preview
 
         #expect(preview.sender == "John Doe")
         #expect(preview.content == "Hello")

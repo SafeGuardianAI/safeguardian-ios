@@ -157,7 +157,7 @@ struct NostrProtocolTests {
         #expect(content.hasPrefix("bitchat1:"))
         let base64url = String(content.dropFirst("bitchat1:".count))
         let packetData = try #require(Self.base64URLDecode(base64url))
-        let packet = try #require(BitchatPacket.from(packetData), "Failed to decode bitchat packet")
+        let packet = try #require(SafeGuardianPacket.from(packetData), "Failed to decode bitchat packet")
         
         #expect(packet.type == MessageType.noiseEncrypted.rawValue)
         let payload = try #require(NoisePayload.decode(packet.payload), "Failed to decode NoisePayload")
@@ -200,7 +200,7 @@ struct NostrProtocolTests {
         #expect(content.hasPrefix("bitchat1:"))
         let base64url = String(content.dropFirst("bitchat1:".count))
         let packetData = try #require(Self.base64URLDecode(base64url))
-        let packet = try #require(BitchatPacket.from(packetData), "Failed to decode bitchat packet")
+        let packet = try #require(SafeGuardianPacket.from(packetData), "Failed to decode bitchat packet")
         
         #expect(packet.type == MessageType.noiseEncrypted.rawValue)
         let payload = try #require(NoisePayload.decode(packet.payload), "Failed to decode NoisePayload")

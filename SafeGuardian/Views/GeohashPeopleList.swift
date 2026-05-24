@@ -20,7 +20,7 @@ struct GeohashPeopleList: View {
         if viewModel.visibleGeohashPeople().isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text(Strings.noneNearby)
-                    .font(.bitchatSystem(size: 14, design: .monospaced))
+                    .font(.safeguardianSystem(size: 14, design: .monospaced))
                     .foregroundColor(secondaryTextColor)
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -59,30 +59,30 @@ struct GeohashPeopleList: View {
                         let icon = teleported ? "face.dashed" : "mappin.and.ellipse"
                         let assignedColor = viewModel.colorForNostrPubkey(person.id, isDark: colorScheme == .dark)
                         let rowColor: Color = isMe ? .orange : assignedColor
-                        Image(systemName: icon).font(.bitchatSystem(size: 12)).foregroundColor(rowColor)
+                        Image(systemName: icon).font(.safeguardianSystem(size: 12)).foregroundColor(rowColor)
 
                         let (base, suffix) = person.displayName.splitSuffix()
                         HStack(spacing: 0) {
                             Text(base)
-                                .font(.bitchatSystem(size: 14, design: .monospaced))
+                                .font(.safeguardianSystem(size: 14, design: .monospaced))
                                 .fontWeight(isMe ? .bold : .regular)
                                 .foregroundColor(rowColor)
                             if !suffix.isEmpty {
                                 let suffixColor = isMe ? Color.orange.opacity(0.6) : rowColor.opacity(0.6)
                                 Text(suffix)
-                                    .font(.bitchatSystem(size: 14, design: .monospaced))
+                                    .font(.safeguardianSystem(size: 14, design: .monospaced))
                                     .foregroundColor(suffixColor)
                             }
                             if isMe {
                                 Text(Strings.youSuffix)
-                                    .font(.bitchatSystem(size: 14, design: .monospaced))
+                                    .font(.safeguardianSystem(size: 14, design: .monospaced))
                                     .foregroundColor(rowColor)
                             }
                         }
                         if let me = myHex, person.id != me {
                             if viewModel.isGeohashUserBlocked(pubkeyHexLowercased: person.id) {
                                 Image(systemName: "nosign")
-                                    .font(.bitchatSystem(size: 10))
+                                    .font(.safeguardianSystem(size: 10))
                                     .foregroundColor(.red)
                                     .help(Strings.blockedTooltip)
                             }

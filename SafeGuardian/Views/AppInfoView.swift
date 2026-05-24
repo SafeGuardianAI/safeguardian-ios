@@ -120,7 +120,7 @@ struct AppInfoView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.bitchatSystem(size: 13, weight: .semibold, design: .monospaced))
+                            .font(.safeguardianSystem(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundColor(textColor)
                             .frame(width: 32, height: 32)
                     }
@@ -138,11 +138,11 @@ struct AppInfoView: View {
             // Header
             VStack(alignment: .center, spacing: 8) {
                 Text(Strings.appName)
-                    .font(.bitchatSystem(size: 32, weight: .bold, design: .monospaced))
+                    .font(.safeguardianSystem(size: 32, weight: .bold, design: .monospaced))
                     .foregroundColor(textColor)
                 
                 Text(Strings.tagline)
-                    .font(.bitchatSystem(size: 16, design: .monospaced))
+                    .font(.safeguardianSystem(size: 16, design: .monospaced))
                     .foregroundColor(secondaryTextColor)
             }
             .frame(maxWidth: .infinity)
@@ -157,7 +157,7 @@ struct AppInfoView: View {
                         Text(instruction)
                     }
                 }
-                .font(.bitchatSystem(size: 14, design: .monospaced))
+                .font(.safeguardianSystem(size: 14, design: .monospaced))
                 .foregroundColor(textColor)
             }
 
@@ -213,7 +213,7 @@ struct SectionHeader: View {
     
     var body: some View {
         Text(title)
-            .font(.bitchatSystem(size: 16, weight: .bold, design: .monospaced))
+            .font(.safeguardianSystem(size: 16, weight: .bold, design: .monospaced))
             .foregroundColor(textColor)
             .padding(.top, 8)
     }
@@ -234,17 +234,17 @@ struct FeatureRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: info.icon)
-                .font(.bitchatSystem(size: 20))
+                .font(.safeguardianSystem(size: 20))
                 .foregroundColor(textColor)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(info.title)
-                    .font(.bitchatSystem(size: 14, weight: .semibold, design: .monospaced))
+                    .font(.safeguardianSystem(size: 14, weight: .semibold, design: .monospaced))
                     .foregroundColor(textColor)
                 
                 Text(info.description)
-                    .font(.bitchatSystem(size: 12, design: .monospaced))
+                    .font(.safeguardianSystem(size: 12, design: .monospaced))
                     .foregroundColor(secondaryTextColor)
                     .fixedSize(horizontal: false, vertical: true)
             }

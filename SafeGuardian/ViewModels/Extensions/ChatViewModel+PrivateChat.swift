@@ -62,7 +62,7 @@ extension ChatViewModel {
         let messageID = UUID().uuidString
         
         // Create the message object
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageID,
             sender: nickname,
             content: content,
@@ -120,7 +120,7 @@ extension ChatViewModel {
         let messageID = UUID().uuidString
         
         // Local echo in the DM thread
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageID,
             sender: nickname,
             content: content,
@@ -220,7 +220,7 @@ extension ChatViewModel {
         }
         
         let senderName = displayNameForNostrPubkey(senderPubkey)
-        let msg = BitchatMessage(
+        let msg = SafeGuardianMessage(
             id: messageId,
             sender: senderName,
             content: pm.content,
@@ -341,7 +341,7 @@ extension ChatViewModel {
                 }
 
                 let data = try Data(contentsOf: url)
-                let packet = BitchatFilePacket(
+                let packet = SafeGuardianFilePacket(
                     fileName: url.lastPathComponent,
                     fileSize: UInt64(data.count),
                     mimeType: "audio/mp4",
@@ -421,7 +421,7 @@ extension ChatViewModel {
                     try? FileManager.default.removeItem(at: outputURL)
                     return
                 }
-                let packet = BitchatFilePacket(
+                let packet = SafeGuardianFilePacket(
                     fileName: outputURL.lastPathComponent,
                     fileSize: UInt64(data.count),
                     mimeType: "image/jpeg",
@@ -452,12 +452,12 @@ extension ChatViewModel {
     }
 
     @MainActor
-    func enqueueMediaMessage(content: String, targetPeer: PeerID?) -> BitchatMessage {
+    func enqueueMediaMessage(content: String, targetPeer: PeerID?) -> SafeGuardianMessage {
         let timestamp = Date()
-        let message: BitchatMessage
+        let message: SafeGuardianMessage
 
         if let peerID = targetPeer {
-            message = BitchatMessage(
+            message = SafeGuardianMessage(
                 sender: nickname,
                 content: content,
                 timestamp: timestamp,
@@ -474,7 +474,7 @@ extension ChatViewModel {
             trimMessagesIfNeeded()
         } else {
             let (displayName, senderPeerID) = currentPublicSender()
-            message = BitchatMessage(
+            message = SafeGuardianMessage(
                 sender: displayName,
                 content: content,
                 timestamp: timestamp,
@@ -546,7 +546,7 @@ extension ChatViewModel {
         }
     }
 
-    func cleanupLocalFile(forMessage message: BitchatMessage) {
+    func cleanupLocalFile(forMessage message: SafeGuardianMessage) {
         // Check both outgoing and incoming directories for thorough cleanup
         let categories: [MimeType.Category] = [.audio, .image, .file]
         guard let category = categories.first(where: { message.content.hasPrefix($0.messagePrefix) }),
@@ -645,7 +645,7 @@ extension ChatViewModel {
         let isRecentMessage = Date().timeIntervalSince(messageTimestamp) < 30
         let shouldMarkAsUnread = !wasReadBefore && !isViewingThisChat && isRecentMessage
 
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageId,
             sender: senderNickname,
             content: messageContent,
@@ -699,7 +699,7 @@ extension ChatViewModel {
     
     /// Handle incoming private message (Mesh)
     @MainActor
-    func handlePrivateMessage(_ message: BitchatMessage) {
+    func handlePrivateMessage(_ message: SafeGuardianMessage) {
         SecureLogger.debug("📥 handlePrivateMessage called for message from \(message.sender)", category: .session)
         let senderPeerID = message.senderPeerID ?? getPeerIDForNickname(message.sender)
         
@@ -799,7 +799,7 @@ extension ChatViewModel {
         return false
     }
     
-    func addMessageToPrivateChatsIfNeeded(_ message: BitchatMessage, targetPeerID: PeerID) {
+    func addMessageToPrivateChatsIfNeeded(_ message: SafeGuardianMessage, targetPeerID: PeerID) {
         if privateChats[targetPeerID] == nil {
             privateChats[targetPeerID] = []
         }
@@ -813,7 +813,7 @@ extension ChatViewModel {
     }
     
     @MainActor
-    func mirrorToEphemeralIfNeeded(_ message: BitchatMessage, targetPeerID: PeerID, key: Data?) {
+    func mirrorToEphemeralIfNeeded(_ message: SafeGuardianMessage, targetPeerID: PeerID, key: Data?) {
         guard let key,
               let ephemeralPeerID = unifiedPeerService.peers.first(where: { $0.noisePublicKey == key })?.peerID,
               ephemeralPeerID != targetPeerID
@@ -833,7 +833,7 @@ extension ChatViewModel {
     }
     
     @MainActor
-    func handleViewingThisChat(_ message: BitchatMessage, targetPeerID: PeerID, key: Data?, senderPubkey: String) {
+    func handleViewingThisChat(_ message: SafeGuardianMessage, targetPeerID: PeerID, key: Data?, senderPubkey: String) {
         unreadPrivateMessages.remove(targetPeerID)
         if let key,
            let ephemeralPeerID = unifiedPeerService.peers.first(where: { $0.noisePublicKey == key })?.peerID {
@@ -925,13 +925,13 @@ extension ChatViewModel {
     }
     
     /// Process action messages (hugs, slaps) into system messages
-    func processActionMessage(_ message: BitchatMessage) -> BitchatMessage {
+    func processActionMessage(_ message: SafeGuardianMessage) -> SafeGuardianMessage {
         let isActionMessage = message.content.hasPrefix("* ") && message.content.hasSuffix(" *") &&
                               (message.content.contains("🫂") || message.content.contains("🐟") || 
                                message.content.contains("took a screenshot"))
         
         if isActionMessage {
-            return BitchatMessage(
+            return SafeGuardianMessage(
                 id: message.id,
                 sender: "system",
                 content: String(message.content.dropFirst(2).dropLast(2)), // Remove * * wrapper
@@ -954,7 +954,7 @@ extension ChatViewModel {
         let currentFingerprint = getFingerprint(for: peerID)
         
         if privateChats[peerID] == nil || privateChats[peerID]?.isEmpty == true {
-            var migratedMessages: [BitchatMessage] = []
+            var migratedMessages: [SafeGuardianMessage] = []
             var oldPeerIDsToRemove: [PeerID] = []
             
             // Only migrate messages from the last 24 hours to prevent old messages from flooding
@@ -1073,7 +1073,7 @@ extension ChatViewModel {
 
     /// Check if a message should be blocked based on sender
     @MainActor
-    func isMessageBlocked(_ message: BitchatMessage) -> Bool {
+    func isMessageBlocked(_ message: SafeGuardianMessage) -> Bool {
         if let peerID = message.senderPeerID ?? getPeerIDForNickname(message.sender) {
             // Check mesh/known peers first
             if isPeerBlocked(peerID) { return true }

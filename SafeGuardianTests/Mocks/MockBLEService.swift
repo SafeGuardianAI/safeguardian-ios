@@ -31,18 +31,18 @@ final class MockBLEService: NSObject {
     
     // MARK: - Properties matching BLEService
     
-    weak var delegate: BitchatDelegate?
+    weak var delegate: SafeGuardianDelegate?
     var myPeerID = PeerID(str: "MOCK1234")
     var myNickname: String = "MockUser"
     
     private let mockKeychain = MockKeychain()
     
     // Test-specific properties
-    var sentMessages: [(message: BitchatMessage, packet: BitchatPacket)] = []
-    var sentPackets: [BitchatPacket] = []
+    var sentMessages: [(message: SafeGuardianMessage, packet: SafeGuardianPacket)] = []
+    var sentPackets: [SafeGuardianPacket] = []
     var connectedPeers: Set<PeerID> = []
-    var messageDeliveryHandler: ((BitchatMessage) -> Void)?
-    var packetDeliveryHandler: ((BitchatPacket) -> Void)?
+    var messageDeliveryHandler: ((SafeGuardianMessage) -> Void)?
+    var packetDeliveryHandler: ((SafeGuardianPacket) -> Void)?
     
     // Compatibility properties for old tests
     var mockNickname: String {
@@ -111,12 +111,12 @@ final class MockBLEService: NSObject {
     }
 
     /// Keep local echo synchronous so Swift Testing confirmations observe it deterministically.
-    private func deliverLocalEcho(_ message: BitchatMessage) {
+    private func deliverLocalEcho(_ message: SafeGuardianMessage) {
         delegate?.didReceiveMessage(message)
     }
     
     func sendMessage(_ content: String, mentions: [String] = [], to recipientID: String? = nil, messageID: String? = nil, timestamp: Date? = nil) {
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageID ?? UUID().uuidString,
             sender: myNickname,
             content: content,
@@ -130,7 +130,7 @@ final class MockBLEService: NSObject {
         )
         
         if let payload = message.toBinaryPayload() {
-            let packet = BitchatPacket(
+            let packet = SafeGuardianPacket(
                 type: 0x01,
                 senderID: myPeerID.id.data(using: .utf8)!,
                 recipientID: recipientID?.data(using: .utf8),
@@ -157,16 +157,16 @@ final class MockBLEService: NSObject {
         }
     }
 
-    func sendFileBroadcast(_ packet: BitchatFilePacket, transferId: String) {
+    func sendFileBroadcast(_ packet: SafeGuardianFilePacket, transferId: String) {
         // Tests currently ignore file transfer flows; keep stub for protocol conformance.
     }
 
-    func sendFilePrivate(_ packet: BitchatFilePacket, to peerID: PeerID, transferId: String) {
+    func sendFilePrivate(_ packet: SafeGuardianFilePacket, to peerID: PeerID, transferId: String) {
         // Tests currently ignore file transfer flows; keep stub for protocol conformance.
     }
 
     func sendPrivateMessage(_ content: String, to recipientPeerID: PeerID, recipientNickname: String, messageID: String) {
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageID,
             sender: myNickname,
             content: content,
@@ -180,7 +180,7 @@ final class MockBLEService: NSObject {
         )
         
         if let payload = message.toBinaryPayload() {
-            let packet = BitchatPacket(
+            let packet = SafeGuardianPacket(
                 type: 0x01,
                 senderID: myPeerID.id.data(using: .utf8)!,
                 recipientID: recipientPeerID.id.data(using: .utf8)!,
@@ -265,7 +265,7 @@ final class MockBLEService: NSObject {
         delegate?.didUpdatePeerList(Array(connectedPeers))
     }
     
-    func simulateIncomingMessage(_ message: BitchatMessage) {
+    func simulateIncomingMessage(_ message: SafeGuardianMessage) {
         delegate?.didReceiveMessage(message)
         // Also surface via test handler for E2E/Integration
         messageDeliveryHandler?(message)
@@ -274,9 +274,9 @@ final class MockBLEService: NSObject {
     private var seenMessageIDs: Set<String> = []
     private let seenLock = NSLock()
 
-    func simulateIncomingPacket(_ packet: BitchatPacket) {
+    func simulateIncomingPacket(_ packet: SafeGuardianPacket) {
         // Process through the actual handling logic
-        if let message = BitchatMessage(packet.payload) {
+        if let message = SafeGuardianMessage(packet.payload) {
             var shouldDeliver = false
             seenLock.lock()
             if !seenMessageIDs.contains(message.id) {

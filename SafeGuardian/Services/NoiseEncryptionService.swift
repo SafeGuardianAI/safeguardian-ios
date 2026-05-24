@@ -455,8 +455,8 @@ final class NoiseEncryptionService {
     
     // MARK: - Packet Signing/Verification
     
-    /// Sign a BitchatPacket using the noise private key
-    func signPacket(_ packet: BitchatPacket) -> BitchatPacket? {
+    /// Sign a SafeGuardianPacket using the noise private key
+    func signPacket(_ packet: SafeGuardianPacket) -> SafeGuardianPacket? {
         // Create canonical packet bytes for signing
         guard let packetData = packet.toBinaryDataForSigning() else {
             return nil
@@ -473,8 +473,8 @@ final class NoiseEncryptionService {
         return signedPacket
     }
     
-    /// Verify a BitchatPacket signature using the provided public key
-    func verifyPacketSignature(_ packet: BitchatPacket, publicKey: Data) -> Bool {
+    /// Verify a SafeGuardianPacket signature using the provided public key
+    func verifyPacketSignature(_ packet: SafeGuardianPacket, publicKey: Data) -> Bool {
         guard let signature = packet.signature else {
             return false
         }

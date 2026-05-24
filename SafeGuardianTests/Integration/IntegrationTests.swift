@@ -467,11 +467,11 @@ struct IntegrationTests {
             // Setup encryption at Alice
             helper.nodes["Alice"]!.packetDeliveryHandler = { packet in
                 if packet.type == 0x01,
-                   let message = BitchatMessage(packet.payload),
+                   let message = SafeGuardianMessage(packet.payload),
                    message.isPrivate && packet.recipientID != nil {
                     // Encrypt private messages
                     if let encrypted = try? helper.noiseManagers["Alice"]!.encrypt(packet.payload, for: helper.nodes["Bob"]!.peerID) {
-                        let encPacket = BitchatPacket(
+                        let encPacket = SafeGuardianPacket(
                             type: 0x02,
                             senderID: packet.senderID,
                             recipientID: packet.recipientID,
@@ -490,7 +490,7 @@ struct IntegrationTests {
                 if packet.type == 0x02 {
                     receivedPacket()
                     if let decrypted = try? helper.noiseManagers["Bob"]!.decrypt(packet.payload, from: helper.nodes["Alice"]!.peerID) {
-                        #expect(BitchatMessage(decrypted)?.content == "Secret message")
+                        #expect(SafeGuardianMessage(decrypted)?.content == "Secret message")
                     } else {
                         Issue.record("Bob was unable to decrypt the message")
                     }

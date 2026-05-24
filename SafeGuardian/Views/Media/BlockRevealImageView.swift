@@ -70,7 +70,7 @@ struct BlockRevealImageView: View {
                                 .fill(Color.black.opacity(0.35))
                                 .overlay(
                                     Image(systemName: "eye.slash.fill")
-                                        .font(.bitchatSystem(size: 24, weight: .semibold))
+                                        .font(.safeguardianSystem(size: 24, weight: .semibold))
                                         .foregroundColor(.white.opacity(0.85))
                                 )
                         }
@@ -88,7 +88,7 @@ struct BlockRevealImageView: View {
             if let onCancel = onCancel, isSending {
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
-                        .font(.bitchatSystem(size: 12, weight: .bold))
+                        .font(.safeguardianSystem(size: 12, weight: .bold))
                         .padding(8)
                         .background(Circle().fill(Color.black.opacity(0.7)))
                         .foregroundColor(.white)

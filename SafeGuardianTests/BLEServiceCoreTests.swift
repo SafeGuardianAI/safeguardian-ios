@@ -76,7 +76,7 @@ struct BLEServiceCoreTests {
         let wrongFirst = derivedPeerID.bare.first == "0" ? "1" : "0"
         let wrongBare = String(wrongFirst) + String(derivedPeerID.bare.dropFirst())
         let wrongPeerID = PeerID(str: wrongBare)
-        let packet = BitchatPacket(
+        let packet = SafeGuardianPacket(
             type: MessageType.announce.rawValue,
             senderID: Data(hexString: wrongPeerID.id) ?? Data(),
             recipientID: nil,
@@ -106,8 +106,8 @@ private func makeService() -> BLEService {
     )
 }
 
-private func makePublicPacket(content: String, sender: PeerID, timestamp: UInt64) -> BitchatPacket {
-    BitchatPacket(
+private func makePublicPacket(content: String, sender: PeerID, timestamp: UInt64) -> SafeGuardianPacket {
+    SafeGuardianPacket(
         type: MessageType.message.rawValue,
         senderID: Data(hexString: sender.id) ?? Data(),
         recipientID: nil,
@@ -118,12 +118,12 @@ private func makePublicPacket(content: String, sender: PeerID, timestamp: UInt64
     )
 }
 
-private final class PublicCaptureDelegate: BitchatDelegate {
+private final class PublicCaptureDelegate: SafeGuardianDelegate {
     private let lock = NSLock()
-    private(set) var publicMessages: [BitchatMessage] = []
+    private(set) var publicMessages: [SafeGuardianMessage] = []
 
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?) {
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: messageID,
             sender: nickname,
             content: content,
@@ -140,13 +140,13 @@ private final class PublicCaptureDelegate: BitchatDelegate {
         lock.unlock()
     }
 
-    func didReceiveMessage(_ message: BitchatMessage) {}
+    func didReceiveMessage(_ message: SafeGuardianMessage) {}
     func didConnectToPeer(_ peerID: PeerID) {}
     func didDisconnectFromPeer(_ peerID: PeerID) {}
     func didUpdatePeerList(_ peers: [PeerID]) {}
     func didUpdateBluetoothState(_ state: CBManagerState) {}
 
-    func publicMessagesSnapshot() -> [BitchatMessage] {
+    func publicMessagesSnapshot() -> [SafeGuardianMessage] {
         lock.lock()
         defer { lock.unlock() }
         return publicMessages

@@ -80,7 +80,7 @@ struct NotificationBlockingTests {
 
     // MARK: - Message Blocking Tests
 
-    @Test("BitchatMessage with blocked sender is identified")
+    @Test("SafeGuardianMessage with blocked sender is identified")
     func bitchatMessage_blockedSenderIdentified() {
         let keychain = MockKeychain()
         let manager = MockIdentityManager(keychain)

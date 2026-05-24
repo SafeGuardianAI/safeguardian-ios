@@ -1,11 +1,11 @@
 import XCTest
 @testable import bitchat
 
-final class BitchatFilePacketTests: XCTestCase {
+final class SafeGuardianFilePacketTests: XCTestCase {
 
     func testRoundTripPreservesFields() throws {
         let content = Data((0..<4096).map { UInt8($0 % 251) })
-        let packet = BitchatFilePacket(
+        let packet = SafeGuardianFilePacket(
             fileName: "sample.jpg",
             fileSize: UInt64(content.count),
             mimeType: "image/jpeg",
@@ -15,7 +15,7 @@ final class BitchatFilePacketTests: XCTestCase {
         guard let encoded = packet.encode() else {
             return XCTFail("Failed to encode file packet")
         }
-        guard let decoded = BitchatFilePacket.decode(encoded) else {
+        guard let decoded = SafeGuardianFilePacket.decode(encoded) else {
             return XCTFail("Failed to decode file packet")
         }
 
@@ -27,7 +27,7 @@ final class BitchatFilePacketTests: XCTestCase {
 
     func testDecodeFallsBackToContentSizeWhenFileSizeMissing() throws {
         let content = Data(repeating: 0x7F, count: 1024)
-        let packet = BitchatFilePacket(
+        let packet = SafeGuardianFilePacket(
             fileName: nil,
             fileSize: nil,
             mimeType: nil,
@@ -37,7 +37,7 @@ final class BitchatFilePacketTests: XCTestCase {
         guard let encoded = packet.encode() else {
             return XCTFail("Failed to encode file packet")
         }
-        guard let decoded = BitchatFilePacket.decode(encoded) else {
+        guard let decoded = SafeGuardianFilePacket.decode(encoded) else {
             return XCTFail("Failed to decode file packet")
         }
 
@@ -56,7 +56,7 @@ final class BitchatFilePacketTests: XCTestCase {
         data.append(contentsOf: [0x00, 0x00, 0x00, 0x04])
         data.append(content)
 
-        let decoded = try XCTUnwrap(BitchatFilePacket.decode(data))
+        let decoded = try XCTUnwrap(SafeGuardianFilePacket.decode(data))
         XCTAssertEqual(decoded.fileSize, 256)
         XCTAssertEqual(decoded.content, content)
     }
@@ -69,7 +69,7 @@ final class BitchatFilePacketTests: XCTestCase {
         data.append(contentsOf: [0x00, 0x00, 0x00, 0x03])
         data.append(content)
 
-        let decoded = try XCTUnwrap(BitchatFilePacket.decode(data))
+        let decoded = try XCTUnwrap(SafeGuardianFilePacket.decode(data))
         XCTAssertEqual(decoded.fileSize, UInt64(content.count))
         XCTAssertEqual(decoded.content, content)
     }

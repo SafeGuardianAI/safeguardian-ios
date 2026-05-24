@@ -13,8 +13,8 @@ import Security
 
 final class KeychainManager: KeychainManagerProtocol {
     // Use consistent service name for all keychain items
-    private let service = BitchatApp.bundleID
-    private let appGroup = "group.\(BitchatApp.bundleID)"
+    private let service = SafeGuardianApp.bundleID
+    private let appGroup = "group.\(SafeGuardianApp.bundleID)"
     
     // MARK: - Identity Keys
     

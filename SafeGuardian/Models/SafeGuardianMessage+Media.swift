@@ -1,5 +1,5 @@
 //
-// BitchatMessage+Media.swift
+// SafeGuardianMessage+Media.swift
 // bitchat
 //
 // This is free and unencumbered software released into the public domain.
@@ -9,7 +9,7 @@
 import BitFoundation
 import Foundation
 
-extension BitchatMessage {
+extension SafeGuardianMessage {
     enum Media {
         case voice(URL)
         case image(URL)

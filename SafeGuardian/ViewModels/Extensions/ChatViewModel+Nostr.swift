@@ -122,7 +122,7 @@ extension ChatViewModel {
         let rawTs = Date(timeIntervalSince1970: TimeInterval(event.created_at))
         let timestamp = min(rawTs, Date())
         let mentions = parseMentions(from: content)
-        let msg = BitchatMessage(
+        let msg = SafeGuardianMessage(
             id: event.id,
             sender: senderName,
             content: content,
@@ -153,7 +153,7 @@ extension ChatViewModel {
         deduplicationService.recordNostrEvent(giftWrap.id)
         
         guard let (content, senderPubkey, rumorTs) = try? NostrProtocol.decryptPrivateMessage(giftWrap: giftWrap, recipientIdentity: id),
-              let packet = Self.decodeEmbeddedBitChatPacket(from: content),
+              let packet = Self.decodeEmbeddedSafeGuardianPacket(from: content),
               packet.type == MessageType.noiseEncrypted.rawValue,
               let noisePayload = NoisePayload.decode(packet.payload)
         else {
@@ -335,7 +335,7 @@ extension ChatViewModel {
         // Clamp future timestamps
         let rawTs = Date(timeIntervalSince1970: TimeInterval(event.created_at))
         let mentions = parseMentions(from: content)
-        let msg = BitchatMessage(
+        let msg = SafeGuardianMessage(
             id: event.id,
             sender: senderName,
             content: content,
@@ -384,7 +384,7 @@ extension ChatViewModel {
         
         SecureLogger.debug("GeoDM: decrypted gift-wrap id=\(giftWrap.id.prefix(16))... from=\(senderPubkey.prefix(8))...", category: .session)
         
-        guard let packet = Self.decodeEmbeddedBitChatPacket(from: content),
+        guard let packet = Self.decodeEmbeddedSafeGuardianPacket(from: content),
               packet.type == MessageType.noiseEncrypted.rawValue,
               let payload = NoisePayload.decode(packet.payload)
         else {
@@ -549,7 +549,7 @@ extension ChatViewModel {
             let rawTs = Date(timeIntervalSince1970: TimeInterval(event.created_at))
             let ts = min(rawTs, Date())
             let mentions = self.parseMentions(from: content)
-            let msg = BitchatMessage(
+            let msg = SafeGuardianMessage(
                 id: event.id,
                 sender: senderName,
                 content: content,
@@ -622,7 +622,7 @@ extension ChatViewModel {
             
             // Check if it's a BitChat packet embedded in the content (bitchat1:...)
             if content.hasPrefix("bitchat1:") {
-                guard let packet = Self.decodeEmbeddedBitChatPacket(from: content) else {
+                guard let packet = Self.decodeEmbeddedSafeGuardianPacket(from: content) else {
                     SecureLogger.error("Failed to decode embedded BitChat packet from Nostr DM", category: .session)
                     return
                 }
@@ -697,7 +697,7 @@ extension ChatViewModel {
         return nil
     }
 
-    func sendDeliveryAckViaNostrEmbedded(_ message: BitchatMessage, wasReadBefore: Bool, senderPubkey: String, key: Data?) {
+    func sendDeliveryAckViaNostrEmbedded(_ message: SafeGuardianMessage, wasReadBefore: Bool, senderPubkey: String, key: Data?) {
         // If we have a Noise key, try to route securely if possible, otherwise fallback to direct
         if let _ = key {
              // Ideally we would use MessageRouter here, but for simplicity in this direct callback:
@@ -802,7 +802,7 @@ extension ChatViewModel {
         messageRouter.sendFavoriteNotification(to: peerID, isFavorite: isFavorite)
     }
 
-    private static func decodeEmbeddedBitChatPacket(from content: String) -> BitchatPacket? {
+    private static func decodeEmbeddedSafeGuardianPacket(from content: String) -> SafeGuardianPacket? {
         guard content.hasPrefix("bitchat1:") else { return nil }
         let encoded = String(content.dropFirst("bitchat1:".count))
         let maxBytes = FileTransferLimits.maxFramedFileBytes
@@ -812,7 +812,7 @@ extension ChatViewModel {
         guard let packetData = Self.base64URLDecode(encoded),
               packetData.count <= maxBytes
         else { return nil }
-        return BitchatPacket.from(packetData)
+        return SafeGuardianPacket.from(packetData)
     }
 
     // MARK: - Geohash Nickname Resolution (for /block in geohash)

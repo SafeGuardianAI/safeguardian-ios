@@ -395,7 +395,7 @@ struct NostrTransportTests {
     private func decodeEmbeddedPayload(
         from event: NostrEvent,
         recipient: NostrIdentity
-    ) throws -> (packet: BitchatPacket, payload: NoisePayload, senderPubkey: String) {
+    ) throws -> (packet: SafeGuardianPacket, payload: NoisePayload, senderPubkey: String) {
         let (content, senderPubkey, _) = try NostrProtocol.decryptPrivateMessage(
             giftWrap: event,
             recipientIdentity: recipient
@@ -405,7 +405,7 @@ struct NostrTransportTests {
         }
         let encoded = String(content.dropFirst("bitchat1:".count))
         guard let packetData = base64URLDecode(encoded),
-              let packet = BitchatPacket.from(packetData),
+              let packet = SafeGuardianPacket.from(packetData),
               let payload = NoisePayload.decode(packet.payload) else {
             throw NostrTransportTestError.invalidPacket
         }

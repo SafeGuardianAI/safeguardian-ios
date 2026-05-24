@@ -359,7 +359,7 @@ struct ViewSmokeTests {
             secondaryTextColor: .gray,
             onTapPerson: {}
         )
-        let truncatableMessage = BitchatMessage(
+        let truncatableMessage = SafeGuardianMessage(
             sender: viewModel.nickname,
             content: String(repeating: "verylongtoken ", count: 160),
             timestamp: Date(),
@@ -367,7 +367,7 @@ struct ViewSmokeTests {
             isPrivate: false,
             deliveryStatus: .sent
         )
-        let paymentMessage = BitchatMessage(
+        let paymentMessage = SafeGuardianMessage(
             sender: viewModel.nickname,
             content: "lightning:lnbc1test cashuA_test-token",
             timestamp: Date(),

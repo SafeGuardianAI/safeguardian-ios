@@ -105,7 +105,7 @@ final class NostrTransport: Transport, @unchecked Sendable {
 
     // MARK: - Transport Protocol Conformance
 
-    weak var delegate: BitchatDelegate?
+    weak var delegate: SafeGuardianDelegate?
     weak var peerEventsDelegate: TransportPeerEventsDelegate?
 
     var peerSnapshotPublisher: AnyPublisher<[TransportPeerSnapshot], Never> {

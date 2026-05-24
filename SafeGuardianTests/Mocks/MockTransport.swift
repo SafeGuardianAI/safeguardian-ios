@@ -18,7 +18,7 @@ final class MockTransport: Transport {
 
     // MARK: - Protocol Properties
 
-    weak var delegate: BitchatDelegate?
+    weak var delegate: SafeGuardianDelegate?
     weak var peerEventsDelegate: TransportPeerEventsDelegate?
 
     var myPeerID: PeerID = PeerID(str: "TESTPEER")
@@ -36,8 +36,8 @@ final class MockTransport: Transport {
     private(set) var sentReadReceipts: [(receipt: ReadReceipt, peerID: PeerID)] = []
     private(set) var sentDeliveryAcks: [(messageID: String, peerID: PeerID)] = []
     private(set) var sentFavoriteNotifications: [(peerID: PeerID, isFavorite: Bool)] = []
-    private(set) var sentBroadcastFiles: [(packet: BitchatFilePacket, transferID: String)] = []
-    private(set) var sentPrivateFiles: [(packet: BitchatFilePacket, peerID: PeerID, transferID: String)] = []
+    private(set) var sentBroadcastFiles: [(packet: SafeGuardianFilePacket, transferID: String)] = []
+    private(set) var sentPrivateFiles: [(packet: SafeGuardianFilePacket, peerID: PeerID, transferID: String)] = []
     private(set) var cancelledTransfers: [String] = []
     private(set) var sentVerifyChallenges: [(peerID: PeerID, noiseKeyHex: String, nonceA: Data)] = []
     private(set) var sentVerifyResponses: [(peerID: PeerID, noiseKeyHex: String, nonceA: Data)] = []
@@ -142,11 +142,11 @@ final class MockTransport: Transport {
         sentDeliveryAcks.append((messageID, peerID))
     }
 
-    func sendFileBroadcast(_ packet: BitchatFilePacket, transferId: String) {
+    func sendFileBroadcast(_ packet: SafeGuardianFilePacket, transferId: String) {
         sentBroadcastFiles.append((packet, transferId))
     }
 
-    func sendFilePrivate(_ packet: BitchatFilePacket, to peerID: PeerID, transferId: String) {
+    func sendFilePrivate(_ packet: SafeGuardianFilePacket, to peerID: PeerID, transferId: String) {
         sentPrivateFiles.append((packet, peerID, transferId))
     }
 
@@ -204,7 +204,7 @@ final class MockTransport: Transport {
     }
 
     /// Simulates receiving a message
-    func simulateIncomingMessage(_ message: BitchatMessage) {
+    func simulateIncomingMessage(_ message: SafeGuardianMessage) {
         delegate?.didReceiveMessage(message)
     }
 

@@ -68,7 +68,7 @@ struct NoiseEncryptionServiceTests {
         )
         #expect(!service.verifySignature(signature, for: Data("data".utf8), publicKey: Data([1, 2, 3])))
 
-        let packet = BitchatPacket(
+        let packet = SafeGuardianPacket(
             type: MessageType.announce.rawValue,
             senderID: Data([0, 1, 2, 3, 4, 5, 6, 7]),
             recipientID: nil,

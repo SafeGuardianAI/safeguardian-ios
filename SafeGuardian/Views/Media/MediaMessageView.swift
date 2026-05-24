@@ -12,8 +12,8 @@ struct MediaMessageView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @EnvironmentObject var viewModel: ChatViewModel
-    let message: BitchatMessage
-    let media: BitchatMessage.Media
+    let message: SafeGuardianMessage
+    let media: SafeGuardianMessage.Media
 
     @Binding var imagePreviewURL: URL?
 
@@ -64,7 +64,7 @@ struct MediaMessageView: View {
         .padding(.vertical, 4)
     }
 
-    private func mediaSendState(for message: BitchatMessage) -> (isSending: Bool, progress: Double?, canCancel: Bool) {
+    private func mediaSendState(for message: SafeGuardianMessage) -> (isSending: Bool, progress: Double?, canCancel: Bool) {
         var isSending = false
         var progress: Double?
         if let status = message.deliveryStatus {

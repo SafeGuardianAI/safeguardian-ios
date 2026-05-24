@@ -70,7 +70,7 @@ struct BinaryProtocolTests {
         ]
 
         // Route is only supported for v2+ packets
-        var packet = BitchatPacket(
+        var packet = SafeGuardianPacket(
             type: 0x01,
             senderID: route[0],
             recipientID: route.last,
@@ -101,7 +101,7 @@ struct BinaryProtocolTests {
         let shortHop = Data([0xAA, 0xBB, 0xCC])
 
         // Route is only supported for v2+ packets
-        var packet = BitchatPacket(
+        var packet = SafeGuardianPacket(
             type: 0x02,
             senderID: sender,
             recipientID: destination,
@@ -130,7 +130,7 @@ struct BinaryProtocolTests {
         ]
         let repeatedString = String(repeating: "compress-me", count: 150)
         // Route is only supported for v2+ packets
-        var packet = BitchatPacket(
+        var packet = SafeGuardianPacket(
             type: 0x03,
             senderID: route[0],
             recipientID: route.last,
@@ -156,7 +156,7 @@ struct BinaryProtocolTests {
             try #require(Data(hexString: "1112131415161718"))
         ]
         
-        var packet = BitchatPacket(
+        var packet = SafeGuardianPacket(
             type: 0x01,
             senderID: route[0],
             recipientID: route.last,
@@ -188,7 +188,7 @@ struct BinaryProtocolTests {
             try #require(Data(hexString: "1112131415161718"))
         ]
         
-        var packet = BitchatPacket(
+        var packet = SafeGuardianPacket(
             type: 0x01,
             senderID: route[0],
             recipientID: route.last,
@@ -219,7 +219,7 @@ struct BinaryProtocolTests {
         let sender = try #require(Data(hexString: "0011223344556677"))
         let recipient = try #require(Data(hexString: "8899aabbccddeeff"))
         
-        let packet = BitchatPacket(
+        let packet = SafeGuardianPacket(
             type: 0x02,
             senderID: sender,
             recipientID: recipient,
@@ -252,7 +252,7 @@ struct BinaryProtocolTests {
         let payloadData = Data("test-payload".utf8)
         
         // v1 packet (route ignored)
-        var v1Packet = BitchatPacket(
+        var v1Packet = SafeGuardianPacket(
             type: 0x01,
             senderID: route[0],
             recipientID: nil,
@@ -265,7 +265,7 @@ struct BinaryProtocolTests {
         v1Packet.route = route  // will be ignored for v1
         
         // v2 packet with same payload but route included
-        var v2Packet = BitchatPacket(
+        var v2Packet = SafeGuardianPacket(
             type: 0x01,
             senderID: route[0],
             recipientID: nil,
@@ -335,7 +335,7 @@ struct BinaryProtocolTests {
                 oversized.append(byteRun.prefix(remaining))
             }
         }
-        let packet = BitchatPacket(
+        let packet = SafeGuardianPacket(
             type: MessageType.message.rawValue,
             senderID: Data(hexString: "0011223344556677") ?? Data(),
             recipientID: nil,
@@ -416,7 +416,7 @@ struct BinaryProtocolTests {
         
         let payload = try #require(message.toBinaryPayload(), "Failed to encode message to binary")
         
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to decode message from binary")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to decode message from binary")
         
         #expect(decodedMessage.content == message.content)
         #expect(decodedMessage.sender == message.sender)
@@ -435,7 +435,7 @@ struct BinaryProtocolTests {
         )
         
         let payload = try #require(message.toBinaryPayload(), "Failed to encode private message")
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to decode private message")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to decode private message")
         
         #expect(decodedMessage.isPrivate)
         #expect(decodedMessage.recipientNickname == TestConstants.testNickname2)
@@ -445,12 +445,12 @@ struct BinaryProtocolTests {
         let mentions = [TestConstants.testNickname2, TestConstants.testNickname3]
         let message = TestHelpers.createTestMessage(mentions: mentions)
         let payload = try #require(message.toBinaryPayload(), "Failed to encode message with mentions")
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to decode message with mentions")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to decode message with mentions")
         #expect(decodedMessage.mentions == mentions)
     }
     
     @Test func relayMessageEncoding() throws {
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: UUID().uuidString,
             sender: TestConstants.testNickname1,
             content: TestConstants.testMessage1,
@@ -462,7 +462,7 @@ struct BinaryProtocolTests {
             mentions: nil
         )
         let payload = try #require(message.toBinaryPayload(), "Failed to encode relay message")
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to decode relay message")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to decode relay message")
         #expect(decodedMessage.isRelay)
         #expect(decodedMessage.originalSender == TestConstants.testNickname3)
     }
@@ -492,7 +492,7 @@ struct BinaryProtocolTests {
         let largeContent = String(repeating: "X", count: 65535) // Max uint16
         let message = TestHelpers.createTestMessage(content: largeContent)
         let payload = try #require(message.toBinaryPayload(), "Failed to handle large message")
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to handle large message")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to handle large message")
         #expect(decodedMessage.content == largeContent)
     }
     
@@ -500,7 +500,7 @@ struct BinaryProtocolTests {
     func emptyFieldsHandling() throws {
         let emptyMessage = TestHelpers.createTestMessage(content: "")
         let payload = try #require(emptyMessage.toBinaryPayload(), "Failed to handle empty message")
-        let decodedMessage = try #require(BitchatMessage(payload), "Failed to handle empty message")
+        let decodedMessage = try #require(SafeGuardianMessage(payload), "Failed to handle empty message")
         #expect(decodedMessage.content.isEmpty)
     }
     

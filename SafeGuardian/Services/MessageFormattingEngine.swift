@@ -20,10 +20,10 @@ protocol MessageFormattingContext: AnyObject {
     var nickname: String { get }
 
     /// Determines if a message was sent by the current user
-    func isSelfMessage(_ message: BitchatMessage) -> Bool
+    func isSelfMessage(_ message: SafeGuardianMessage) -> Bool
 
     /// Gets the color for a message's sender
-    func senderColor(for message: BitchatMessage, isDark: Bool) -> Color
+    func senderColor(for message: SafeGuardianMessage, isDark: Bool) -> Color
 
     /// Resolves a peer ID to a clickable URL
     func peerURL(for peerID: PeerID) -> URL?
@@ -100,7 +100,7 @@ final class MessageFormattingEngine {
     /// Formats a message with rich text styling
     @MainActor
     static func formatMessage(
-        _ message: BitchatMessage,
+        _ message: SafeGuardianMessage,
         context: MessageFormattingContext,
         colorScheme: ColorScheme
     ) -> AttributedString {
@@ -149,7 +149,7 @@ final class MessageFormattingEngine {
     /// Formats just the message header (sender portion)
     @MainActor
     static func formatHeader(
-        _ message: BitchatMessage,
+        _ message: SafeGuardianMessage,
         context: MessageFormattingContext,
         colorScheme: ColorScheme
     ) -> AttributedString {
@@ -160,7 +160,7 @@ final class MessageFormattingEngine {
         if message.sender == "system" {
             var style = AttributeContainer()
             style.foregroundColor = baseColor
-            style.font = .bitchatSystem(size: 14, weight: .medium, design: .monospaced)
+            style.font = .safeguardianSystem(size: 14, weight: .medium, design: .monospaced)
             return AttributedString(message.sender).mergingAttributes(style)
         }
 
@@ -195,20 +195,20 @@ final class MessageFormattingEngine {
 
     // MARK: - Private Helpers
 
-    private static func formatSystemMessage(_ message: BitchatMessage, isDark: Bool) -> AttributedString {
+    private static func formatSystemMessage(_ message: SafeGuardianMessage, isDark: Bool) -> AttributedString {
         var result = AttributedString()
 
         let content = AttributedString("* \(message.content) *")
         var contentStyle = AttributeContainer()
         contentStyle.foregroundColor = Color.gray
-        contentStyle.font = .bitchatSystem(size: 12, design: .monospaced).italic()
+        contentStyle.font = .safeguardianSystem(size: 12, design: .monospaced).italic()
         result.append(content.mergingAttributes(contentStyle))
 
         // Add timestamp
         let timestamp = AttributedString(" [\(message.formattedTimestamp)]")
         var timestampStyle = AttributeContainer()
         timestampStyle.foregroundColor = Color.gray.opacity(0.5)
-        timestampStyle.font = .bitchatSystem(size: 10, design: .monospaced)
+        timestampStyle.font = .safeguardianSystem(size: 10, design: .monospaced)
         result.append(timestamp.mergingAttributes(timestampStyle))
 
         return result
@@ -216,7 +216,7 @@ final class MessageFormattingEngine {
 
     @MainActor
     private static func formatSenderHeader(
-        message: BitchatMessage,
+        message: SafeGuardianMessage,
         baseColor: Color,
         isSelf: Bool,
         context: MessageFormattingContext
@@ -227,7 +227,7 @@ final class MessageFormattingEngine {
         var senderStyle = AttributeContainer()
         senderStyle.foregroundColor = baseColor
         let fontWeight: Font.Weight = isSelf ? .bold : .medium
-        senderStyle.font = .bitchatSystem(size: 14, weight: fontWeight, design: .monospaced)
+        senderStyle.font = .safeguardianSystem(size: 14, weight: fontWeight, design: .monospaced)
 
         // Make sender clickable
         if let spid = message.senderPeerID, let url = context.peerURL(for: spid) {
@@ -393,8 +393,8 @@ final class MessageFormattingEngine {
         var style = AttributeContainer()
         style.foregroundColor = baseColor
         style.font = isSelf
-            ? .bitchatSystem(size: 14, weight: .bold, design: .monospaced)
-            : .bitchatSystem(size: 14, design: .monospaced)
+            ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
+            : .safeguardianSystem(size: 14, design: .monospaced)
         return AttributedString(content).mergingAttributes(style)
     }
 
@@ -404,8 +404,8 @@ final class MessageFormattingEngine {
         var style = AttributeContainer()
         style.foregroundColor = baseColor
         style.font = isSelf
-            ? .bitchatSystem(size: 14, weight: .bold, design: .monospaced)
-            : .bitchatSystem(size: 14, design: .monospaced)
+            ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
+            : .safeguardianSystem(size: 14, design: .monospaced)
 
         if isMentioned {
             style.font = style.font?.bold()
@@ -425,7 +425,7 @@ final class MessageFormattingEngine {
 
             var mentionStyle = AttributeContainer()
             mentionStyle.foregroundColor = .blue
-            mentionStyle.font = .bitchatSystem(size: 14, weight: .semibold, design: .monospaced)
+            mentionStyle.font = .safeguardianSystem(size: 14, weight: .semibold, design: .monospaced)
             result.append(AttributedString(baseName).mergingAttributes(mentionStyle))
 
             if !suffix.isEmpty {
@@ -438,11 +438,11 @@ final class MessageFormattingEngine {
 
         case .hashtag:
             style.foregroundColor = .purple
-            style.font = .bitchatSystem(size: 14, weight: .medium, design: .monospaced)
+            style.font = .safeguardianSystem(size: 14, weight: .medium, design: .monospaced)
 
         case .url:
             style.foregroundColor = .blue
-            style.font = .bitchatSystem(size: 14, design: .monospaced)
+            style.font = .safeguardianSystem(size: 14, design: .monospaced)
             style.underlineStyle = .single
             if let url = URL(string: text) {
                 style.link = url
@@ -450,12 +450,12 @@ final class MessageFormattingEngine {
 
         case .cashu:
             style.foregroundColor = .green
-            style.font = .bitchatSystem(size: 14, weight: .medium, design: .monospaced)
+            style.font = .safeguardianSystem(size: 14, weight: .medium, design: .monospaced)
             style.backgroundColor = Color.green.opacity(0.1)
 
         case .lightning, .bolt11, .lnurl:
             style.foregroundColor = .yellow
-            style.font = .bitchatSystem(size: 14, weight: .medium, design: .monospaced)
+            style.font = .safeguardianSystem(size: 14, weight: .medium, design: .monospaced)
             style.backgroundColor = Color.yellow.opacity(0.1)
         }
 
@@ -466,7 +466,7 @@ final class MessageFormattingEngine {
         let text = AttributedString(" [\(timestamp)]")
         var style = AttributeContainer()
         style.foregroundColor = Color.gray.opacity(0.5)
-        style.font = .bitchatSystem(size: 10, design: .monospaced)
+        style.font = .safeguardianSystem(size: 10, design: .monospaced)
         return text.mergingAttributes(style)
     }
 }

@@ -100,8 +100,8 @@ enum LazyHandshakeState {
 
 // MARK: - Delegate Protocol
 
-protocol BitchatDelegate: AnyObject {
-    func didReceiveMessage(_ message: BitchatMessage)
+protocol SafeGuardianDelegate: AnyObject {
+    func didReceiveMessage(_ message: SafeGuardianMessage)
     func didConnectToPeer(_ peerID: PeerID)
     func didDisconnectFromPeer(_ peerID: PeerID)
     func didUpdatePeerList(_ peers: [PeerID])
@@ -120,7 +120,7 @@ protocol BitchatDelegate: AnyObject {
 }
 
 // Provide default implementation to make it effectively optional
-extension BitchatDelegate {
+extension SafeGuardianDelegate {
     func isFavorite(fingerprint: String) -> Bool {
         return false
     }

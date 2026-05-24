@@ -48,20 +48,20 @@ struct CommandSuggestionsView: View {
     private func buttonRow(for command: CommandInfo) -> some View {
         HStack {
             Text(command.alias)
-                .font(.bitchatSystem(size: 11, design: .monospaced))
+                .font(.safeguardianSystem(size: 11, design: .monospaced))
                 .foregroundColor(textColor)
                 .fontWeight(.medium)
             
             if let placeholder = command.placeholder {
                 Text(placeholder)
-                    .font(.bitchatSystem(size: 10, design: .monospaced))
+                    .font(.safeguardianSystem(size: 10, design: .monospaced))
                     .foregroundColor(secondaryTextColor.opacity(0.8))
             }
 
             Spacer()
             
             Text(command.description)
-                .font(.bitchatSystem(size: 10, design: .monospaced))
+                .font(.safeguardianSystem(size: 10, design: .monospaced))
                 .foregroundColor(secondaryTextColor)
         }
         .padding(.horizontal, 12)

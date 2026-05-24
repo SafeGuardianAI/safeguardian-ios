@@ -161,7 +161,7 @@ struct ChatViewModelReceivingTests {
     func didReceiveMessage_callsDelegate() async {
         let (_, transport) = makeTestableViewModel()
 
-        let message = BitchatMessage(
+        let message = SafeGuardianMessage(
             id: "msg-001",
             sender: "Alice",
             content: "Hello from Alice",
@@ -215,7 +215,7 @@ struct ChatViewModelRateLimitingTests {
         let now = Date()
 
         for i in 0..<6 {
-            let message = BitchatMessage(
+            let message = SafeGuardianMessage(
                 id: "rate-\(i)",
                 sender: "Spammer",
                 content: "rate-msg-\(i)",
@@ -347,7 +347,7 @@ struct ChatViewModelPrivateChatSelectionTests {
 
         viewModel.privateChats = [
             peerA: [
-                BitchatMessage(
+                SafeGuardianMessage(
                     id: "a-1",
                     sender: "A",
                     content: "Old",
@@ -359,7 +359,7 @@ struct ChatViewModelPrivateChatSelectionTests {
                 )
             ],
             peerB: [
-                BitchatMessage(
+                SafeGuardianMessage(
                     id: "b-1",
                     sender: "B",
                     content: "New",
@@ -389,7 +389,7 @@ struct ChatViewModelPrivateChatSelectionTests {
 
         viewModel.privateChats = [
             peerA: [
-                BitchatMessage(
+                SafeGuardianMessage(
                     id: "a-1",
                     sender: "A",
                     content: "Old",
@@ -401,7 +401,7 @@ struct ChatViewModelPrivateChatSelectionTests {
                 )
             ],
             peerB: [
-                BitchatMessage(
+                SafeGuardianMessage(
                     id: "b-1",
                     sender: "B",
                     content: "New",
@@ -472,7 +472,7 @@ struct ChatViewModelPanicTests {
         // Set up some state
         transport.connectedPeers.insert(PeerID(str: "PEER1"))
         viewModel.messages = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "panic-1",
                 sender: "Tester",
                 content: "Before",
@@ -481,7 +481,7 @@ struct ChatViewModelPanicTests {
             )
         ]
         viewModel.privateChats[PeerID(str: "PEER1")] = [
-            BitchatMessage(
+            SafeGuardianMessage(
                 id: "pm-1",
                 sender: "Peer",
                 content: "Secret",

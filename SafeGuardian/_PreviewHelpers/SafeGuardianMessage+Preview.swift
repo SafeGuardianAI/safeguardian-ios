@@ -1,5 +1,5 @@
 //
-// BitchatMessage+Preview.swift
+// SafeGuardianMessage+Preview.swift
 // bitchat
 //
 // This is free and unencumbered software released into the public domain.
@@ -9,9 +9,9 @@
 import BitFoundation
 import Foundation
 
-extension BitchatMessage {
-    static var preview: BitchatMessage {
-        BitchatMessage(
+extension SafeGuardianMessage {
+    static var preview: SafeGuardianMessage {
+        SafeGuardianMessage(
             id: UUID().uuidString,
             sender: "John Doe",
             content: "Hello",

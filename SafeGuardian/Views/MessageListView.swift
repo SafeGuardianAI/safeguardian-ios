@@ -10,7 +10,7 @@ import SwiftUI
 
 private struct MessageDisplayItem: Identifiable {
     let id: String
-    let message: BitchatMessage
+    let message: SafeGuardianMessage
 }
 
 struct MessageListView: View {
@@ -218,7 +218,7 @@ struct MessageListView: View {
 
 private extension MessageListView {
     @ViewBuilder
-    func messageRow(for message: BitchatMessage) -> some View {
+    func messageRow(for message: SafeGuardianMessage) -> some View {
         Group {
             if message.sender == "system" {
                 systemMessageRow(message)
@@ -231,14 +231,14 @@ private extension MessageListView {
     }
 
     @ViewBuilder
-    func systemMessageRow(_ message: BitchatMessage) -> some View {
+    func systemMessageRow(_ message: SafeGuardianMessage) -> some View {
         Text(viewModel.formatMessageAsText(message, colorScheme: colorScheme))
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    func expandWindow(ifNeededFor message: BitchatMessage,
-                      allMessages: [BitchatMessage],
+    func expandWindow(ifNeededFor message: SafeGuardianMessage,
+                      allMessages: [SafeGuardianMessage],
                       privatePeer: PeerID?,
                       proxy: ScrollViewProxy) {
         let step = TransportConfig.uiWindowStepCount

@@ -19,7 +19,7 @@ struct BlockRevealImageView: View {
 
     @State private var platformImage: PlatformImage?
     @State private var aspectRatio: CGFloat = 1
-    @State private var isBlurred: Bool = false
+    @State private var isBlurred: Bool
 
     init(
         url: URL,
@@ -37,6 +37,9 @@ struct BlockRevealImageView: View {
         self.initiallyBlurred = initiallyBlurred
         self.onOpen = onOpen
         self.onDelete = onDelete
+        // Initialise once here so that LazyVStack cell reuse (onAppear re-firing)
+        // does not reset a user-revealed image back to blurred.
+        _isBlurred = State(initialValue: initiallyBlurred)
     }
 
     private var fraction: Double {
@@ -98,10 +101,10 @@ struct BlockRevealImageView: View {
             }
         }
         .onAppear {
-            isBlurred = initiallyBlurred
             loadImage()
         }
         .onChange(of: url) { _ in
+            // URL changed means a new image — re-apply the initial blur policy.
             isBlurred = initiallyBlurred
             loadImage()
         }

@@ -806,7 +806,7 @@ struct ContentView: View {
     
     private var mainHeaderView: some View {
         HStack(spacing: 0) {
-            Text(verbatim: "bitchat/")
+            Text(verbatim: "safeguardian/")
                 .font(.safeguardianSystem(size: 18, weight: .medium, design: .monospaced))
                 .foregroundColor(textColor)
                 .onTapGesture(count: 3) {

@@ -271,7 +271,7 @@ private extension MessageListView {
     }
 
     func handleOpenURL(_ url: URL) {
-        guard url.scheme == "bitchat" else { return }
+        guard url.scheme == "safeguardian" else { return }
         switch url.host {
         case "user":
             let id = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))

@@ -69,7 +69,7 @@ private extension GeoRelayDirectoryDependencies {
                         appropriateFor: nil,
                         create: true
                     )
-                    let dir = base.appendingPathComponent("bitchat", isDirectory: true)
+                    let dir = base.appendingPathComponent("safeguardian", isDirectory: true)
                     try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                     return dir.appendingPathComponent("georelays_cache.csv")
                 } catch {

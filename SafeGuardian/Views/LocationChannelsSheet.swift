@@ -95,59 +95,9 @@ struct LocationChannelsSheet: View {
     }
 
     var body: some View {
-        NavigationView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Text(Strings.title)
-                        .font(.safeguardianSystem(size: 18, design: .monospaced))
-                    Spacer()
-                    closeButton
-                }
-                Text(Strings.description)
-                    .font(.safeguardianSystem(size: 12, design: .monospaced))
-                    .foregroundColor(.secondary)
-
-                Group {
-                    switch manager.permissionState {
-                    case LocationChannelManager.PermissionState.notDetermined:
-                        Button(action: { manager.enableLocationChannels() }) {
-                            Text(Strings.requestPermissions)
-                                .font(.safeguardianSystem(size: 12, design: .monospaced))
-                                .foregroundColor(standardGreen)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 6)
-                                .background(standardGreen.opacity(0.12))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(.plain)
-                    case LocationChannelManager.PermissionState.denied, LocationChannelManager.PermissionState.restricted:
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(Strings.permissionDenied)
-                                .font(.safeguardianSystem(size: 12, design: .monospaced))
-                                .foregroundColor(.secondary)
-                            Button(Strings.openSettings, action: SystemSettings.location.open)
-                            .buttonStyle(.plain)
-                        }
-                    case LocationChannelManager.PermissionState.authorized:
-                        EmptyView()
-                    }
-                }
-
-                channelList
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(backgroundColor)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(true)
-            #else
-            .navigationTitle("")
-            #endif
-        }
+        sheetContent
         #if os(macOS)
-        .frame(minWidth: 420, minHeight: 520)
+        .frame(minWidth: 380, idealWidth: 420, minHeight: 500, idealHeight: 560)
         #endif
         .background(backgroundColor)
         .onAppear {
@@ -168,6 +118,52 @@ struct LocationChannelsSheet: View {
             }
         }
         .onChange(of: manager.availableChannels) { _ in }
+    }
+
+    private var sheetContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Text(Strings.title)
+                    .font(.safeguardianSystem(size: 18, design: .monospaced))
+                Spacer()
+                closeButton
+            }
+            Text(Strings.description)
+                .font(.safeguardianSystem(size: 12, design: .monospaced))
+                .foregroundColor(.secondary)
+
+            Group {
+                switch manager.permissionState {
+                case LocationChannelManager.PermissionState.notDetermined:
+                    Button(action: { manager.enableLocationChannels() }) {
+                        Text(Strings.requestPermissions)
+                            .font(.safeguardianSystem(size: 12, design: .monospaced))
+                            .foregroundColor(standardGreen)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(standardGreen.opacity(0.12))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                case LocationChannelManager.PermissionState.denied, LocationChannelManager.PermissionState.restricted:
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(Strings.permissionDenied)
+                            .font(.safeguardianSystem(size: 12, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Button(Strings.openSettings, action: SystemSettings.location.open)
+                        .buttonStyle(.plain)
+                    }
+                case LocationChannelManager.PermissionState.authorized:
+                    EmptyView()
+                }
+            }
+
+            channelList
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(backgroundColor)
     }
 
     private var closeButton: some View {

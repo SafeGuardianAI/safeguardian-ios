@@ -91,9 +91,6 @@ final class NovaBroadcaster: ObservableObject {
 
 #if os(iOS)
         let battery = UIDevice.current.batteryLevel
-#else
-        let battery: Float = -1
-#endif
         let batteryPct = battery < 0 ? 1.0 : Double(battery)
 
         if battery >= 0, battery < Self.suspendThreshold {
@@ -103,17 +100,15 @@ final class NovaBroadcaster: ObservableObject {
             return
         }
 
-        let targetInterval: TimeInterval
-        if battery >= 0, battery < Self.reducedRateThreshold {
-            targetInterval = Self.reducedInterval
-        } else {
-            targetInterval = Self.normalInterval
-        }
-
-        // Reschedule if battery crossed into reduced-rate band.
+        let targetInterval: TimeInterval = battery >= 0 && battery < Self.reducedRateThreshold
+            ? Self.reducedInterval
+            : Self.normalInterval
         rescheduleIfNeeded(interval: targetInterval)
 
         guard let tick = buildTick(batteryPct: batteryPct) else { return }
+#else
+        guard let tick = buildTick(batteryPct: 1.0) else { return }
+#endif
         publish(tick)
     }
 

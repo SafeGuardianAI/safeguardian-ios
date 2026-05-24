@@ -48,7 +48,7 @@ Data Retention and State
 
 Logging and Telemetry
 - Centralized `SecureLogger` filters potential secrets and uses OSLog privacy markers.
-- Default level: `info`; release builds suppress debug. Developers can set `BITCHAT_LOG_LEVEL=debug|info|warning|error|fault`.
+- Default level: `info`; release builds suppress debug. Developers can set `SAFEGUARDIAN_LOG_LEVEL=debug|info|warning|error|fault`.
 - Transport routing, ACK sends, subscribe/connect noise were downgraded from info→debug.
 - OS/system errors (e.g., transient WebSocket disconnects) may still appear in system logs; BitChat avoids re-logging those unless actionable.
 

@@ -100,9 +100,9 @@ public final class SecureLogger {
 
     // MARK: - Global Threshold
 
-    /// Minimum level that will be logged. Defaults to .info. Override via env BITCHAT_LOG_LEVEL.
+    /// Minimum level that will be logged. Defaults to .info. Override via env SAFEGUARDIAN_LOG_LEVEL.
     private static let minimumLevel: LogLevel = {
-        let env = ProcessInfo.processInfo.environment["BITCHAT_LOG_LEVEL"]?.lowercased()
+        let env = ProcessInfo.processInfo.environment["SAFEGUARDIAN_LOG_LEVEL"]?.lowercased()
         switch env {
         case "debug": return .debug
         case "warning": return .warning

@@ -475,112 +475,112 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ shared link to bitchat",
+            "value": "✓ shared link to SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ تم إرسال الرابط إلى bitchat",
+            "value": "✓ تم إرسال الرابط إلى SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ link zu bitchat geteilt",
+            "value": "✓ link zu SafeGuardian geteilt",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ enlace compartido con bitchat",
+            "value": "✓ enlace compartido con SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ lien partagé vers bitchat",
+            "value": "✓ lien partagé vers SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ הקישור נשלח אל bitchat",
+            "value": "✓ הקישור נשלח אל SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ tautan dikirim ke bitchat",
+            "value": "✓ tautan dikirim ke SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ link inviato a bitchat",
+            "value": "✓ link inviato a SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchatにリンクを共有",
+            "value": "✓ SafeGuardianにリンクを共有",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "ne": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat मा लिङ्क पठाइयो",
+            "value": "✓ SafeGuardian मा लिङ्क पठाइयो",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ link enviado para bitchat",
+            "value": "✓ link enviado para SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ ссылка отправлена в bitchat",
+            "value": "✓ ссылка отправлена в SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ посилання надіслано в bitchat",
+            "value": "✓ посилання надіслано в SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ 已将链接分享至 bitchat",
+            "value": "✓ 已将链接分享至 SafeGuardian",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat으로 링크를 공유했습니다",
+            "value": "✓ SafeGuardian으로 링크를 공유했습니다",
             "comment": "Confirmation after successfully sharing a link"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat'e bağlantı paylaşıldı",
+            "value": "✓ SafeGuardian'e bağlantı paylaşıldı",
             "comment": "Confirmation after successfully sharing a link"
           }
         }
@@ -592,112 +592,112 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ shared text to bitchat",
+            "value": "✓ shared text to SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ تم إرسال النص إلى bitchat",
+            "value": "✓ تم إرسال النص إلى SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ text zu bitchat geteilt",
+            "value": "✓ text zu SafeGuardian geteilt",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ texto compartido con bitchat",
+            "value": "✓ texto compartido con SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ texte partagé vers bitchat",
+            "value": "✓ texte partagé vers SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ הטקסט נשלח אל bitchat",
+            "value": "✓ הטקסט נשלח אל SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ teks dikirim ke bitchat",
+            "value": "✓ teks dikirim ke SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ testo inviato a bitchat",
+            "value": "✓ testo inviato a SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchatにテキストを共有",
+            "value": "✓ SafeGuardianにテキストを共有",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "ne": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat मा पाठ पठाइयो",
+            "value": "✓ SafeGuardian मा पाठ पठाइयो",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ texto enviado para bitchat",
+            "value": "✓ texto enviado para SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ текст отправлен в bitchat",
+            "value": "✓ текст отправлен в SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ текст надіслано в bitchat",
+            "value": "✓ текст надіслано в SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ 已将文本分享至 bitchat",
+            "value": "✓ 已将文本分享至 SafeGuardian",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat으로 텍스트를 공유했습니다",
+            "value": "✓ SafeGuardian으로 텍스트를 공유했습니다",
             "comment": "Confirmation after successfully sharing text"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "✓ bitchat'e metin paylaşıldı",
+            "value": "✓ SafeGuardian'e metin paylaşıldı",
             "comment": "Confirmation after successfully sharing text"
           }
         }

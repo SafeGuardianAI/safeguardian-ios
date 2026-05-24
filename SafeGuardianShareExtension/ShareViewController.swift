@@ -1,6 +1,6 @@
 //
 // ShareViewController.swift
-// bitchatShareExtension
+// SafeGuardianShareExtension
 //
 // This is free and unencumbered software released into the public domain.
 // For more information, see <https://unlicense.org>
@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 /// Avoids deprecated Social framework and SLComposeServiceViewController.
 final class ShareViewController: UIViewController {
     // Bundle.main.bundleIdentifier would get the extension's bundleID
-    private static let groupID = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String ?? "group.chat.bitchat"
+    private static let groupID = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String ?? "group.chat.safeguardian"
 
     private enum Strings {
         static let nothingToShare = String(localized: "share.status.nothing_to_share", comment: "Shown when the share extension receives no content")

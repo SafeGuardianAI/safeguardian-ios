@@ -23,9 +23,17 @@ actor VoiceRecorder {
     nonisolated
     func requestPermission() async -> Bool {
         #if os(iOS)
-        return await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+        if #available(iOS 17, *) {
+            return await withCheckedContinuation { continuation in
+                AVAudioApplication.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
+        } else {
+            return await withCheckedContinuation { continuation in
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
             }
         }
         #elseif os(macOS)
@@ -49,8 +57,14 @@ actor VoiceRecorder {
 
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
-        guard session.recordPermission == .granted else {
-            throw RecorderError.microphoneAccessDenied
+        if #available(iOS 17, *) {
+            guard AVAudioApplication.shared.recordPermission == .granted else {
+                throw RecorderError.microphoneAccessDenied
+            }
+        } else {
+            guard session.recordPermission == .granted else {
+                throw RecorderError.microphoneAccessDenied
+            }
         }
         #if targetEnvironment(simulator)
         // allowBluetoothHFP is not available on iOS Simulator

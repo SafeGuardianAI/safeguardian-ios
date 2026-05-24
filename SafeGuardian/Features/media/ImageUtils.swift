@@ -77,12 +77,17 @@ enum ImageUtils {
         let scale = maxDimension / maxSide
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
 
-        // Draw into a new context to get a clean CGImage without metadata
-        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let rendered = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return rendered ?? image
+        if #available(iOS 17, *) {
+            return UIGraphicsImageRenderer(size: newSize).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+            }
+        } else {
+            UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            let rendered = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return rendered ?? image
+        }
     }
 
     // Shared EXIF-stripping JPEG encoder for both iOS and macOS

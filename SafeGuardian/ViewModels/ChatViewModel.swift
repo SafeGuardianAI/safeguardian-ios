@@ -2142,7 +2142,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             let fontWeight: Font.Weight = isSelf ? .bold : .medium
             senderStyle.font = .safeguardianSystem(size: 14, weight: fontWeight, design: .monospaced)
             // Make sender clickable: encode senderPeerID into a custom URL
-            if let spid = message.senderPeerID, let url = URL(string: "bitchat://user/\(spid.toPercentEncoded())") {
+            if let spid = message.senderPeerID, let url = URL(string: "safeguardian://user/\(spid.toPercentEncoded())") {
                 senderStyle.link = url
             }
 
@@ -2351,7 +2351,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                                 ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .safeguardianSystem(size: 14, design: .monospaced)
                             tagStyle.foregroundColor = baseColor
-                            if isGeohash && !attachedToMention && standalone, let url = URL(string: "bitchat://geohash/\(token)") {
+                            if isGeohash && !attachedToMention && standalone, let url = URL(string: "safeguardian://geohash/\(token)") {
                                 tagStyle.link = url
                                 tagStyle.underlineStyle = .single
                             }
@@ -2469,7 +2469,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         senderStyle.foregroundColor = baseColor
         senderStyle.font = .safeguardianSystem(size: 14, weight: isSelf ? .bold : .medium, design: .monospaced)
         if let spid = message.senderPeerID,
-           let url = URL(string: "bitchat://user/\(spid.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? spid.id)") {
+           let url = URL(string: "safeguardian://user/\(spid.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? spid.id)") {
             senderStyle.link = url
         }
 
@@ -2649,7 +2649,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     @MainActor
     func peerURL(for peerID: PeerID) -> URL? {
-        return URL(string: "bitchat://user/\(peerID.toPercentEncoded())")
+        return URL(string: "safeguardian://user/\(peerID.toPercentEncoded())")
     }
 
     // Public helpers for views to color peers consistently in lists

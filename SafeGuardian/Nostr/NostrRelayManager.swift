@@ -238,16 +238,16 @@ final class NostrRelayManager: ObservableObject {
             dependencies.awaitTorReady { [weak self] ready in
                 guard let self = self else { return }
                 if !ready {
-                    SecureLogger.error("❌ Tor not ready; aborting relay connections (fail-closed)", category: .session)
+ SecureLogger.error(" Tor not ready; aborting relay connections (fail-closed)", category: .session)
                     return
                 }
-                SecureLogger.debug("🌐 Connecting to \(self.relays.count) Nostr relays (via Tor)", category: .session)
+ SecureLogger.debug(" Connecting to \(self.relays.count) Nostr relays (via Tor)", category: .session)
                 for relay in self.relays {
                     self.connectToRelay(relay.url)
                 }
             }
         } else {
-            SecureLogger.debug("🌐 Connecting to \(self.relays.count) Nostr relays (direct)", category: .session)
+ SecureLogger.debug(" Connecting to \(self.relays.count) Nostr relays (direct)", category: .session)
             for relay in self.relays {
                 connectToRelay(relay.url)
             }
@@ -397,11 +397,11 @@ final class NostrRelayManager: ObservableObject {
         do {
             let message = try encoder.encode(req)
             guard let messageString = String(data: message, encoding: .utf8) else { 
-                SecureLogger.error("❌ Failed to encode subscription request", category: .session)
+ SecureLogger.error(" Failed to encode subscription request", category: .session)
                 return 
             }
             
-            // SecureLogger.debug("📋 Subscription filter JSON: \(messageString.prefix(200))...", category: .session)
+ // SecureLogger.debug(" Subscription filter JSON: \(messageString.prefix(200))...", category: .session)
             
             // Target specific relays if provided; else default. Filter permanently failed relays.
             let baseUrls = relayUrls ?? Self.defaultRelays
@@ -437,7 +437,7 @@ final class NostrRelayManager: ObservableObject {
                     eoseTrackers[id] = tracker
                 }
             }
-            SecureLogger.debug("📋 Queued subscription id=\(id) for \(urls.count) relay(s)", category: .session)
+ SecureLogger.debug(" Queued subscription id=\(id) for \(urls.count) relay(s)", category: .session)
             // Ensure we actually have sockets opening to these relays so queued REQs can flush
             ensureConnections(to: urls)
             // If some targets are already connected, flush immediately for them
@@ -447,7 +447,7 @@ final class NostrRelayManager: ObservableObject {
                 }
             }
         } catch {
-            SecureLogger.error("❌ Failed to encode subscription request: \(error)", category: .session)
+ SecureLogger.error(" Failed to encode subscription request: \(error)", category: .session)
         }
     }
 
@@ -554,7 +554,7 @@ final class NostrRelayManager: ObservableObject {
             dependencies.awaitTorReady { [weak self] ready in
                 guard let self = self else { return }
                 if ready { self.connectToRelay(urlString) }
-                else { SecureLogger.error("❌ Tor not ready; skipping connection to \(urlString)", category: .session) }
+ else { SecureLogger.error(" Tor not ready; skipping connection to \(urlString)", category: .session) }
             }
             return
         }
@@ -572,12 +572,12 @@ final class NostrRelayManager: ObservableObject {
         task.sendPing { [weak self] error in
             DispatchQueue.main.async {
                 if error == nil {
-                    SecureLogger.debug("✅ Connected to Nostr relay: \(urlString)", category: .session)
+ SecureLogger.debug(" Connected to Nostr relay: \(urlString)", category: .session)
                     self?.updateRelayStatus(urlString, isConnected: true)
                     // Flush any pending subscriptions for this relay
                     self?.flushPendingSubscriptions(for: urlString)
                 } else {
-                    SecureLogger.error("❌ Failed to connect to Nostr relay \(urlString): \(error?.localizedDescription ?? "Unknown error")", category: .session)
+ SecureLogger.error(" Failed to connect to Nostr relay \(urlString): \(error?.localizedDescription ?? "Unknown error")", category: .session)
                     self?.updateRelayStatus(urlString, isConnected: false, error: error)
                     // Trigger disconnection handler for proper backoff
                     self?.handleDisconnection(relayUrl: urlString, error: error ?? NSError(domain: "NostrRelay", code: -1, userInfo: nil))
@@ -594,7 +594,7 @@ final class NostrRelayManager: ObservableObject {
             if self.subscriptions[relayUrl]?.contains(id) == true { continue }
             connection.send(.string(messageString)) { error in
                 if let error = error {
-                    SecureLogger.error("❌ Failed to send pending subscription to \(relayUrl): \(error)", category: .session)
+ SecureLogger.error(" Failed to send pending subscription to \(relayUrl): \(error)", category: .session)
                 } else {
                     Task { @MainActor in
                         var subs = self.subscriptions[relayUrl] ?? Set<String>()
@@ -643,7 +643,7 @@ final class NostrRelayManager: ObservableObject {
         switch parsed {
         case .event(let subId, let event):
             if event.kind != 1059 {
-                SecureLogger.debug("📥 Event kind=\(event.kind) id=\(event.id.prefix(16))… relay=\(relayUrl)", category: .session)
+ SecureLogger.debug(" Event kind=\(event.kind) id=\(event.id.prefix(16))… relay=\(relayUrl)", category: .session)
             }
             if let index = self.relays.firstIndex(where: { $0.url == relayUrl }) {
                 self.relays[index].messagesReceived += 1
@@ -651,7 +651,7 @@ final class NostrRelayManager: ObservableObject {
             if let handler = self.messageHandlers[subId] {
                 handler(event)
             } else {
-                SecureLogger.warning("⚠️ No handler for subscription \(subId)", category: .session)
+ SecureLogger.warning(" No handler for subscription \(subId)", category: .session)
             }
         case .eose(let subId):
             if var tracker = eoseTrackers[subId] {
@@ -667,13 +667,13 @@ final class NostrRelayManager: ObservableObject {
         case .ok(let eventId, let success, let reason):
             if success {
                 _ = Self.pendingGiftWrapIDs.remove(eventId)
-                SecureLogger.debug("✅ Accepted id=\(eventId.prefix(16))… relay=\(relayUrl)", category: .session)
+ SecureLogger.debug(" Accepted id=\(eventId.prefix(16))… relay=\(relayUrl)", category: .session)
             } else {
                 let isGiftWrap = Self.pendingGiftWrapIDs.remove(eventId) != nil
                 if isGiftWrap {
-                    SecureLogger.warning("📮 Rejected id=\(eventId.prefix(16))… reason=\(reason)", category: .session)
+ SecureLogger.warning(" Rejected id=\(eventId.prefix(16))… reason=\(reason)", category: .session)
                 } else {
-                    SecureLogger.error("📮 Rejected id=\(eventId.prefix(16))… reason=\(reason)", category: .session)
+ SecureLogger.error(" Rejected id=\(eventId.prefix(16))… reason=\(reason)", category: .session)
                 }
             }
         case .notice:
@@ -688,14 +688,14 @@ final class NostrRelayManager: ObservableObject {
             let data = try encoder.encode(req)
             let message = String(data: data, encoding: .utf8) ?? ""
             
-            SecureLogger.debug("📤 Send kind=\(event.kind) id=\(event.id.prefix(16))… relay=\(relayUrl)", category: .session)
+ SecureLogger.debug(" Send kind=\(event.kind) id=\(event.id.prefix(16))… relay=\(relayUrl)", category: .session)
             
             connection.send(.string(message)) { [weak self] error in
                 DispatchQueue.main.async {
                     if let error = error {
-                        SecureLogger.error("❌ Failed to send event to \(relayUrl): \(error)", category: .session)
+ SecureLogger.error(" Failed to send event to \(relayUrl): \(error)", category: .session)
                     } else {
-                        // SecureLogger.debug("✅ Event sent to relay: \(relayUrl)", category: .session)
+ // SecureLogger.debug(" Event sent to relay: \(relayUrl)", category: .session)
                         // Update relay stats
                         if let index = self?.relays.firstIndex(where: { $0.url == relayUrl }) {
                             self?.relays[index].messagesSent += 1

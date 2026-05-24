@@ -446,7 +446,7 @@ final class BLEService: NSObject {
             ttl: messageTTL
         )
         guard let signedPacket = noiseService.signPacket(basePacket) else {
-            SecureLogger.error("❌ Failed to sign public message", category: .security)
+ SecureLogger.error(" Failed to sign public message", category: .security)
             return
         }
         // Pre-mark our own broadcast as processed to avoid handling relayed self copy
@@ -702,14 +702,14 @@ final class BLEService: NSObject {
             if let state = self.activeTransfers.removeValue(forKey: transferId) {
                 state.workItems.forEach { $0.cancel() }
                 TransferProgressManager.shared.cancel(id: transferId)
-                SecureLogger.debug("🛑 Cancelled transfer \(transferId.prefix(8))…", category: .session)
+ SecureLogger.debug(" Cancelled transfer \(transferId.prefix(8))…", category: .session)
                 self.messageQueue.async { [weak self] in
                     self?.startNextPendingTransferIfNeeded()
                 }
             } else if let pendingIndex = self.pendingFragmentTransfers.firstIndex(where: { $0.transferId == transferId }) {
                 self.pendingFragmentTransfers.remove(at: pendingIndex)
                 TransferProgressManager.shared.cancel(id: transferId)
-                SecureLogger.debug("🛑 Removed pending transfer \(transferId.prefix(8))… before start", category: .session)
+ SecureLogger.debug(" Removed pending transfer \(transferId.prefix(8))… before start", category: .session)
             }
         }
     }
@@ -732,7 +732,7 @@ final class BLEService: NSObject {
         messageQueue.async { [weak self] in
             guard let self = self else { return }
             guard let payload = filePacket.encode() else {
-                SecureLogger.error("❌ Failed to encode file packet for broadcast", category: .session)
+ SecureLogger.error(" Failed to encode file packet for broadcast", category: .session)
                 return
             }
 
@@ -750,7 +750,7 @@ final class BLEService: NSObject {
             if let signed = self.noiseService.signPacket(packet) {
                 packet = signed
             } else {
-                SecureLogger.error("❌ Failed to sign file broadcast packet", category: .security)
+ SecureLogger.error(" Failed to sign file broadcast packet", category: .security)
                 return
             }
 
@@ -758,7 +758,7 @@ final class BLEService: NSObject {
             let dedupID = "\(senderHex)-\(packet.timestamp)-\(packet.type)"
             self.messageDeduplicator.markProcessed(dedupID)
 
-            SecureLogger.debug("📁 Broadcasting file transfer payload bytes=\(payload.count)", category: .session)
+ SecureLogger.debug(" Broadcasting file transfer payload bytes=\(payload.count)", category: .session)
             self.broadcastPacket(packet, transferId: transferId)
             self.gossipSyncManager?.onPublicPacketSeen(packet)
         }
@@ -768,14 +768,14 @@ final class BLEService: NSObject {
         messageQueue.async { [weak self] in
             guard let self = self else { return }
             guard let payload = filePacket.encode() else {
-                SecureLogger.error("❌ Failed to encode file packet for private send", category: .session)
+ SecureLogger.error(" Failed to encode file packet for private send", category: .session)
                 return
             }
             // Normalize to short form (SHA256-derived 16-hex) for wire protocol compatibility
             // This ensures 64-hex Noise keys are converted to the canonical routing format
             let targetID = peerID.toShort()
             guard let recipientData = Data(hexString: targetID.id) else {
-                SecureLogger.error("❌ Invalid recipient peer ID for file transfer: \(peerID)", category: .session)
+ SecureLogger.error(" Invalid recipient peer ID for file transfer: \(peerID)", category: .session)
                 return
             }
 
@@ -794,7 +794,7 @@ final class BLEService: NSObject {
                 packet = signed
             }
 
-            SecureLogger.debug("📁 Sending private file transfer to \(peerID.id.prefix(8))… bytes=\(payload.count)", category: .session)
+ SecureLogger.debug(" Sending private file transfer to \(peerID.id.prefix(8))… bytes=\(payload.count)", category: .session)
             self.broadcastPacket(packet, transferId: transferId)
         }
     }
@@ -806,7 +806,7 @@ final class BLEService: NSObject {
         payload.append(contentsOf: receipt.originalMessageID.utf8)
 
         if noiseService.hasEstablishedSession(with: peerID) {
-            SecureLogger.debug("📤 Sending READ receipt for message \(receipt.originalMessageID) to \(peerID)", category: .session)
+ SecureLogger.debug(" Sending READ receipt for message \(receipt.originalMessageID) to \(peerID)", category: .session)
             do {
                 let encrypted = try noiseService.encrypt(payload, for: peerID)
                 let packet = SafeGuardianPacket(
@@ -829,7 +829,7 @@ final class BLEService: NSObject {
                 self.pendingNoisePayloadsAfterHandshake[peerID, default: []].append(payload)
             }
             if !noiseService.hasSession(with: peerID) { initiateNoiseHandshake(with: peerID) }
-            SecureLogger.debug("🕒 Queued READ receipt for \(peerID) until handshake completes", category: .session)
+ SecureLogger.debug(" Queued READ receipt for \(peerID) until handshake completes", category: .session)
         }
     }
     
@@ -887,7 +887,7 @@ final class BLEService: NSObject {
             return
         }
         guard let data = packetToSend.toBinaryData(padding: padForBLE) else {
-            SecureLogger.error("❌ Failed to convert packet to binary data", category: .session)
+ SecureLogger.error(" Failed to convert packet to binary data", category: .session)
             return
         }
         if packetToSend.type == MessageType.noiseEncrypted.rawValue {
@@ -974,12 +974,12 @@ final class BLEService: NSObject {
             guard let self = self else { return }
             if self.pendingNotifications.count < TransportConfig.blePendingNotificationsCapCount {
                 self.pendingNotifications.append((data: data, centrals: centrals))
-                SecureLogger.debug("📋 Queued \(context) packet for retry (pending=\(self.pendingNotifications.count))", category: .session)
+ SecureLogger.debug(" Queued \(context) packet for retry (pending=\(self.pendingNotifications.count))", category: .session)
                 return
             }
 
             if attempt >= TransportConfig.bleNotificationRetryMaxAttempts {
-                SecureLogger.error("❌ Dropping \(context) packet after exhausting retry window (pending=\(self.pendingNotifications.count))", category: .session)
+ SecureLogger.error(" Dropping \(context) packet after exhausting retry window (pending=\(self.pendingNotifications.count))", category: .session)
                 return
             }
 
@@ -1111,7 +1111,7 @@ final class BLEService: NSObject {
             if byMsg[msgID] == nil {
                 byMsg[msgID] = (packet: packet, enqueuedAt: Date())
                 self.pendingDirectedRelays[recipientPeerID] = byMsg
-                SecureLogger.debug("🧳 Spooling directed packet for \(recipientPeerID) mid=\(msgID.prefix(8))…", category: .session)
+ SecureLogger.debug(" Spooling directed packet for \(recipientPeerID) mid=\(msgID.prefix(8))…", category: .session)
             }
         }
     }
@@ -1180,7 +1180,7 @@ final class BLEService: NSObject {
         }
 
         guard accepted else {
-            SecureLogger.warning("🚫 Dropping file transfer from unverified or unknown peer \(peerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" Dropping file transfer from unverified or unknown peer \(peerID.id.prefix(8))…", category: .security)
             return
         }
 
@@ -1199,24 +1199,24 @@ final class BLEService: NSObject {
         }
 
         guard let filePacket = SafeGuardianFilePacket.decode(packet.payload) else {
-            SecureLogger.error("❌ Failed to decode file transfer payload", category: .session)
+ SecureLogger.error(" Failed to decode file transfer payload", category: .session)
             return
         }
 
         guard FileTransferLimits.isValidPayload(filePacket.content.count) else {
-            SecureLogger.warning("🚫 Dropping file transfer exceeding size cap (\(filePacket.content.count) bytes)", category: .security)
+ SecureLogger.warning(" Dropping file transfer exceeding size cap (\(filePacket.content.count) bytes)", category: .security)
             return
         }
 
         guard let mime = MimeType(filePacket.mimeType), mime.isAllowed else {
-            SecureLogger.warning("🚫 MIME REJECT: '\(filePacket.mimeType ?? "<empty>")' not supported. Size=\(filePacket.content.count)b from \(peerID.id.prefix(8))...", category: .security)
+ SecureLogger.warning(" MIME REJECT: '\(filePacket.mimeType ?? "<empty>")' not supported. Size=\(filePacket.content.count)b from \(peerID.id.prefix(8))...", category: .security)
             return
         }
 
         // Validate content matches declared MIME type (magic byte check)
         guard mime.matches(data: filePacket.content) else {
             let prefix = filePacket.content.prefix(20).map { String(format: "%02x", $0) }.joined(separator: " ")
-            SecureLogger.warning("🚫 MAGIC REJECT: MIME='\(mime)' size=\(filePacket.content.count)b prefix=[\(prefix)] from \(peerID.id.prefix(8))...", category: .security)
+ SecureLogger.warning(" MAGIC REJECT: MIME='\(mime)' size=\(filePacket.content.count)b prefix=[\(prefix)] from \(peerID.id.prefix(8))...", category: .security)
             return
         }
 
@@ -1251,7 +1251,7 @@ final class BLEService: NSObject {
             senderPeerID: peerID
         )
 
-        SecureLogger.debug("📁 Stored incoming media from \(peerID.id.prefix(8))… -> \(destination.lastPathComponent)", category: .session)
+ SecureLogger.debug(" Stored incoming media from \(peerID.id.prefix(8))… -> \(destination.lastPathComponent)", category: .session)
 
         notifyUI { [weak self] in
             self?.delegate?.didReceiveMessage(message)
@@ -1259,7 +1259,7 @@ final class BLEService: NSObject {
     }
     
     func sendFavoriteNotification(to peerID: PeerID, isFavorite: Bool) {
-        SecureLogger.debug("🔔 sendFavoriteNotification called - peerID: \(peerID), isFavorite: \(isFavorite)", category: .session)
+ SecureLogger.debug(" sendFavoriteNotification called - peerID: \(peerID), isFavorite: \(isFavorite)", category: .session)
         
         // Include Nostr public key in the notification
         var content = isFavorite ? "[FAVORITED]" : "[UNFAVORITED]"
@@ -1267,10 +1267,10 @@ final class BLEService: NSObject {
         // Add our Nostr public key if available
         if let myNostrIdentity = try? idBridge.getCurrentNostrIdentity() {
             content += ":" + myNostrIdentity.npub
-            SecureLogger.debug("📝 Sending favorite notification with Nostr npub: \(myNostrIdentity.npub)", category: .session)
+ SecureLogger.debug(" Sending favorite notification with Nostr npub: \(myNostrIdentity.npub)", category: .session)
         }
         
-        SecureLogger.debug("📤 Sending favorite notification to \(peerID): \(content)", category: .session)
+ SecureLogger.debug(" Sending favorite notification to \(peerID): \(content)", category: .session)
         sendPrivateMessage(content, to: peerID, messageID: UUID().uuidString)
     }
     
@@ -1306,7 +1306,7 @@ final class BLEService: NSObject {
                 self.pendingNoisePayloadsAfterHandshake[peerID, default: []].append(payload)
             }
             if !noiseService.hasSession(with: peerID) { initiateNoiseHandshake(with: peerID) }
-            SecureLogger.debug("🕒 Queued DELIVERED ack for \(peerID) until handshake completes", category: .session)
+ SecureLogger.debug(" Queued DELIVERED ack for \(peerID) until handshake completes", category: .session)
         }
     }
 
@@ -1388,7 +1388,7 @@ final class BLEService: NSObject {
 
         // Security: Validate path doesn't escape directory
         if !candidate.path.hasPrefix(directory.path) {
-            SecureLogger.warning("⚠️ Path traversal blocked: \(fileName)", category: .security)
+ SecureLogger.warning(" Path traversal blocked: \(fileName)", category: .security)
             return directory.appendingPathComponent("blocked_\(UUID().uuidString)")
         }
 
@@ -1431,7 +1431,7 @@ final class BLEService: NSObject {
             try data.write(to: destination, options: .atomic)
             return destination
         } catch {
-            SecureLogger.error("❌ Failed to persist incoming media: \(error)", category: .session)
+ SecureLogger.error(" Failed to persist incoming media: \(error)", category: .session)
             return nil
         }
     }
@@ -1488,17 +1488,17 @@ final class BLEService: NSObject {
                 do {
                     try fileManager.removeItem(at: file.url)
                     freedSpace += file.size
-                    SecureLogger.debug("🗑️ BCH-01-002: Deleted old incoming file to free space: \(file.url.lastPathComponent)", category: .security)
+ SecureLogger.debug(" BCH-01-002: Deleted old incoming file to free space: \(file.url.lastPathComponent)", category: .security)
                 } catch {
-                    SecureLogger.warning("⚠️ Failed to delete old file for quota: \(error)", category: .security)
+ SecureLogger.warning(" Failed to delete old file for quota: \(error)", category: .security)
                 }
             }
 
             if freedSpace > 0 {
-                SecureLogger.info("📊 BCH-01-002: Freed \(ByteCountFormatter.string(fromByteCount: freedSpace, countStyle: .file)) to stay within incoming files quota", category: .security)
+ SecureLogger.info(" BCH-01-002: Freed \(ByteCountFormatter.string(fromByteCount: freedSpace, countStyle: .file)) to stay within incoming files quota", category: .security)
             }
         } catch {
-            SecureLogger.warning("⚠️ Could not enforce storage quota: \(error)", category: .security)
+ SecureLogger.warning(" Could not enforce storage quota: \(error)", category: .security)
         }
     }
 
@@ -1534,7 +1534,7 @@ final class BLEService: NSObject {
         )
         
         guard let payload = announcement.encode() else {
-            SecureLogger.error("❌ Failed to encode announce packet", category: .session)
+ SecureLogger.error(" Failed to encode announce packet", category: .session)
             return
         }
         
@@ -1551,7 +1551,7 @@ final class BLEService: NSObject {
         
         // Sign the packet using the noise private key
         guard let signedPacket = noiseService.signPacket(packet) else {
-            SecureLogger.error("❌ Failed to sign announce packet", category: .security)
+ SecureLogger.error(" Failed to sign announce packet", category: .security)
             return
         }
         
@@ -1612,7 +1612,7 @@ extension BLEService: CBCentralManagerDelegate {
         let allowDuplicates = restoredOptions[CBCentralManagerScanOptionAllowDuplicatesKey] as? Bool
 
         SecureLogger.info(
-            "♻️ Central restore: peripherals=\(restoredPeripherals.count) services=\(restoredServices.count) allowDuplicates=\(String(describing: allowDuplicates))",
+            "Central restore: peripherals=\(restoredPeripherals.count) services=\(restoredServices.count) allowDuplicates=\(String(describing: allowDuplicates))",
             category: .session
         )
 
@@ -1659,7 +1659,7 @@ extension BLEService: CBCentralManagerDelegate {
 
         case .poweredOff:
             // Bluetooth was turned off - stop scanning and clean up connection state
-            SecureLogger.info("📴 Bluetooth powered off - cleaning up central state", category: .session)
+ SecureLogger.info(" Bluetooth powered off - cleaning up central state", category: .session)
             central.stopScan()
             // Mark all peripheral connections as disconnected (they are now invalid)
             let peerIDs: [PeerID] = peripherals.compactMap { $0.value.peerID }
@@ -1677,25 +1677,25 @@ extension BLEService: CBCentralManagerDelegate {
 
         case .unauthorized:
             // User denied Bluetooth permission
-            SecureLogger.warning("🚫 Bluetooth unauthorized - user denied permission", category: .session)
+ SecureLogger.warning(" Bluetooth unauthorized - user denied permission", category: .session)
             central.stopScan()
             peripherals.removeAll()
             peerToPeripheralUUID.removeAll()
 
         case .unsupported:
             // Device doesn't support BLE
-            SecureLogger.error("❌ Bluetooth LE not supported on this device", category: .session)
+ SecureLogger.error(" Bluetooth LE not supported on this device", category: .session)
 
         case .resetting:
             // Bluetooth stack is resetting - will get another state update when done
-            SecureLogger.info("🔄 Bluetooth stack resetting...", category: .session)
+ SecureLogger.info(" Bluetooth stack resetting...", category: .session)
 
         case .unknown:
             // Initial state before we know the actual state
-            SecureLogger.debug("❓ Bluetooth state unknown (initializing)", category: .session)
+ SecureLogger.debug(" Bluetooth state unknown (initializing)", category: .session)
 
         @unknown default:
-            SecureLogger.warning("⚠️ Unknown Bluetooth state: \(central.state.rawValue)", category: .session)
+ SecureLogger.warning(" Unknown Bluetooth state: \(central.state.rawValue)", category: .session)
         }
     }
     
@@ -1819,7 +1819,7 @@ extension BLEService: CBCentralManagerDelegate {
         peripheral.delegate = self
         
         // Connect to the peripheral with options for faster connection
-        SecureLogger.debug("📱 Connect: \(advertisedName) [RSSI:\(rssiValue)]", category: .session)
+ SecureLogger.debug(" Connect: \(advertisedName) [RSSI:\(rssiValue)]", category: .session)
         
         // Use connection options for faster reconnection
         let options: [String: Any] = [
@@ -1840,12 +1840,12 @@ extension BLEService: CBCentralManagerDelegate {
             // Double-check actual CBPeripheral state to avoid canceling a just-connected peripheral
             // This prevents a race where connection completes just as timeout fires
             guard peripheral.state != .connected else {
-                SecureLogger.debug("⏱️ Timeout fired but peripheral already connected: \(advertisedName)", category: .session)
+ SecureLogger.debug("⏱ Timeout fired but peripheral already connected: \(advertisedName)", category: .session)
                 return
             }
 
             // Connection timed out - cancel it
-            SecureLogger.debug("⏱️ Timeout: \(advertisedName)", category: .session)
+ SecureLogger.debug("⏱ Timeout: \(advertisedName)", category: .session)
             central.cancelPeripheralConnection(peripheral)
             self.peripherals[peripheralID] = nil
             self.recentConnectTimeouts[peripheralID] = Date()
@@ -1880,7 +1880,7 @@ func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeriph
         failureCounts[peripheralID] = 0
         recentConnectTimeouts.removeValue(forKey: peripheralID)
 
-        SecureLogger.debug("✅ Connected: \(peripheral.name ?? "Unknown") [\(peripheralID)]", category: .session)
+ SecureLogger.debug(" Connected: \(peripheral.name ?? "Unknown") [\(peripheralID)]", category: .session)
         
         // Discover services
         peripheral.discoverServices([BLEService.serviceUUID])
@@ -1892,7 +1892,7 @@ func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeriph
         // Find the peer ID if we have it
         let peerID = peripherals[peripheralID]?.peerID
         
-        SecureLogger.debug("📱 Disconnect: \(peerID?.id ?? peripheralID)\(error != nil ? " (\(error!.localizedDescription))" : "")", category: .session)
+ SecureLogger.debug(" Disconnect: \(peerID?.id ?? peripheralID)\(error != nil ? " (\(error!.localizedDescription))" : "")", category: .session)
 
         // If disconnect carried an error (often timeout), apply short backoff to avoid thrash
         if error != nil {
@@ -1949,7 +1949,7 @@ func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeriph
         // Clean up the references
         peripherals.removeValue(forKey: peripheralID)
         
-        SecureLogger.error("❌ Failed to connect to peripheral: \(peripheral.name ?? "Unknown") [\(peripheralID)] - Error: \(error?.localizedDescription ?? "Unknown")", category: .session)
+ SecureLogger.error(" Failed to connect to peripheral: \(peripheral.name ?? "Unknown") [\(peripheralID)] - Error: \(error?.localizedDescription ?? "Unknown")", category: .session)
         failureCounts[peripheralID, default: 0] += 1
         // Try next candidate
         bleQueue.async { [weak self] in self?.tryConnectFromQueue() }
@@ -2064,7 +2064,7 @@ extension BLEService {
 extension BLEService: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Error discovering services for \(peripheral.name ?? "Unknown"): \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Error discovering services for \(peripheral.name ?? "Unknown"): \(error.localizedDescription)", category: .session)
             // Retry service discovery after a delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard peripheral.state == .connected else { return }
@@ -2074,7 +2074,7 @@ extension BLEService: CBPeripheralDelegate {
         }
         
         guard let services = peripheral.services else {
-            SecureLogger.warning("⚠️ No services discovered for \(peripheral.name ?? "Unknown")", category: .session)
+ SecureLogger.warning(" No services discovered for \(peripheral.name ?? "Unknown")", category: .session)
             return
         }
         
@@ -2090,12 +2090,12 @@ extension BLEService: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Error discovering characteristics for \(peripheral.name ?? "Unknown"): \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Error discovering characteristics for \(peripheral.name ?? "Unknown"): \(error.localizedDescription)", category: .session)
             return
         }
         
         guard let characteristic = service.characteristics?.first(where: { $0.uuid == BLEService.characteristicUUID }) else {
-            SecureLogger.warning("⚠️ No matching characteristic found for \(peripheral.name ?? "Unknown")", category: .session)
+ SecureLogger.warning(" No matching characteristic found for \(peripheral.name ?? "Unknown")", category: .session)
             return
         }
         
@@ -2112,7 +2112,7 @@ extension BLEService: CBPeripheralDelegate {
         
         // Verify characteristic supports reliable writes
         if !characteristic.properties.contains(.write) {
-            SecureLogger.warning("⚠️ Characteristic doesn't support reliable writes (withResponse)!", category: .session)
+ SecureLogger.warning(" Characteristic doesn't support reliable writes (withResponse)!", category: .session)
         }
         
         // Store characteristic in our consolidated structure
@@ -2125,7 +2125,7 @@ extension BLEService: CBPeripheralDelegate {
         // Subscribe for notifications
         if characteristic.properties.contains(.notify) {
             peripheral.setNotifyValue(true, for: characteristic)
-            SecureLogger.debug("🔔 Subscribed to notifications from \(peripheral.name ?? "Unknown")", category: .session)
+ SecureLogger.debug(" Subscribed to notifications from \(peripheral.name ?? "Unknown")", category: .session)
             
             // Send announce after subscription is confirmed (force send for new connection)
             messageQueue.asyncAfter(deadline: .now() + TransportConfig.blePostSubscribeAnnounceDelaySeconds) { [weak self] in
@@ -2134,18 +2134,18 @@ extension BLEService: CBPeripheralDelegate {
                 self?.flushDirectedSpool()
             }
         } else {
-            SecureLogger.warning("⚠️ Characteristic does not support notifications", category: .session)
+ SecureLogger.warning(" Characteristic does not support notifications", category: .session)
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Error receiving notification: \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Error receiving notification: \(error.localizedDescription)", category: .session)
             return
         }
         
         guard let data = characteristic.value, !data.isEmpty else {
-            SecureLogger.warning("⚠️ No data in notification", category: .session)
+ SecureLogger.warning(" No data in notification", category: .session)
             return
         }
 
@@ -2171,11 +2171,11 @@ extension BLEService: CBPeripheralDelegate {
         peripherals[peripheralUUID] = state
 
         for byte in result.droppedPrefixes {
-            SecureLogger.warning("⚠️ Dropping byte from BLE stream (unexpected prefix \(String(format: "%02x", byte)))", category: .session)
+ SecureLogger.warning(" Dropping byte from BLE stream (unexpected prefix \(String(format: "%02x", byte)))", category: .session)
         }
 
         if result.reset {
-            SecureLogger.error("❌ Invalid BLE frame length; reset notification stream", category: .session)
+ SecureLogger.error(" Invalid BLE frame length; reset notification stream", category: .session)
         }
         
         // Codex review identified TOCTOU in this patch.
@@ -2188,7 +2188,7 @@ extension BLEService: CBPeripheralDelegate {
         for frame in result.frames {
             guard let packet = BinaryProtocol.decode(frame) else {
                 let prefix = frame.prefix(16).map { String(format: "%02x", $0) }.joined(separator: " ")
-                SecureLogger.error("❌ Failed to decode assembled notification frame (len=\(frame.count), prefix=\(prefix))", category: .session)
+ SecureLogger.error(" Failed to decode assembled notification frame (len=\(frame.count), prefix=\(prefix))", category: .session)
                 continue
             }
 
@@ -2197,7 +2197,7 @@ extension BLEService: CBPeripheralDelegate {
             let trustedSenderID: PeerID?
             if let knownPeerID = boundPeerID {
                 if knownPeerID != claimedSenderID {
-                    SecureLogger.warning("🚫 SECURITY: Sender ID spoofing attempt detected! Peripheral \(peripheralUUID.prefix(8))… claimed to be \(claimedSenderID.id.prefix(8))… but is bound to \(knownPeerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" SECURITY: Sender ID spoofing attempt detected! Peripheral \(peripheralUUID.prefix(8))… claimed to be \(claimedSenderID.id.prefix(8))… but is bound to \(knownPeerID.id.prefix(8))…", category: .security)
                     continue
                 }
                 trustedSenderID = knownPeerID
@@ -2225,7 +2225,7 @@ extension BLEService: CBPeripheralDelegate {
         let senderID = PeerID(hexData: packet.senderID)
 
         if packet.type != MessageType.announce.rawValue {
-            SecureLogger.debug("📦 Decoded notification packet type: \(packet.type) from sender: \(senderID)", category: .session)
+ SecureLogger.debug(" Decoded notification packet type: \(packet.type) from sender: \(senderID)", category: .session)
         }
 
         if packet.type == MessageType.announce.rawValue {
@@ -2254,28 +2254,28 @@ extension BLEService: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Write failed to \(peripheral.name ?? peripheral.identifier.uuidString): \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Write failed to \(peripheral.name ?? peripheral.identifier.uuidString): \(error.localizedDescription)", category: .session)
             // Don't retry - just log the error
         } else {
-            SecureLogger.debug("✅ Write confirmed to \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
+ SecureLogger.debug(" Write confirmed to \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
         }
     }
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
         // Resume queued writes for this peripheral - called when canSendWriteWithoutResponse becomes true again
-        SecureLogger.debug("📤 Peripheral \(peripheral.name ?? peripheral.identifier.uuidString.prefix(8).description) ready for more writes", category: .session)
+ SecureLogger.debug(" Peripheral \(peripheral.name ?? peripheral.identifier.uuidString.prefix(8).description) ready for more writes", category: .session)
         drainPendingWrites(for: peripheral)
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        SecureLogger.warning("⚠️ Services modified for \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
+ SecureLogger.warning(" Services modified for \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
         
         // Check if our service was invalidated (peer app quit)
         let hasOurService = peripheral.services?.contains { $0.uuid == BLEService.serviceUUID } ?? false
         
         if !hasOurService {
             // Service is gone - disconnect
-            SecureLogger.warning("❌ BitChat service removed - disconnecting from \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
+ SecureLogger.warning(" BitChat service removed - disconnecting from \(peripheral.name ?? peripheral.identifier.uuidString)", category: .session)
             centralManager?.cancelPeripheralConnection(peripheral)
         } else {
             // Try to rediscover
@@ -2285,9 +2285,9 @@ extension BLEService: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Error updating notification state: \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Error updating notification state: \(error.localizedDescription)", category: .session)
         } else {
-            SecureLogger.debug("🔔 Notification state updated for \(peripheral.name ?? peripheral.identifier.uuidString): \(characteristic.isNotifying ? "ON" : "OFF")", category: .session)
+ SecureLogger.debug(" Notification state updated for \(peripheral.name ?? peripheral.identifier.uuidString): \(characteristic.isNotifying ? "ON" : "OFF")", category: .session)
             
             // If notifications are now on, send an announce to ensure this peer knows about us
             if characteristic.isNotifying {
@@ -2303,7 +2303,7 @@ extension BLEService: CBPeripheralDelegate {
 
 extension BLEService: CBPeripheralManagerDelegate {
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        SecureLogger.debug("📡 Peripheral manager state: \(peripheral.state.rawValue)", category: .session)
+ SecureLogger.debug(" Peripheral manager state: \(peripheral.state.rawValue)", category: .session)
 
         switch peripheral.state {
         case .poweredOn:
@@ -2323,12 +2323,12 @@ extension BLEService: CBPeripheralManagerDelegate {
             service.characteristics = [characteristic!]
 
             // Add service (advertising will start in didAdd delegate)
-            SecureLogger.debug("🔧 Adding BLE service...", category: .session)
+ SecureLogger.debug(" Adding BLE service...", category: .session)
             peripheral.add(service)
 
         case .poweredOff:
             // Bluetooth was turned off - clean up peripheral state
-            SecureLogger.info("📴 Bluetooth powered off - cleaning up peripheral state", category: .session)
+ SecureLogger.info(" Bluetooth powered off - cleaning up peripheral state", category: .session)
             peripheral.stopAdvertising()
             // Clear subscribed centrals (they are now invalid)
             let centralPeerIDs = centralToPeerID.values.map { $0 }
@@ -2345,7 +2345,7 @@ extension BLEService: CBPeripheralManagerDelegate {
 
         case .unauthorized:
             // User denied Bluetooth permission
-            SecureLogger.warning("🚫 Bluetooth unauthorized for peripheral role", category: .session)
+ SecureLogger.warning(" Bluetooth unauthorized for peripheral role", category: .session)
             peripheral.stopAdvertising()
             subscribedCentrals.removeAll()
             centralToPeerID.removeAll()
@@ -2354,17 +2354,17 @@ extension BLEService: CBPeripheralManagerDelegate {
 
         case .unsupported:
             // Device doesn't support BLE peripheral role
-            SecureLogger.error("❌ Bluetooth LE peripheral role not supported", category: .session)
+ SecureLogger.error(" Bluetooth LE peripheral role not supported", category: .session)
 
         case .resetting:
             // Bluetooth stack is resetting
-            SecureLogger.info("🔄 Bluetooth peripheral stack resetting...", category: .session)
+ SecureLogger.info(" Bluetooth peripheral stack resetting...", category: .session)
 
         case .unknown:
-            SecureLogger.debug("❓ Peripheral Bluetooth state unknown (initializing)", category: .session)
+ SecureLogger.debug(" Peripheral Bluetooth state unknown (initializing)", category: .session)
 
         @unknown default:
-            SecureLogger.warning("⚠️ Unknown peripheral Bluetooth state: \(peripheral.state.rawValue)", category: .session)
+ SecureLogger.warning(" Unknown peripheral Bluetooth state: \(peripheral.state.rawValue)", category: .session)
         }
     }
     
@@ -2374,7 +2374,7 @@ extension BLEService: CBPeripheralManagerDelegate {
         let restoredAdvertisement = (dict[CBPeripheralManagerRestoredStateAdvertisementDataKey] as? [String: Any]) ?? [:]
 
         SecureLogger.info(
-            "♻️ Peripheral restore: services=\(restoredServices.count) advertisingDataKeys=\(Array(restoredAdvertisement.keys))",
+            "Peripheral restore: services=\(restoredServices.count) advertisingDataKeys=\(Array(restoredAdvertisement.keys))",
             category: .session
         )
 
@@ -2396,22 +2396,22 @@ extension BLEService: CBPeripheralManagerDelegate {
     
     func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
         if let error = error {
-            SecureLogger.error("❌ Failed to add service: \(error.localizedDescription)", category: .session)
+ SecureLogger.error(" Failed to add service: \(error.localizedDescription)", category: .session)
             return
         }
         
-        SecureLogger.debug("✅ Service added successfully, starting advertising", category: .session)
+ SecureLogger.debug(" Service added successfully, starting advertising", category: .session)
         
         // Start advertising after service is confirmed added
         let adData = buildAdvertisementData()
         peripheral.startAdvertising(adData)
         
-        SecureLogger.debug("📡 Started advertising (LocalName: \((adData[CBAdvertisementDataLocalNameKey] as? String) != nil ? "on" : "off"), ID: \(myPeerID.id.prefix(8))…)", category: .session)
+ SecureLogger.debug(" Started advertising (LocalName: \((adData[CBAdvertisementDataLocalNameKey] as? String) != nil ? "on" : "off"), ID: \(myPeerID.id.prefix(8))…)", category: .session)
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
         let centralUUID = central.identifier.uuidString
-        SecureLogger.debug("📥 Central subscribed: \(centralUUID)", category: .session)
+ SecureLogger.debug(" Central subscribed: \(centralUUID)", category: .session)
         subscribedCentrals.append(central)
 
         // BCH-01-004: Rate-limit subscription-triggered announces to prevent enumeration attacks
@@ -2427,7 +2427,7 @@ extension BLEService: CBPeripheralManagerDelegate {
 
             // If within backoff period, skip the announce
             if timeSinceLastAnnounce < existingState.currentBackoffSeconds {
-                SecureLogger.warning("🛡️ BCH-01-004: Rate-limited announce for central \(centralUUID.prefix(8))... (backoff: \(Int(existingState.currentBackoffSeconds))s, attempts: \(existingState.attemptCount))", category: .security)
+ SecureLogger.warning(" BCH-01-004: Rate-limited announce for central \(centralUUID.prefix(8))... (backoff: \(Int(existingState.currentBackoffSeconds))s, attempts: \(existingState.attemptCount))", category: .security)
 
                 // Increment attempt count and increase backoff
                 // Update lastAnnounceTime to 'now' so each blocked attempt extends the suppression window
@@ -2445,7 +2445,7 @@ extension BLEService: CBPeripheralManagerDelegate {
 
                 // If too many rapid attempts, this is likely an enumeration attack - don't respond
                 if newAttemptCount >= TransportConfig.bleSubscriptionRateLimitMaxAttempts {
-                    SecureLogger.warning("🚨 BCH-01-004: Possible enumeration attack from central \(centralUUID.prefix(8))... - suppressing announce", category: .security)
+ SecureLogger.warning(" BCH-01-004: Possible enumeration attack from central \(centralUUID.prefix(8))... - suppressing announce", category: .security)
                     return
                 }
 
@@ -2490,12 +2490,12 @@ extension BLEService: CBPeripheralManagerDelegate {
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
-        SecureLogger.debug("📤 Central unsubscribed: \(central.identifier.uuidString)", category: .session)
+ SecureLogger.debug(" Central unsubscribed: \(central.identifier.uuidString)", category: .session)
         subscribedCentrals.removeAll { $0.identifier == central.identifier }
         
         // Ensure we're still advertising for other devices to find us
         if peripheral.isAdvertising == false {
-            SecureLogger.debug("📡 Restarting advertising after central unsubscribed", category: .session)
+ SecureLogger.debug(" Restarting advertising after central unsubscribed", category: .session)
             peripheral.startAdvertising(buildAdvertisementData())
         }
         
@@ -2530,7 +2530,7 @@ extension BLEService: CBPeripheralManagerDelegate {
     }
     
     func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
-        SecureLogger.debug("📤 Peripheral manager ready to send more notifications", category: .session)
+ SecureLogger.debug(" Peripheral manager ready to send more notifications", category: .session)
         
         // Retry pending notifications now that queue has space
         collectionsQueue.async(flags: .barrier) { [weak self] in
@@ -2551,7 +2551,7 @@ extension BLEService: CBPeripheralManagerDelegate {
                         // Still full, re-queue this and all remaining items
                         let remaining = pending.dropFirst(index)
                         self.pendingNotifications.append(contentsOf: remaining)
-                        SecureLogger.debug("⚠️ Notification queue still full after \(sentCount) sent, re-queuing \(remaining.count) items", category: .session)
+ SecureLogger.debug(" Notification queue still full after \(sentCount) sent, re-queuing \(remaining.count) items", category: .session)
                         break  // Stop trying, wait for next ready callback
                     } else {
                         sentCount += 1
@@ -2563,7 +2563,7 @@ extension BLEService: CBPeripheralManagerDelegate {
                         // Still full, re-queue this and all remaining items
                         let remaining = pending.dropFirst(index)
                         self.pendingNotifications.append(contentsOf: remaining)
-                        SecureLogger.debug("⚠️ Notification queue still full after \(sentCount) sent, re-queuing \(remaining.count) items", category: .session)
+ SecureLogger.debug(" Notification queue still full after \(sentCount) sent, re-queuing \(remaining.count) items", category: .session)
                         break
                     } else {
                         sentCount += 1
@@ -2572,11 +2572,11 @@ extension BLEService: CBPeripheralManagerDelegate {
             }
 
             if sentCount > 0 {
-                SecureLogger.debug("✅ Sent \(sentCount) pending notifications from retry queue", category: .session)
+ SecureLogger.debug(" Sent \(sentCount) pending notifications from retry queue", category: .session)
             }
             
             if !self.pendingNotifications.isEmpty {
-                SecureLogger.debug("📋 Still have \(self.pendingNotifications.count) pending notifications", category: .session)
+ SecureLogger.debug(" Still have \(self.pendingNotifications.count) pending notifications", category: .session)
             }
         }
     }
@@ -2584,7 +2584,7 @@ extension BLEService: CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]) {
         // Suppress logs for single write requests to reduce noise
         if requests.count > 1 {
-            SecureLogger.debug("📥 Received \(requests.count) write requests from central", category: .session)
+ SecureLogger.debug(" Received \(requests.count) write requests from central", category: .session)
         }
         
         // IMPORTANT: Respond immediately to prevent timeouts!
@@ -2623,7 +2623,7 @@ extension BLEService: CBPeripheralManagerDelegate {
             if combined.count >= 2 {
                 let peekType = combined[1]
                 if peekType != MessageType.announce.rawValue {
-                    SecureLogger.debug("📥 Accumulated write from central \(centralUUID): size=\(combined.count) (+\(appendedBytes)) bytes (type=\(peekType)), offsets=\(offsets)", category: .session)
+ SecureLogger.debug(" Accumulated write from central \(centralUUID): size=\(combined.count) (+\(appendedBytes)) bytes (type=\(peekType)), offsets=\(offsets)", category: .session)
                 }
             }
 
@@ -2637,7 +2637,7 @@ extension BLEService: CBPeripheralManagerDelegate {
                 let trustedSenderID: PeerID?
                 if let knownPeerID = centralToPeerID[centralUUID] {
                     if knownPeerID != claimedSenderID {
-                        SecureLogger.warning("🚫 SECURITY: Sender ID spoofing attempt detected! Central \(centralUUID.prefix(8))… claimed to be \(claimedSenderID.id.prefix(8))… but is bound to \(knownPeerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" SECURITY: Sender ID spoofing attempt detected! Central \(centralUUID.prefix(8))… claimed to be \(claimedSenderID.id.prefix(8))… but is bound to \(knownPeerID.id.prefix(8))…", category: .security)
                         continue
                     }
                     trustedSenderID = knownPeerID
@@ -2650,7 +2650,7 @@ extension BLEService: CBPeripheralManagerDelegate {
                 }
 
                 if packet.type != MessageType.announce.rawValue {
-                    SecureLogger.debug("📦 Decoded (combined) packet type: \(packet.type) from sender: \(claimedSenderID)", category: .session)
+ SecureLogger.debug(" Decoded (combined) packet type: \(packet.type) from sender: \(claimedSenderID)", category: .session)
                 }
                 if !subscribedCentrals.contains(sorted[0].central) {
                     subscribedCentrals.append(sorted[0].central)
@@ -2678,12 +2678,12 @@ extension BLEService: CBPeripheralManagerDelegate {
                 // If buffer grows suspiciously large, reset to avoid memory leak
                 if combined.count > TransportConfig.blePendingWriteBufferCapBytes { // cap for safety
                     pendingWriteBuffers.removeValue(forKey: centralUUID)
-                    SecureLogger.warning("⚠️ Dropping oversized pending write buffer (\(combined.count) bytes) for central \(centralUUID)", category: .session)
+ SecureLogger.warning(" Dropping oversized pending write buffer (\(combined.count) bytes) for central \(centralUUID)", category: .session)
                 }
                 // If this was a single short write and still failed, log the raw chunk for debugging
                 if !hasMultiple, let only = sorted.first, let raw = only.value {
                     let prefix = raw.prefix(16).map { String(format: "%02x", $0) }.joined(separator: " ")
-                    SecureLogger.error("❌ Failed to decode packet from central (len=\(raw.count), prefix=\(prefix))", category: .session)
+ SecureLogger.error(" Failed to decode packet from central (len=\(raw.count), prefix=\(prefix))", category: .session)
                 }
             }
         }
@@ -2764,7 +2764,7 @@ extension BLEService {
         #endif
 
         SecureLogger.info(
-            "📊 BLE status [\(context)]: phase=\(appPhase) central=\(centralState) scanning=\(isScanning) peripheral=\(peripheralState) advertising=\(isAdvertising) connected=\(peerSummary.connected) known=\(peerSummary.known) candidates=\(peerSummary.candidates)\(backgroundDescriptor)",
+            "BLE status [\(context)]: phase=\(appPhase) central=\(centralState) scanning=\(isScanning) peripheral=\(peripheralState) advertising=\(isAdvertising) connected=\(peerSummary.connected) known=\(peerSummary.known) candidates=\(peerSummary.candidates)\(backgroundDescriptor)",
             category: .session
         )
     }
@@ -2802,7 +2802,7 @@ extension BLEService {
         )
         // Re-sign the packet since route and version changed
         guard let signedPacket = noiseService.signPacket(routedPacket) else {
-            SecureLogger.error("❌ Failed to re-sign packet with route", category: .security)
+ SecureLogger.error(" Failed to re-sign packet with route", category: .security)
             return packet // Return original packet if signing fails
         }
         return signedPacket
@@ -2879,7 +2879,7 @@ extension BLEService {
     
     private func configureNoiseServiceCallbacks(for service: NoiseEncryptionService) {
         service.onPeerAuthenticated = { [weak self] peerID, fingerprint in
-            SecureLogger.debug("🔐 Noise session authenticated with \(peerID), fingerprint: \(fingerprint.prefix(16))...")
+ SecureLogger.debug(" Noise session authenticated with \(peerID), fingerprint: \(fingerprint.prefix(16))...")
             self?.messageQueue.async { [weak self] in
                 self?.sendPendingMessagesAfterHandshake(for: peerID)
                 self?.sendPendingNoisePayloadsAfterHandshake(for: peerID)
@@ -2908,7 +2908,7 @@ extension BLEService {
                     self.pendingNoisePayloadsAfterHandshake[peerID] = []
                 }
                 self.pendingNoisePayloadsAfterHandshake[peerID]?.append(typedPayload)
-                SecureLogger.debug("📥 Queued noise payload for \(peerID) pending handshake", category: .session)
+ SecureLogger.debug(" Queued noise payload for \(peerID) pending handshake", category: .session)
             }
             initiateNoiseHandshake(with: peerID)
             return
@@ -3018,7 +3018,7 @@ extension BLEService {
                     let newSize = data.count
                     // If single chunk exceeds cap, drop it immediately
                     if newSize > capBytes {
-                        SecureLogger.warning("⚠️ Dropping oversized write chunk (\(newSize)B) for peripheral \(uuid)", category: .session)
+ SecureLogger.warning(" Dropping oversized write chunk (\(newSize)B) for peripheral \(uuid)", category: .session)
                     } else {
                         let item = PendingWrite(priority: priority, data: data)
                         var total = queue.reduce(0) { $0 + $1.data.count } + newSize
@@ -3032,7 +3032,7 @@ extension BLEService {
                                 total -= removed.data.count
                             }
                             if removedBytes > 0 {
-                                SecureLogger.warning("📉 Trimmed pending write buffer for \(uuid) by \(removedBytes)B to \(total)B", category: .session)
+ SecureLogger.warning(" Trimmed pending write buffer for \(uuid) by \(removedBytes)B to \(total)B", category: .session)
                             }
                         }
                         self.pendingPeripheralWrites[uuid] = queue.isEmpty ? nil : queue
@@ -3111,7 +3111,7 @@ extension BLEService {
             }
 
             if sentCount > 0 {
-                SecureLogger.debug("🔄 Periodic drain: sent \(sentCount) pending notifications", category: .session)
+ SecureLogger.debug(" Periodic drain: sent \(sentCount) pending notifications", category: .session)
             }
         }
     }
@@ -3156,7 +3156,7 @@ extension BLEService {
     // MARK: Private Message Handling
     
     private func sendPrivateMessage(_ content: String, to recipientID: PeerID, messageID: String) {
-        SecureLogger.debug("📨 Sending PM to \(recipientID): \(content.prefix(30))...", category: .session)
+ SecureLogger.debug(" Sending PM to \(recipientID): \(content.prefix(30))...", category: .session)
         
         // Check if we have an established Noise session
         if noiseService.hasEstablishedSession(with: recipientID) {
@@ -3212,7 +3212,7 @@ extension BLEService {
             }
         } else {
             // Queue message for sending after handshake completes
-            SecureLogger.debug("🤝 No session with \(recipientID), initiating handshake and queueing message", category: .session)
+ SecureLogger.debug(" No session with \(recipientID), initiating handshake and queueing message", category: .session)
             
             // Queue the message (especially important for favorite notifications)
             collectionsQueue.sync(flags: .barrier) {
@@ -3264,7 +3264,7 @@ extension BLEService {
 
         guard let messages = pendingMessages, !messages.isEmpty else { return }
 
-        SecureLogger.debug("📤 Sending \(messages.count) pending messages after handshake to \(peerID)", category: .session)
+ SecureLogger.debug(" Sending \(messages.count) pending messages after handshake to \(peerID)", category: .session)
 
         // Track failed messages for re-queuing
         var failedMessages: [(content: String, messageID: String)] = []
@@ -3303,7 +3303,7 @@ extension BLEService {
                     self?.delegate?.didUpdateMessageDeliveryStatus(messageID, status: .sent)
                 }
 
-                SecureLogger.debug("✅ Sent pending message \(messageID) to \(peerID) after handshake", category: .session)
+ SecureLogger.debug(" Sent pending message \(messageID) to \(peerID) after handshake", category: .session)
             } catch {
                 SecureLogger.error("Failed to send pending message after handshake: \(error)")
                 failedMessages.append((content, messageID))
@@ -3324,7 +3324,7 @@ extension BLEService {
                 }
                 // Prepend failed messages to maintain order
                 self.pendingMessagesAfterHandshake[peerID]?.insert(contentsOf: failedMessages, at: 0)
-                SecureLogger.warning("⚠️ Re-queued \(failedMessages.count) failed messages for \(peerID)", category: .session)
+ SecureLogger.warning(" Re-queued \(failedMessages.count) failed messages for \(peerID)", category: .session)
             }
         }
     }
@@ -3355,9 +3355,9 @@ extension BLEService {
             }
         }
         if let transferId = context.transferId {
-            SecureLogger.debug("🚦 Queued media transfer \(transferId.prefix(8))… waiting for slot", category: .session)
+ SecureLogger.debug(" Queued media transfer \(transferId.prefix(8))… waiting for slot", category: .session)
         } else {
-            SecureLogger.debug("🚦 Queued fragment transfer waiting for slot", category: .session)
+ SecureLogger.debug(" Queued fragment transfer waiting for slot", category: .session)
         }
     }
 
@@ -3616,7 +3616,7 @@ extension BLEService {
                 }
                 incomingFragments[key] = [:]
                 fragmentMetadata[key] = (originalType, total, Date())
-                SecureLogger.debug("📦 Started fragment assembly id=\(String(format: "%016llx", fragU64)) total=\(total)", category: .session)
+ SecureLogger.debug(" Started fragment assembly id=\(String(format: "%016llx", fragU64)) total=\(total)", category: .session)
             }
 
             // Check cumulative size before storing this fragment
@@ -3632,7 +3632,7 @@ extension BLEService {
             guard projectedSize <= assemblyLimit else {
                 // Exceeds size limit - evict this assembly
                 SecureLogger.warning(
-                    "🚫 Fragment assembly exceeds size limit (\(projectedSize) bytes > \(assemblyLimit)), evicting. Type=\(originalType) Index=\(index)/\(total)",
+                    "Fragment assembly exceeds size limit (\(projectedSize) bytes > \(assemblyLimit)), evicting. Type=\(originalType) Index=\(index)/\(total)",
                     category: .security
                 )
                 incomingFragments.removeValue(forKey: key)
@@ -3643,7 +3643,7 @@ extension BLEService {
             }
 
             incomingFragments[key]?[index] = Data(fragmentData)
-            SecureLogger.debug("📦 Fragment \(index + 1)/\(total) (len=\(fragmentData.count)) for id=\(String(format: "%016llx", fragU64))", category: .session)
+ SecureLogger.debug(" Fragment \(index + 1)/\(total) (len=\(fragmentData.count)) for id=\(String(format: "%016llx", fragU64))", category: .session)
 
             // Check if complete
             if let fragments = incomingFragments[key], fragments.count == total {
@@ -3673,12 +3673,12 @@ extension BLEService {
             if !validatePacket(originalPacket, from: innerSender) {
                 // Cleanup below
             } else {
-                SecureLogger.debug("✅ Reassembled packet id=\(String(format: "%016llx", fragU64)) type=\(originalPacket.type) bytes=\(reassembled.count)", category: .session)
+ SecureLogger.debug(" Reassembled packet id=\(String(format: "%016llx", fragU64)) type=\(originalPacket.type) bytes=\(reassembled.count)", category: .session)
                 originalPacket.ttl = 0
                 handleReceivedPacket(originalPacket, from: peerID)
             }
         } else {
-            SecureLogger.error("❌ Failed to decode reassembled packet (type=\(originalType), total=\(total))", category: .session)
+ SecureLogger.error(" Failed to decode reassembled packet (type=\(originalType), total=\(total))", category: .session)
         }
 
         // Critical section: Cleanup completed assembly
@@ -3708,7 +3708,7 @@ extension BLEService {
         // Only log non-announce packets to reduce noise
         if packet.type != MessageType.announce.rawValue {
             // Log packet details for debugging
-            SecureLogger.debug("📦 Handling packet type \(packet.type) from \(senderID), messageID: \(messageID)", category: .session)
+ SecureLogger.debug(" Handling packet type \(packet.type) from \(senderID), messageID: \(messageID)", category: .session)
         }
         
         // Efficient deduplication
@@ -3720,7 +3720,7 @@ extension BLEService {
             // Announce packets (type 1) are sent every 10 seconds for peer discovery
             // It's normal to see these as duplicates - don't log them to reduce noise
             if packet.type != MessageType.announce.rawValue {
-                SecureLogger.debug("⚠️ Duplicate packet ignored: \(messageID)", category: .session)
+ SecureLogger.debug(" Duplicate packet ignored: \(messageID)", category: .session)
             }
             // In sparse graphs (<=2 neighbors), keep the pending relay to ensure bridging.
             // In denser graphs, cancel the pending relay to reduce redundant floods.
@@ -3779,7 +3779,7 @@ extension BLEService {
             handleLeave(packet, from: senderID)
             
         case .none:
-            SecureLogger.warning("⚠️ Unknown message type: \(packet.type)", category: .session)
+ SecureLogger.warning(" Unknown message type: \(packet.type)", category: .session)
             break
         }
         
@@ -3824,7 +3824,7 @@ extension BLEService {
     
     private func handleAnnounce(_ packet: SafeGuardianPacket, from peerID: PeerID) {
         guard let announcement = AnnouncementPacket.decode(from: packet.payload) else {
-            SecureLogger.error("❌ Failed to decode announce packet from \(peerID)", category: .session)
+ SecureLogger.error(" Failed to decode announce packet from \(peerID)", category: .session)
             return
         }
         
@@ -3832,7 +3832,7 @@ extension BLEService {
         // This helps detect relayed or spoofed announces. Only warn in release; assert in debug.
         let derivedFromKey = PeerID(publicKey: announcement.noisePublicKey)
         if derivedFromKey != peerID {
-            SecureLogger.warning("⚠️ Announce sender mismatch: derived \(derivedFromKey.id.prefix(8))… vs packet \(peerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" Announce sender mismatch: derived \(derivedFromKey.id.prefix(8))… vs packet \(peerID.id.prefix(8))…", category: .security)
             return
         }
         
@@ -3862,11 +3862,11 @@ extension BLEService {
         if packet.signature != nil {
             verifiedAnnounce = noiseService.verifyPacketSignature(packet, publicKey: announcement.signingPublicKey)
             if !verifiedAnnounce {
-                SecureLogger.warning("⚠️ Signature verification for announce failed \(peerID.id.prefix(8))", category: .security)
+ SecureLogger.warning(" Signature verification for announce failed \(peerID.id.prefix(8))", category: .security)
             }
         }
         if let existingKey = existingPeerForVerify?.noisePublicKey, existingKey != announcement.noisePublicKey {
-            SecureLogger.warning("⚠️ Announce key mismatch for \(peerID.id.prefix(8))… — keeping unverified", category: .security)
+ SecureLogger.warning(" Announce key mismatch for \(peerID.id.prefix(8))… — keeping unverified", category: .security)
             verifiedAnnounce = false
         }
 
@@ -3899,7 +3899,7 @@ extension BLEService {
 
             // Require verified announce; ignore otherwise (no backward compatibility)
             if !verified {
-                SecureLogger.warning("❌ Ignoring unverified announce from \(peerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" Ignoring unverified announce from \(peerID.id.prefix(8))…", category: .security)
                 // Reset flags to prevent post-barrier code from acting on unverified announces
                 isNewPeer = false
                 isReconnectedPeer = false
@@ -3935,17 +3935,17 @@ extension BLEService {
             if isDirectAnnounce || hasPeripheralConnection || hasCentralSubscription {
                 let now = Date()
                 if existingPeer == nil {
-                    SecureLogger.debug("🆕 New peer: \(announcement.nickname)", category: .session)
+ SecureLogger.debug(" New peer: \(announcement.nickname)", category: .session)
                 } else if wasDisconnected {
                     // Debounce 'reconnected' logs within short window
                     if let last = lastReconnectLogAt[peerID], now.timeIntervalSince(last) < TransportConfig.bleReconnectLogDebounceSeconds {
                         // Skip duplicate log
                     } else {
-                        SecureLogger.debug("🔄 Peer \(announcement.nickname) reconnected", category: .session)
+ SecureLogger.debug(" Peer \(announcement.nickname) reconnected", category: .session)
                         lastReconnectLogAt[peerID] = now
                     }
                 } else if existingPeer?.nickname != announcement.nickname {
-                    SecureLogger.debug("🔄 Peer \(peerID) changed nickname: \(existingPeer?.nickname ?? "Unknown") -> \(announcement.nickname)", category: .session)
+ SecureLogger.debug(" Peer \(peerID) changed nickname: \(existingPeer?.nickname ?? "Unknown") -> \(announcement.nickname)", category: .session)
                 }
             }
         }
@@ -4009,7 +4009,7 @@ extension BLEService {
     // Handle REQUEST_SYNC: decode payload and respond with missing packets via sync manager
     private func handleRequestSync(_ packet: SafeGuardianPacket, from peerID: PeerID) {
         guard let req = RequestSyncPacket.decode(from: packet.payload) else {
-            SecureLogger.warning("⚠️ Malformed REQUEST_SYNC from \(peerID)", category: .session)
+ SecureLogger.warning(" Malformed REQUEST_SYNC from \(peerID)", category: .session)
             return
         }
         gossipSyncManager?.handleRequestSync(from: peerID, request: req)
@@ -4084,7 +4084,7 @@ extension BLEService {
         }
 
         guard accepted else {
-            SecureLogger.warning("🚫 Dropping public message from unverified or unknown peer \(peerID.id.prefix(8))…", category: .security)
+ SecureLogger.warning(" Dropping public message from unverified or unknown peer \(peerID.id.prefix(8))…", category: .security)
             return
         }
 
@@ -4097,7 +4097,7 @@ extension BLEService {
         }
 
         guard let content = String(data: packet.payload, encoding: .utf8) else {
-            SecureLogger.error("❌ Failed to decode message payload as UTF-8", category: .session)
+ SecureLogger.error(" Failed to decode message payload as UTF-8", category: .session)
             return
         }
         // Determine if we have a direct link to the sender
@@ -4105,7 +4105,7 @@ extension BLEService {
         let hasDirectLink = directLink.hasPeripheral || directLink.hasCentral
 
         let pathTag = hasDirectLink ? "direct" : "mesh"
-        SecureLogger.debug("💬 [\(senderNickname)] TTL:\(packet.ttl) (\(pathTag)): \(String(content.prefix(50)))\(content.count > 50 ? "..." : "")", category: .session)
+ SecureLogger.debug(" [\(senderNickname)] TTL:\(packet.ttl) (\(pathTag)): \(String(content.prefix(50)))\(content.count > 50 ? "..." : "")", category: .session)
 
         let ts = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000)
         var resolvedSelfMessageID: String? = nil
@@ -4156,15 +4156,15 @@ extension BLEService {
     }
     
     private func handleNoiseEncrypted(_ packet: SafeGuardianPacket, from peerID: PeerID) {
-        SecureLogger.debug("🔐 handleNoiseEncrypted called for packet from \(peerID)")
+ SecureLogger.debug(" handleNoiseEncrypted called for packet from \(peerID)")
         
         guard let recipientID = PeerID(hexData: packet.recipientID) else {
-            SecureLogger.warning("⚠️ Encrypted message has no recipient ID", category: .session)
+ SecureLogger.warning(" Encrypted message has no recipient ID", category: .session)
             return
         }
         
         if recipientID != myPeerID {
-            SecureLogger.debug("🔐 Encrypted message not for me (for \(recipientID), I am \(myPeerID))", category: .session)
+ SecureLogger.debug(" Encrypted message not for me (for \(recipientID), I am \(myPeerID))", category: .session)
             return
         }
         
@@ -4206,19 +4206,19 @@ extension BLEService {
                     self?.delegate?.didReceiveNoisePayload(from: peerID, type: .verifyResponse, payload: Data(payloadData), timestamp: ts)
                 }
             case .none:
-                SecureLogger.warning("⚠️ Unknown noise payload type: \(payloadType)")
+ SecureLogger.warning(" Unknown noise payload type: \(payloadType)")
             }
         } catch NoiseEncryptionError.sessionNotEstablished {
             // We received an encrypted message before establishing a session with this peer.
             // Trigger a handshake so future messages can be decrypted.
-            SecureLogger.debug("🔑 Encrypted message from \(peerID) without session; initiating handshake")
+ SecureLogger.debug(" Encrypted message from \(peerID) without session; initiating handshake")
             if !noiseService.hasSession(with: peerID) {
                 initiateNoiseHandshake(with: peerID)
             }
         } catch {
             // Decryption failed - clear the corrupted session and re-initiate handshake
             // This handles cases where session state got out of sync (nonce mismatch, etc.)
-            SecureLogger.error("❌ Failed to decrypt message from \(peerID): \(error) - clearing session and re-initiating handshake")
+ SecureLogger.error(" Failed to decrypt message from \(peerID): \(error) - clearing session and re-initiating handshake")
             noiseService.clearSession(for: peerID)
             initiateNoiseHandshake(with: peerID)
         }
@@ -4233,7 +4233,7 @@ extension BLEService {
             return list
         }
         guard !payloads.isEmpty else { return }
-        SecureLogger.debug("📤 Sending \(payloads.count) pending noise payloads to \(peerID) after handshake", category: .session)
+ SecureLogger.debug(" Sending \(payloads.count) pending noise payloads to \(peerID) after handshake", category: .session)
         for payload in payloads {
             do {
                 let encrypted = try noiseService.encrypt(payload, for: peerID)
@@ -4248,7 +4248,7 @@ extension BLEService {
                 )
                 broadcastPacket(packet)
             } catch {
-                SecureLogger.error("❌ Failed to send pending noise payload to \(peerID): \(error)")
+ SecureLogger.error(" Failed to send pending noise payload to \(peerID): \(error)")
             }
         }
     }
@@ -4406,7 +4406,7 @@ extension BLEService {
                 // Cleanup: remove peers that are not connected and past reachability retention
                 if !peer.isConnected {
                     if age > retention {
-                        SecureLogger.debug("🗑️ Removing stale peer after reachability window: \(peerID) (\(peer.nickname))", category: .session)
+ SecureLogger.debug(" Removing stale peer after reachability window: \(peerID) (\(peer.nickname))", category: .session)
                         // Also remove any stored announcement from sync candidates
                         gossipSyncManager?.removeAnnouncementForPeer(peerID)
                         peers.removeValue(forKey: peerID)

@@ -34,7 +34,7 @@ struct NotificationStreamAssembler {
         let minimumFramePrefix = BinaryProtocol.v1HeaderSize + BinaryProtocol.senderIDSize
 
         if buffer.count > TransportConfig.bleNotificationAssemblerHardCapBytes {
-            SecureLogger.error("❌ Notification assembler overflow (\(buffer.count) bytes); dropping partial frame", category: .session)
+ SecureLogger.error(" Notification assembler overflow (\(buffer.count) bytes); dropping partial frame", category: .session)
             resetState()
             return ([], [], true)
         }
@@ -94,7 +94,7 @@ struct NotificationStreamAssembler {
             if isCompressed {
                 let rawLengthFieldBytes = (version == 2) ? 4 : 2
                 if payloadLength < rawLengthFieldBytes {
-                    SecureLogger.error("❌ Invalid compressed payload length (\(payloadLength))", category: .session)
+ SecureLogger.error(" Invalid compressed payload length (\(payloadLength))", category: .session)
                     resetState()
                     didReset = true
                     break
@@ -102,7 +102,7 @@ struct NotificationStreamAssembler {
             }
 
             guard frameLength > 0, frameLength <= maxFrameLength else {
-                SecureLogger.error("❌ Notification frame length \(frameLength) invalid (cap=\(maxFrameLength)); resetting stream", category: .session)
+ SecureLogger.error(" Notification frame length \(frameLength) invalid (cap=\(maxFrameLength)); resetting stream", category: .session)
                 resetState()
                 didReset = true
                 break
@@ -117,7 +117,7 @@ struct NotificationStreamAssembler {
                     let elapsed = now.uptimeNanoseconds - started.uptimeNanoseconds
                     let threshold = UInt64(TransportConfig.bleAssemblerStallResetMs) * 1_000_000
                     if elapsed >= threshold {
-                        SecureLogger.debug("📉 Resetting notification assembler after waiting \(remaining)B for \(TransportConfig.bleAssemblerStallResetMs)ms", category: .session)
+ SecureLogger.debug(" Resetting notification assembler after waiting \(remaining)B for \(TransportConfig.bleAssemblerStallResetMs)ms", category: .session)
                         resetState()
                         didReset = true
                     } else {

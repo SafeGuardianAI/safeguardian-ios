@@ -74,7 +74,7 @@ final class MessageRouter {
             // Enforce per-peer size limit with FIFO eviction
             if let count = outbox[peerID]?.count, count > Self.maxMessagesPerPeer {
                 let evicted = outbox[peerID]?.removeFirst()
-                SecureLogger.warning("📤 Outbox overflow for \(peerID.id.prefix(8))… - evicted oldest message: \(evicted?.messageID.prefix(8) ?? "?")…", category: .session)
+ SecureLogger.warning(" Outbox overflow for \(peerID.id.prefix(8))… - evicted oldest message: \(evicted?.messageID.prefix(8) ?? "?")…", category: .session)
             }
 
             SecureLogger.debug("Queued PM for \(peerID.id.prefix(8))… (no reachable transport) id=\(messageID.prefix(8))… queue=\(outbox[peerID]?.count ?? 0)", category: .session)

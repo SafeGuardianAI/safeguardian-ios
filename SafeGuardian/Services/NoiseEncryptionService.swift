@@ -626,7 +626,7 @@ final class NoiseEncryptionService {
                 fingerprintToPeerID.removeValue(forKey: fingerprint)
             }
         }
-        SecureLogger.debug("🔓 Cleared Noise session for \(peerID)", category: .session)
+ SecureLogger.debug(" Cleared Noise session for \(peerID)", category: .session)
     }
     
     // MARK: - Private Helpers

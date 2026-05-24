@@ -371,7 +371,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if let data = try? JSONEncoder().encode(Array(sentReadReceipts)) {
                 UserDefaults.standard.set(data, forKey: "sentReadReceipts")
             } else {
-                SecureLogger.error("❌ Failed to encode read receipts for persistence", category: .session)
+ SecureLogger.error(" Failed to encode read receipts for persistence", category: .session)
             }
         }
     }
@@ -534,7 +534,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     if uniquePeers[peer.peerID] == nil {
                         uniquePeers[peer.peerID] = peer
                     } else {
-                        SecureLogger.warning("⚠️ Duplicate peer ID detected: \(peer.peerID) (\(peer.displayName))", category: .session)
+ SecureLogger.warning(" Duplicate peer ID detected: \(peer.peerID) (\(peer.displayName))", category: .session)
                     }
                 }
                 self.peerIndex = uniquePeers
@@ -1043,7 +1043,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 messageTimestamp = Date(timeIntervalSince1970: TimeInterval(event.created_at))
                 geoContext = (channel: ch, event: event, identity: identity, teleported: teleported)
             } catch {
-                SecureLogger.error("❌ Failed to prepare geohash message: \(error)", category: .session)
+ SecureLogger.error(" Failed to prepare geohash message: \(error)", category: .session)
                 addSystemMessage(
                     String(localized: "system.location.send_failed", comment: "System message when a location channel send fails")
                 )
@@ -1471,7 +1471,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 
                 // If we have a private chat open with the old peer ID, update it to the new one
                 if selectedPrivateChatPeer == oldPeerID {
-                    SecureLogger.info("📱 Updating private chat peer ID due to key change: \(oldPeerID) -> \(newPeerID)", category: .session)
+ SecureLogger.info(" Updating private chat peer ID due to key change: \(oldPeerID) -> \(newPeerID)", category: .session)
                     
                     // Transfer private chat messages to new peer ID
                     if let messages = privateChats[oldPeerID] {
@@ -1502,7 +1502,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 } else {
                     // Even if the chat isn't open, migrate any existing private chat data
                     if let messages = privateChats[oldPeerID] {
-                        SecureLogger.debug("📱 Migrating private chat messages from \(oldPeerID) to \(newPeerID)", category: .session)
+ SecureLogger.debug(" Migrating private chat messages from \(oldPeerID) to \(newPeerID)", category: .session)
                         var chats = privateChats
                         chats[newPeerID] = messages
                         chats.removeValue(forKey: oldPeerID)
@@ -1664,7 +1664,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         // Track ourselves as active participant
                         self.participantTracker.recordParticipant(pubkeyHex: identity.publicKeyHex)
                     } catch {
-                        SecureLogger.error("❌ Failed to send geohash screenshot message: \(error)", category: .session)
+ SecureLogger.error(" Failed to send geohash screenshot message: \(error)", category: .session)
                         self.addSystemMessage(
                             String(localized: "system.location.send_failed", comment: "System message when a location channel send fails")
                         )
@@ -1721,7 +1721,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 // Search for the current peer ID with the same nickname
                 for (currentPeerID, currentNickname) in meshService.getPeerNicknames() {
                     if currentNickname == peerNickname {
-                        SecureLogger.info("📖 Resolved updated peer ID for read receipt: \(peerID) -> \(currentPeerID)", category: .session)
+ SecureLogger.info(" Resolved updated peer ID for read receipt: \(peerID) -> \(currentPeerID)", category: .session)
                         actualPeerID = currentPeerID
                         break
                     }
@@ -1983,7 +1983,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 // Delete the entire files directory and recreate it
                 if FileManager.default.fileExists(atPath: filesDir.path) {
                     try FileManager.default.removeItem(at: filesDir)
-                    SecureLogger.info("🗑️ Deleted all media files during panic clear", category: .session)
+ SecureLogger.info(" Deleted all media files during panic clear", category: .session)
                 }
 
                 // Recreate empty directory structure
@@ -2025,7 +2025,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 for item in contents {
                     try FileManager.default.removeItem(at: item)
                 }
-                SecureLogger.info("🗑️ Cleared app switcher snapshots during panic clear", category: .session)
+ SecureLogger.info(" Cleared app switcher snapshots during panic clear", category: .session)
             }
         } catch {
             SecureLogger.error("Failed to clear app switcher snapshots: \(error)", category: .session)
@@ -2902,14 +2902,14 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         verifiedFingerprints = identityManager.getVerifiedFingerprints()
         // Log snapshot for debugging persistence
         let sample = Array(verifiedFingerprints.prefix(TransportConfig.uiFingerprintSampleCount)).map { $0.prefix(8) }.joined(separator: ", ")
-        SecureLogger.info("🔐 Verified loaded: \(verifiedFingerprints.count) [\(sample)]", category: .security)
+ SecureLogger.info(" Verified loaded: \(verifiedFingerprints.count) [\(sample)]", category: .security)
         // Also log any offline favorites and whether we consider them verified
         let offlineFavorites = unifiedPeerService.favorites.filter { !$0.isConnected }
         for fav in offlineFavorites {
             let fp = unifiedPeerService.getFingerprint(for: fav.peerID)
             let isVer = fp.flatMap { verifiedFingerprints.contains($0) } ?? false
             let fpShort = fp?.prefix(8) ?? "nil"
-            SecureLogger.info("⭐️ Favorite offline: \(fav.nickname) fp=\(fpShort) verified=\(isVer)", category: .security)
+ SecureLogger.info(" Favorite offline: \(fav.nickname) fp=\(fpShort) verified=\(isVer)", category: .security)
         }
         // Invalidate cached encryption statuses so offline favorites can show verified badges immediately
         invalidateEncryptionCache()
@@ -2925,7 +2925,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
-                SecureLogger.debug("🔐 Authenticated: \(peerID)", category: .security)
+ SecureLogger.debug(" Authenticated: \(peerID)", category: .security)
 
                 // Update encryption status
                 if self.verifiedFingerprints.contains(fingerprint) {
@@ -2944,7 +2944,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                    let keyData = self.meshService.getNoiseService().getPeerPublicKeyData(peerID) {
                     let stable = PeerID(hexData: keyData)
                     self.shortIDToNoiseKey[peerID] = stable
-                    SecureLogger.debug("🗺️ Mapped short peerID to Noise key for header continuity: \(peerID) -> \(stable.id.prefix(8))…", category: .session)
+ SecureLogger.debug(" Mapped short peerID to Noise key for header continuity: \(peerID) -> \(stable.id.prefix(8))…", category: .session)
                 }
 
                 // If a QR verification is pending but not sent yet, send it now that session is authenticated
@@ -2952,7 +2952,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     self.meshService.sendVerifyChallenge(to: peerID, noiseKeyHex: pending.noiseKeyHex, nonceA: pending.nonceA)
                     pending.sent = true
                     self.pendingQRVerifications[peerID] = pending
-                    SecureLogger.debug("📤 Sent deferred verify challenge to \(peerID) after handshake", category: .security)
+ SecureLogger.debug(" Sent deferred verify challenge to \(peerID) after handshake", category: .security)
                 }
 
                 // Schedule UI update
@@ -3058,7 +3058,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
                 // BCH-01-012: Check blocking before processing private message to prevent notification bypass
                 if isPeerBlocked(peerID) {
-                    SecureLogger.debug("🚫 Ignoring Noise payload from blocked peer: \(peerID)", category: .security)
+ SecureLogger.debug(" Ignoring Noise payload from blocked peer: \(peerID)", category: .security)
                     return
                 }
 
@@ -3143,7 +3143,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     pendingQRVerifications.removeValue(forKey: peerID)
                     if let fp = getFingerprint(for: peerID) {
                         let short = fp.prefix(8)
-                        SecureLogger.info("🔐 Marking verified fingerprint: \(short)", category: .security)
+ SecureLogger.info(" Marking verified fingerprint: \(short)", category: .security)
                         identityManager.setVerified(fingerprint: fp, verified: true)
                         saveIdentityState()
                         verifiedFingerprints.insert(fp)
@@ -3237,7 +3237,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     // MARK: - Peer Connection Events
 
     func didConnectToPeer(_ peerID: PeerID) {
-        SecureLogger.debug("🤝 Peer connected: \(peerID)", category: .session)
+ SecureLogger.debug(" Peer connected: \(peerID)", category: .session)
         
         // Handle all main actor work async
         Task { @MainActor in
@@ -3264,7 +3264,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     }
     
     func didDisconnectFromPeer(_ peerID: PeerID) {
-        SecureLogger.debug("👋 Peer disconnected: \(peerID)", category: .session)
+ SecureLogger.debug(" Peer disconnected: \(peerID)", category: .session)
         
         // Remove ephemeral session from identity manager
         identityManager.removeEphemeralSession(peerID: peerID)
@@ -3363,7 +3363,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         self.lastNetworkNotificationTime = Date()
                         NotificationService.shared.sendNetworkAvailableNotification(peerCount: meshPeers.count)
                         SecureLogger.info(
-                            "👥 Sent bitchatters nearby notification for \(meshPeers.count) mesh peers (new: \(newPeers.count))",
+                            "Sent nearby notification for \(meshPeers.count) mesh peers (new: \(newPeers.count))",
                             category: .session
                         )
                     }
@@ -3430,7 +3430,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }
             
             if !idsToRemove.isEmpty {
-                SecureLogger.debug("🧹 Cleaned up \(idsToRemove.count) stale unread peer IDs", category: .session)
+ SecureLogger.debug(" Cleaned up \(idsToRemove.count) stale unread peer IDs", category: .session)
             }
         }
         
@@ -3460,9 +3460,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }
         if activeMeshPeers.isEmpty {
             recentlySeenPeers.removeAll()
-            SecureLogger.debug("⏱️ Network notification window reset after quiet period", category: .session)
+ SecureLogger.debug("⏱ Network notification window reset after quiet period", category: .session)
         } else {
-            SecureLogger.debug("⏱️ Skipped network notification reset; still seeing \(activeMeshPeers.count) mesh peers", category: .session)
+ SecureLogger.debug("⏱ Skipped network notification reset; still seeing \(activeMeshPeers.count) mesh peers", category: .session)
         }
         networkResetTimer = nil
     }
@@ -3525,7 +3525,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         
         let removedCount = oldCount - sentReadReceipts.count
         if removedCount > 0 {
-            SecureLogger.debug("🧹 Cleaned up \(removedCount) old read receipts", category: .session)
+ SecureLogger.debug(" Cleaned up \(removedCount) old read receipts", category: .session)
         }
     }
     
@@ -3694,7 +3694,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         NostrRelayManager.shared.sendEvent(event, to: targetRelays)
                     }
                 } catch {
-                    SecureLogger.error("❌ Failed to send geohash raw message: \(error)", category: .session)
+ SecureLogger.error(" Failed to send geohash raw message: \(error)", category: .session)
                 }
             }
             return
@@ -3802,7 +3802,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     let isMentioned = (message.mentions?.contains { myTokens.contains($0) } ?? false)
 
     if isMentioned && message.sender != nickname {
-        SecureLogger.info("🔔 Mention from \(message.sender)", category: .session)
+ SecureLogger.info(" Mention from \(message.sender)", category: .session)
         NotificationService.shared.sendMentionNotification(from: message.sender, message: message.content)
     }
 }

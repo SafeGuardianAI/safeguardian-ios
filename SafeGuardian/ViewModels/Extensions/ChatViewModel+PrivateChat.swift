@@ -700,11 +700,11 @@ extension ChatViewModel {
     /// Handle incoming private message (Mesh)
     @MainActor
     func handlePrivateMessage(_ message: SafeGuardianMessage) {
-        SecureLogger.debug("📥 handlePrivateMessage called for message from \(message.sender)", category: .session)
+ SecureLogger.debug(" handlePrivateMessage called for message from \(message.sender)", category: .session)
         let senderPeerID = message.senderPeerID ?? getPeerIDForNickname(message.sender)
         
         guard let peerID = senderPeerID else { 
-            SecureLogger.warning("⚠️ Could not get peer ID for sender \(message.sender)", category: .session)
+ SecureLogger.warning(" Could not get peer ID for sender \(message.sender)", category: .session)
             return 
         }
         
@@ -744,7 +744,7 @@ extension ChatViewModel {
                     // Clean up the stable key storage to avoid duplication
                     privateChats.removeValue(forKey: stableKeyHex)
                     
-                    SecureLogger.info("📥 Consolidated \(nostrMessages.count) Nostr messages from stable key to ephemeral peer \(peerID)", category: .session)
+ SecureLogger.info(" Consolidated \(nostrMessages.count) Nostr messages from stable key to ephemeral peer \(peerID)", category: .session)
                 }
             }
         }
@@ -891,14 +891,14 @@ extension ChatViewModel {
         var nostrPubkey: String? = nil
         if parts.count > 1 {
             nostrPubkey = String(parts[1])
-            SecureLogger.info("📝 Received Nostr npub in favorite notification: \(nostrPubkey ?? "none")", category: .session)
+ SecureLogger.info(" Received Nostr npub in favorite notification: \(nostrPubkey ?? "none")", category: .session)
         }
         
         // Get the noise public key for this peer
         let noiseKey = peerID.noiseKey ?? unifiedPeerService.getPeer(by: peerID)?.noisePublicKey
         
         guard let finalNoiseKey = noiseKey else {
-            SecureLogger.warning("⚠️ Cannot get Noise key for peer \(peerID)", category: .session)
+ SecureLogger.warning(" Cannot get Noise key for peer \(peerID)", category: .session)
             return
         }
         // Determine prior state to avoid duplicate system messages on repeated notifications
@@ -914,7 +914,7 @@ extension ChatViewModel {
 
         // If they favorited us and provided their Nostr key, ensure it's stored (log only)
         if isFavorite && nostrPubkey != nil {
-            SecureLogger.info("💾 Storing Nostr key association for \(senderNickname): \(nostrPubkey!.prefix(16))...", category: .session)
+ SecureLogger.info(" Storing Nostr key association for \(senderNickname): \(nostrPubkey!.prefix(16))...", category: .session)
         }
 
         // Only show a system message when the state changes, and only in mesh
@@ -981,10 +981,10 @@ extension ChatViewModel {
                             oldPeerIDsToRemove.append(oldPeerID)
                         } else {
                             // Keep old messages in original location but don't show in UI
-                            SecureLogger.info("📦 Partially migrating \(recentMessages.count) of \(messages.count) messages from \(oldPeerID)", category: .session)
+ SecureLogger.info(" Partially migrating \(recentMessages.count) of \(messages.count) messages from \(oldPeerID)", category: .session)
                         }
                         
-                        SecureLogger.info("📦 Migrating \(recentMessages.count) recent messages from old peer ID \(oldPeerID) to \(peerID) (fingerprint match)", category: .session)
+ SecureLogger.info(" Migrating \(recentMessages.count) recent messages from old peer ID \(oldPeerID) to \(peerID) (fingerprint match)", category: .session)
                     } else if currentFingerprint == nil || oldFingerprint == nil {
                         // Check if this chat contains messages with this sender by nickname
                         let isRelevantChat = recentMessages.contains { msg in
@@ -1000,7 +1000,7 @@ extension ChatViewModel {
                                 oldPeerIDsToRemove.append(oldPeerID)
                             }
                             
-                            SecureLogger.warning("📦 Migrating \(recentMessages.count) recent messages from old peer ID \(oldPeerID) to \(peerID) (nickname match)", category: .session)
+ SecureLogger.warning(" Migrating \(recentMessages.count) recent messages from old peer ID \(oldPeerID) to \(peerID) (nickname match)", category: .session)
                         }
                     }
                 }
@@ -1062,12 +1062,12 @@ extension ChatViewModel {
         // Try mesh first for connected peers
         if meshService.isPeerConnected(peerID) {
             messageRouter.sendFavoriteNotification(to: peerID, isFavorite: isFavorite)
-            SecureLogger.debug("📤 Sent favorite notification via BLE to \(peerID)", category: .session)
+ SecureLogger.debug(" Sent favorite notification via BLE to \(peerID)", category: .session)
         } else if let key = noiseKey {
             // Send via Nostr for offline peers (using router)
             messageRouter.sendFavoriteNotification(to: PeerID(hexData: key), isFavorite: isFavorite)
         } else {
-            SecureLogger.warning("⚠️ Cannot send favorite notification - peer not connected and no Nostr pubkey", category: .session)
+ SecureLogger.warning(" Cannot send favorite notification - peer not connected and no Nostr pubkey", category: .session)
         }
     }
 

@@ -575,11 +575,11 @@ extension ChatViewModel {
 
     func setupNostrMessageHandling() {
         guard let currentIdentity = try? idBridge.getCurrentNostrIdentity() else {
-            SecureLogger.warning("⚠️ No Nostr identity available for message handling", category: .session)
+ SecureLogger.warning(" No Nostr identity available for message handling", category: .session)
             return
         }
         
-        SecureLogger.debug("🔑 Setting up Nostr subscription for pubkey: \(currentIdentity.publicKeyHex.prefix(16))...", category: .session)
+ SecureLogger.debug(" Setting up Nostr subscription for pubkey: \(currentIdentity.publicKeyHex.prefix(16))...", category: .session)
         
         // Subscribe to Nostr messages
         let filter = NostrFilter.giftWrapsFor(
@@ -672,7 +672,7 @@ extension ChatViewModel {
                let encoded = try? Bech32.encode(hrp: "npub", data: pubkeyData) {
                 npubToMatch = encoded
             } else {
-                SecureLogger.warning("⚠️ Invalid hex public key format or encoding failed: \(nostrPubkey.prefix(16))...", category: .session)
+ SecureLogger.warning(" Invalid hex public key format or encoding failed: \(nostrPubkey.prefix(16))...", category: .session)
             }
         }
         
@@ -681,19 +681,19 @@ extension ChatViewModel {
             if let storedNostrKey = relationship.peerNostrPublicKey {
                 // Compare against stored key (could be hex or npub)
                 if storedNostrKey == npubToMatch {
-                    // SecureLogger.debug("✅ Found Noise key for Nostr sender (npub match)", category: .session)
+ // SecureLogger.debug(" Found Noise key for Nostr sender (npub match)", category: .session)
                     return relationship.peerNoisePublicKey
                 }
                 
                 // Also try comparing raw hex if stored key is hex
                 if !storedNostrKey.hasPrefix("npub") && storedNostrKey == nostrPubkey {
-                    SecureLogger.debug("✅ Found Noise key for Nostr sender (hex match)", category: .session)
+ SecureLogger.debug(" Found Noise key for Nostr sender (hex match)", category: .session)
                     return relationship.peerNoisePublicKey
                 }
             }
         }
         
-        SecureLogger.debug("⚠️ No matching Noise key found for Nostr pubkey: \(nostrPubkey.prefix(16))... (tried npub: \(npubToMatch.prefix(16))...)", category: .session)
+ SecureLogger.debug(" No matching Noise key found for Nostr pubkey: \(nostrPubkey.prefix(16))... (tried npub: \(npubToMatch.prefix(16))...)", category: .session)
         return nil
     }
 
@@ -768,11 +768,11 @@ extension ChatViewModel {
              }
         }
         
-        SecureLogger.info("📝 Received favorite notification from \(senderNickname): \(isFavorite)", category: .session)
+ SecureLogger.info(" Received favorite notification from \(senderNickname): \(isFavorite)", category: .session)
         
         // If they favorited us and provided their Nostr key, ensure it's stored
         if isFavorite && extractedNostrPubkey != nil {
-            SecureLogger.info("💾 Storing Nostr key association for \(senderNickname): \(extractedNostrPubkey!.prefix(16))...", category: .session)
+ SecureLogger.info(" Storing Nostr key association for \(senderNickname): \(extractedNostrPubkey!.prefix(16))...", category: .session)
              FavoritesPersistenceService.shared.addFavorite(
                 peerNoisePublicKey: senderNoiseKey,
                 peerNostrPublicKey: extractedNostrPubkey,
@@ -792,7 +792,7 @@ extension ChatViewModel {
         // Find peer Nostr key
         guard let relationship = FavoritesPersistenceService.shared.getFavoriteStatus(for: noisePublicKey),
               relationship.peerNostrPublicKey != nil else {
-            SecureLogger.warning("⚠️ Cannot send favorite notification - no Nostr key for peer", category: .session)
+ SecureLogger.warning(" Cannot send favorite notification - no Nostr key for peer", category: .session)
             return
         }
         

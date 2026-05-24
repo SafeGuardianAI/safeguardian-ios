@@ -153,12 +153,12 @@ final class PrivateChatManager: ObservableObject {
             if hadUnreadTemp {
                 unreadMessages.insert(peerID)
                 hasUnreadMessages = true
-                SecureLogger.debug("📬 Transferred unread status from temp peer IDs to \(peerID)", category: .session)
+ SecureLogger.debug(" Transferred unread status from temp peer IDs to \(peerID)", category: .session)
             }
 
             if consolidatedCount > 0 {
                 privateChats[peerID]?.sort { $0.timestamp < $1.timestamp }
-                SecureLogger.info("📥 Consolidated \(consolidatedCount) Nostr messages from temporary peer IDs to \(peerNickname)", category: .session)
+ SecureLogger.info(" Consolidated \(consolidatedCount) Nostr messages from temporary peer IDs to \(peerNickname)", category: .session)
             }
         }
 

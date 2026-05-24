@@ -3085,11 +3085,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 guard let name = unifiedPeerService.getPeer(by: peerID)?.nickname,
                       let (foundPeerID, idx) = findMessageIndex(messageID: messageID, peerID: peerID) else { return }
 
-                // Don't downgrade from .read to .delivered
-                if case .read = privateChats[foundPeerID]?[idx].deliveryStatus { return }
-
-                privateChats[foundPeerID]?[idx].deliveryStatus = .delivered(to: name, at: Date())
-                objectWillChange.send()
+                if var messages = privateChats[foundPeerID], idx < messages.count {
+                    // Don't downgrade from .read to .delivered
+                    if case .read = messages[idx].deliveryStatus { return }
+                    messages[idx].deliveryStatus = .delivered(to: name, at: Date())
+                    privateChats[foundPeerID] = messages
+                    objectWillChange.send()
+                }
 
             case .readReceipt:
                 guard let messageID = String(data: payload, encoding: .utf8) else { return }
@@ -3277,6 +3279,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             shortIDToNoiseKey[peerID] = derivedStableKeyHex
         }
 
+        // Clear sent read receipts before any migration so privateChats[peerID] is still populated.
+        if let messages = privateChats[peerID] {
+            for message in messages where message.senderPeerID == peerID {
+                sentReadReceipts.remove(message.id)
+            }
+        }
+
         if let current = selectedPrivateChatPeer, current == peerID, let stableKeyHex = derivedStableKeyHex {
             // Migrate messages view context to stable key so header shows favorite + Nostr globe
             if let messages = privateChats[peerID] {
@@ -3308,22 +3317,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             selectedPrivateChatPeer = stableKeyHex
             objectWillChange.send()
         }
-        
+
         // Update peer list immediately and force UI refresh
         DispatchQueue.main.async { [weak self] in
-            // UnifiedPeerService updates automatically via subscriptions
             self?.objectWillChange.send()
-        }
-        
-        // Clear sent read receipts for this peer since they'll need to be resent after reconnection
-        // Only clear receipts for messages from this specific peer
-        if let messages = privateChats[peerID] {
-            for message in messages {
-                // Remove read receipts for messages FROM this peer (not TO this peer)
-                if message.senderPeerID == peerID {
-                    sentReadReceipts.remove(message.id)
-                }
-            }
         }
     }
     

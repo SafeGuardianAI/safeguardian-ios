@@ -12,16 +12,6 @@ import BitFoundation
 import UserNotifications
 
 @main
-struct SafeGuardianMain {
-    static func main() {
-        if ProcessInfo.processInfo.arguments.contains("--tui") {
-            runHeadlessTUI()
-        } else {
-            SafeGuardianApp.main()
-        }
-    }
-}
-
 struct SafeGuardianApp: App {
     static let bundleID = Bundle.main.bundleIdentifier ?? "chat.safeguardian"
     static let groupID = "group.\(bundleID)"
@@ -43,17 +33,21 @@ struct SafeGuardianApp: App {
     init() {
         let keychain = KeychainManager()
         let idBridge = self.idBridge
-        _chatViewModel = StateObject(
-            wrappedValue: ChatViewModel(
-                keychain: keychain,
-                idBridge: idBridge,
-                identityManager: SecureIdentityStateManager(keychain)
-            )
+        let cvm = ChatViewModel(
+            keychain: keychain,
+            idBridge: idBridge,
+            identityManager: SecureIdentityStateManager(keychain)
         )
+        _chatViewModel = StateObject(wrappedValue: cvm)
         
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         // Warm up georelay directory and refresh if stale (once/day)
         GeoRelayDirectory.shared.prefetchIfNeeded()
+        
+        #if os(macOS)
+        // Start the IPC host for the terminal CLI
+        SafeGuardianIPCHost.shared.start(chatViewModel: cvm)
+        #endif
     }
     
     var body: some Scene {

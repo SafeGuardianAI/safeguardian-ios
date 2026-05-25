@@ -21,7 +21,7 @@ import struct Foundation.UUID
 public final class SafeGuardianMessage: Codable {
     public let id: String
     public let sender: String
-    public let content: String
+    public var content: String
     public let timestamp: Date
     public let isRelay: Bool
     public let originalSender: String?

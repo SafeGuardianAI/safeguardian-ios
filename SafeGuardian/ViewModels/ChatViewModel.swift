@@ -1001,6 +1001,17 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         if pendingGPSShareConfirmation {
             handleGPSShareConfirmation(trimmed)
             return
+        }   
+            
+        // Route @nova mentions to on-device inference; never sent to the mesh
+        if trimmed.lowercased().hasPrefix("@nova") {
+            let prompt = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            if prompt.isEmpty {
+                addLocalMessage("usage: @nova <message>")
+            } else {
+                routeToNova(prompt)
+            } 
+            return
         }
 
         // Check for commands

@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @Suite("ReadReceipt Tests")
 struct ReadReceiptTests {

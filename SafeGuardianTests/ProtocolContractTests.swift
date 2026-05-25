@@ -3,7 +3,7 @@ import Foundation
 import Combine
 import CoreBluetooth
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 private final class DefaultDelegateProbe: SafeGuardianDelegate {
     func didReceiveMessage(_ message: SafeGuardianMessage) {}

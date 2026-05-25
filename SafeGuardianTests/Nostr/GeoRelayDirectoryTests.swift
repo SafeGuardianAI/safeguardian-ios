@@ -1,7 +1,7 @@
 import Foundation
 import Tor
 import XCTest
-@testable import bitchat
+@testable import SafeGuardian
 
 @MainActor
 final class GeoRelayDirectoryTests: XCTestCase {

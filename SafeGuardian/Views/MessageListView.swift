@@ -102,10 +102,10 @@ struct MessageListView: View {
             .onOpenURL(perform: handleOpenURL)
             .onTapGesture(count: 3) { viewModel.sendMessage("/clear") }
             .onAppear { scrollToBottom(on: proxy) }
-            .onChange(of: privatePeer) { _ in scrollToBottom(on: proxy) }
-            .onChange(of: viewModel.messages.count) { _ in onMessagesChange(proxy: proxy) }
-            .onChange(of: viewModel.privateChats) { _ in onPrivateChatsChange(proxy: proxy) }
-            .onChange(of: locationManager.selectedChannel) { onSelectedChannelChange($0, proxy: proxy) }
+            .onChange(of: privatePeer) { _, _ in scrollToBottom(on: proxy) }
+            .onChange(of: viewModel.messages.count) { _, _ in onMessagesChange(proxy: proxy) }
+            .onChange(of: viewModel.privateChats) { _, _ in onPrivateChatsChange(proxy: proxy) }
+            .onChange(of: locationManager.selectedChannel) { _, newValue in onSelectedChannelChange(newValue, proxy: proxy) }
             .confirmationDialog(
                 selectedMessageSender.map { "@\($0)" } ?? String(localized: "content.actions.title"),
                 isPresented: $showMessageActions,

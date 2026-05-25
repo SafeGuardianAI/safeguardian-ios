@@ -8,7 +8,7 @@
 
 import Testing
 import Foundation
-@testable import bitchat
+@testable import SafeGuardian
 
 // MARK: - LRU Deduplication Cache Tests
 

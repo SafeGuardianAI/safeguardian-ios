@@ -8,7 +8,7 @@
 
 import Foundation
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 final class MockBLEBus {
     private var registry: [PeerID: MockBLEService] = [:]

@@ -9,7 +9,7 @@ import Testing
 import CryptoKit
 import Foundation
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 struct NostrProtocolTests {
     
@@ -49,7 +49,7 @@ struct NostrProtocolTests {
         let timeDiff = abs(messageDate.timeIntervalSinceNow)
         #expect(timeDiff < 60, "Message timestamp should be recent")
         
-        print("✅ Successfully decrypted message: '\(decryptedContent)' from \(senderPubkey) at \(messageDate)")
+        print(" Successfully decrypted message: '\(decryptedContent)' from \(senderPubkey) at \(messageDate)")
     }
     
     @Test func giftWrapUsesUniqueEphemeralKeys() throws {

@@ -17,7 +17,7 @@
                BlueprintIdentifier = "0576A29205865664C0937536"
                BuildableName = "SafeGuardian.app"
                BlueprintName = "SafeGuardian_macOS"
-               ReferencedContainer = "container:bitchat.xcodeproj">
+               ReferencedContainer = "container:SafeGuardian.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,7 +33,7 @@
             BlueprintIdentifier = "0576A29205865664C0937536"
             BuildableName = "SafeGuardian.app"
                BlueprintName = "SafeGuardian_macOS"
-            ReferencedContainer = "container:bitchat.xcodeproj">
+            ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -45,7 +45,7 @@
                BlueprintIdentifier = "47FF23248747DD7CB666CB91"
                BuildableName = "SafeGuardianTests_macOS.xctest"
                BlueprintName = "SafeGuardianTests_macOS"
-               ReferencedContainer = "container:bitchat.xcodeproj">
+               ReferencedContainer = "container:SafeGuardian.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,7 +67,7 @@
             BlueprintIdentifier = "0576A29205865664C0937536"
             BuildableName = "SafeGuardian.app"
                BlueprintName = "SafeGuardian_macOS"
-            ReferencedContainer = "container:bitchat.xcodeproj">
+            ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <EnvironmentVariables>
@@ -91,7 +91,7 @@
             BlueprintIdentifier = "0576A29205865664C0937536"
             BuildableName = "SafeGuardian.app"
                BlueprintName = "SafeGuardian_macOS"
-            ReferencedContainer = "container:bitchat.xcodeproj">
+            ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

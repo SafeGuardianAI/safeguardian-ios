@@ -927,7 +927,7 @@ extension ChatViewModel {
     /// Process action messages (hugs, slaps) into system messages
     func processActionMessage(_ message: SafeGuardianMessage) -> SafeGuardianMessage {
         let isActionMessage = message.content.hasPrefix("* ") && message.content.hasSuffix(" *") &&
-                              (message.content.contains("🫂") || message.content.contains("🐟") || 
+                              (message.content.contains("") || message.content.contains("") || 
                                message.content.contains("took a screenshot"))
         
         if isActionMessage {

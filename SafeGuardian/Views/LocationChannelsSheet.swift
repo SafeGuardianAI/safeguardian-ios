@@ -112,12 +112,12 @@ struct LocationChannelsSheet: View {
         .onDisappear {
             manager.endLiveRefresh()
         }
-        .onChange(of: manager.permissionState) { newValue in
+        .onChange(of: manager.permissionState) { _, newValue in
             if newValue == LocationChannelManager.PermissionState.authorized {
                 manager.refreshChannels()
             }
         }
-        .onChange(of: manager.availableChannels) { _ in }
+        .onChange(of: manager.availableChannels) { _, _ in }
     }
 
     private var sheetContent: some View {
@@ -285,7 +285,7 @@ struct LocationChannelsSheet: View {
                     .keyboardType(.asciiCapable)
                     #endif
                     .font(.safeguardianSystem(size: 14, design: .monospaced))
-                    .onChange(of: customGeohash) { newValue in
+                    .onChange(of: customGeohash) { _, newValue in
                         let allowed = Set("0123456789bcdefghjkmnpqrstuvwxyz")
                         let filtered = newValue
                             .lowercased()
@@ -431,7 +431,7 @@ struct LocationChannelsSheet: View {
                 }
                 Spacer()
                 if isSelected {
-                    Text(verbatim: "✔︎")
+                    Text(verbatim: "︎")
                         .font(.safeguardianSystem(size: 16, design: .monospaced))
                         .foregroundColor(standardGreen)
                 }

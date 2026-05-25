@@ -1,6 +1,6 @@
 import XCTest
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 final class RequestSyncManagerTests: XCTestCase {
     func test_isValidResponse_returnsFalseWhenPacketIsNotRSR() {

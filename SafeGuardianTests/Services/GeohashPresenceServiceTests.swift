@@ -1,6 +1,6 @@
 import Combine
 import XCTest
-@testable import bitchat
+@testable import SafeGuardian
 
 @MainActor
 final class GeohashPresenceServiceTests: XCTestCase {

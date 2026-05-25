@@ -94,14 +94,13 @@ info:
     @echo "• Use /msg @user for private messages"
     @echo "• Triple-tap logo for emergency wipe"
 
-# Force clean everything (nuclear option)
-nuke:
-    @echo "🧨 Nuclear clean - removing all build artifacts and backups..."
-    @rm -rf ~/Library/Developer/Xcode/DerivedData/bitchat-* 2>/dev/null || true
-    @rm -rf SafeGuardian.xcodeproj 2>/dev/null || true
-    @rm -f SafeGuardian.xcodeproj/project.pbxproj.backup 2>/dev/null || true
-    @rm -f SafeGuardian/Info.plist.backup 2>/dev/null || true
-    @# Restore iOS-specific files if they were moved
-    @if [ -f SafeGuardian/LaunchScreen.storyboard.ios ]; then mv SafeGuardian/LaunchScreen.storyboard.ios SafeGuardian/LaunchScreen.storyboard; fi
-    @git checkout SafeGuardian.xcodeproj/project.pbxproj SafeGuardian/Info.plist 2>/dev/null || echo "⚠️  Not a git repo or no changes to restore"
-    @echo "✅ Nuclear clean complete"
+# Query Nova on-device (macOS native binary)
+nova prompt:
+    @echo "[*] Nova is loading native infra..."
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS="" build > /dev/null
+    @DERIVED_DATA=$(xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug -showBuildSettings | grep -m 1 "TARGET_BUILD_DIR" | cut -d '=' -f 2 | xargs); \
+    swift -I $$DERIVED_DATA \
+           -F $$DERIVED_DATA \
+           -L $$DERIVED_DATA \
+           -l SafeGuardian.debug \
+           NovaCLI/main.swift "{{prompt}}"

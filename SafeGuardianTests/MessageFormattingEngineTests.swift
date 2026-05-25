@@ -10,7 +10,7 @@ import Testing
 import Foundation
 import SwiftUI
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 struct MessageFormattingEngineTests {
     // MARK: - Formatting Behavior Tests

@@ -14,7 +14,7 @@ import UIKit
 import AppKit
 #endif
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 // MARK: - Test Helpers
 

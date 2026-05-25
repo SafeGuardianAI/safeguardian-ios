@@ -97,9 +97,9 @@ final class CommandProcessor {
         case "/clear":
             return handleClear()
         case "/hug":
-            return handleEmote(args, command: "hug", action: "hugs", emoji: "🫂")
+            return handleEmote(args, command: "hug", action: "hugs", emoji: "")
         case "/slap":
-            return handleEmote(args, command: "slap", action: "slaps", emoji: "🐟", suffix: " around a bit with a large trout")
+            return handleEmote(args, command: "slap", action: "slaps", emoji: "", suffix: " around a bit with a large trout")
         case "/block":
             return handleBlock(args)
         case "/unblock":

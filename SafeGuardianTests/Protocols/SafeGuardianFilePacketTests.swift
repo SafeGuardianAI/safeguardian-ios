@@ -1,5 +1,5 @@
 import XCTest
-@testable import bitchat
+@testable import SafeGuardian
 
 final class SafeGuardianFilePacketTests: XCTestCase {
 

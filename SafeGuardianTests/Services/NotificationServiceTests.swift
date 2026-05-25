@@ -1,7 +1,7 @@
 import XCTest
 import UserNotifications
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 final class NotificationServiceTests: XCTestCase {
     func test_requestAuthorization_skipsWhenRunningTests() {
@@ -68,7 +68,7 @@ final class NotificationServiceTests: XCTestCase {
         service.sendPrivateMessageNotification(from: "Alice", message: "hi", peerID: peerID)
 
         let request = deliverer.requests.singleValue
-        XCTAssertEqual(request?.content.title, "🔒 DM from Alice")
+        XCTAssertEqual(request?.content.title, " DM from Alice")
         XCTAssertEqual(request?.content.body, "hi")
         XCTAssertEqual(request?.content.userInfo["peerID"] as? String, peerID.id)
         XCTAssertEqual(request?.content.userInfo["senderName"] as? String, "Alice")

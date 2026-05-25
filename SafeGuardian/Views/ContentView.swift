@@ -137,7 +137,7 @@ struct ContentView: View {
                     }
                     #endif
                 }
-                .onChange(of: colorScheme) { newValue in
+                .onChange(of: colorScheme) { _, newValue in
                     viewModel.currentColorScheme = newValue
                 }
 
@@ -174,7 +174,7 @@ struct ContentView: View {
         #if os(macOS)
         .frame(minWidth: 600, minHeight: 400)
         #endif
-        .onChange(of: viewModel.selectedPrivateChatPeer) { newValue in
+        .onChange(of: viewModel.selectedPrivateChatPeer) { _, newValue in
             if newValue != nil {
                 showSidebar = true
             }
@@ -348,7 +348,7 @@ struct ContentView: View {
                 )
                 .modifier(FocusEffectDisabledModifier())
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .onChange(of: messageText) { newValue in
+                .onChange(of: messageText) { _, newValue in
                     autocompleteDebounceTimer?.invalidate()
                     autocompleteDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak viewModel] _ in
                         let cursorPosition = newValue.count
@@ -834,7 +834,7 @@ struct ContentView: View {
                     .textInputAutocapitalization(.never)
                     #endif
                     .modifier(FocusEffectDisabledModifier())
-                    .onChange(of: isNicknameFieldFocused) { isFocused in
+                    .onChange(of: isNicknameFieldFocused) { _, isFocused in
                         if !isFocused {
                             // Only validate when losing focus
                             viewModel.validateAndSaveNickname()
@@ -1032,7 +1032,7 @@ struct ContentView: View {
             .onDisappear {
                 LocationChannelManager.shared.endLiveRefresh()
             }
-            .onChange(of: locationManager.availableChannels) { channels in
+            .onChange(of: locationManager.availableChannels) { _, channels in
                 if let current = channels.first(where: { $0.level == .building })?.geohash,
                     notesGeohash != current {
                     notesGeohash = current
@@ -1052,14 +1052,14 @@ struct ContentView: View {
                 LocationChannelManager.shared.refreshChannels()
             }
         }
-        .onChange(of: locationManager.selectedChannel) { _ in
+        .onChange(of: locationManager.selectedChannel) { _, _ in
             if case .mesh = locationManager.selectedChannel,
                locationManager.permissionState == .authorized,
                LocationChannelManager.shared.availableChannels.isEmpty {
                 LocationChannelManager.shared.refreshChannels()
             }
         }
-        .onChange(of: locationManager.permissionState) { _ in
+        .onChange(of: locationManager.permissionState) { _, _ in
             if case .mesh = locationManager.selectedChannel,
                locationManager.permissionState == .authorized,
                LocationChannelManager.shared.availableChannels.isEmpty {

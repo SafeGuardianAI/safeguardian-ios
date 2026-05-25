@@ -8,7 +8,7 @@
 
 import Testing
 import Foundation
-@testable import bitchat
+@testable import SafeGuardian
 
 /// Mock context for testing
 @MainActor

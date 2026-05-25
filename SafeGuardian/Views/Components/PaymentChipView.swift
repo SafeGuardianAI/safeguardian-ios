@@ -37,8 +37,8 @@ struct PaymentChipView: View {
         
         var emoji: String {
             switch self {
-            case .cashu:        "🥜"
-            case .lightning:    "⚡"
+            case .cashu:        ""
+            case .lightning:    ""
             }
         }
         

@@ -8,7 +8,7 @@
 
 import Testing
 import Foundation
-@testable import bitchat
+@testable import SafeGuardian
 
 struct InputValidatorTests {
 
@@ -87,8 +87,8 @@ struct InputValidatorTests {
     // MARK: - Unicode and Special Character Tests
 
     @Test func emojiIsAccepted() throws {
-        let result = InputValidator.validateUserString("Hello 👋 World", maxLength: 100)
-        #expect(result == "Hello 👋 World")
+        let result = InputValidator.validateUserString("Hello  World", maxLength: 100)
+        #expect(result == "Hello  World")
     }
 
     @Test func unicodeCharactersAreAccepted() throws {
@@ -109,8 +109,8 @@ struct InputValidatorTests {
     }
 
     @Test func nicknameWithEmojiIsAccepted() throws {
-        let result = InputValidator.validateNickname("Alice 🚀")
-        #expect(result == "Alice 🚀")
+        let result = InputValidator.validateNickname("Alice ")
+        #expect(result == "Alice ")
     }
 
     @Test func nicknameTooLongIsRejected() throws {

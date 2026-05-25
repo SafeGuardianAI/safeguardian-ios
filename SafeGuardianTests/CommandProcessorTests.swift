@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @Suite(.serialized)
 struct CommandProcessorTests {
@@ -185,8 +185,8 @@ struct CommandProcessorTests {
             Issue.record("Expected handled result")
         }
         #expect(transport.sentPrivateMessages.count == 1)
-        #expect(transport.sentPrivateMessages.first?.content == "* 🫂 me hugs you *")
-        #expect(context.localPrivateSystemMessages.first?.content == "🫂 you hugged bob")
+        #expect(transport.sentPrivateMessages.first?.content == "*  me hugs you *")
+        #expect(context.localPrivateSystemMessages.first?.content == " you hugged bob")
         #expect(context.localPrivateSystemMessages.first?.peerID == peerID)
     }
 
@@ -208,8 +208,8 @@ struct CommandProcessorTests {
         default:
             Issue.record("Expected handled result")
         }
-        #expect(context.sentPublicRawMessages == ["* 🐟 me slaps bob around a bit with a large trout *"])
-        #expect(context.publicSystemMessages == ["🐟 me slaps bob around a bit with a large trout"])
+        #expect(context.sentPublicRawMessages == ["*  me slaps bob around a bit with a large trout *"])
+        #expect(context.publicSystemMessages == [" me slaps bob around a bit with a large trout"])
     }
 
     @MainActor
@@ -428,5 +428,13 @@ private final class MockCommandContextProvider: CommandContextProvider {
 
     func sendFavoriteNotification(to peerID: PeerID, isFavorite: Bool) {
         favoriteNotifications.append((peerID, isFavorite))
+    }
+
+    func addLocalMessage(_ content: String) {
+        // No-op for now or add a capture if needed
+    }
+
+    func promptGPSShare() {
+        // No-op for now or add a capture if needed
     }
 }

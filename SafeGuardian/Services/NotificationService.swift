@@ -148,7 +148,7 @@ final class NotificationService {
     }
     
     func sendMentionNotification(from sender: String, message: String) {
-        let title = "🫵 you were mentioned by \(sender)"
+        let title = " you were mentioned by \(sender)"
         let body = message
         let identifier = "mention-\(UUID().uuidString)"
         
@@ -156,7 +156,7 @@ final class NotificationService {
     }
     
     func sendPrivateMessageNotification(from sender: String, message: String, peerID: PeerID) {
-        let title = "🔒 DM from \(sender)"
+        let title = " DM from \(sender)"
         let body = message
         let identifier = "private-\(UUID().uuidString)"
         let userInfo = ["peerID": peerID.id, "senderName": sender]
@@ -174,7 +174,7 @@ final class NotificationService {
     }
 
     func sendNetworkAvailableNotification(peerCount: Int) {
-        let title = "👥 SafeGuardians nearby!"
+        let title = " SafeGuardians nearby!"
         let body = peerCount == 1 ? "1 person around" : "\(peerCount) people around"
         // Fixed identifier so iOS updates the existing notification instead of creating new ones
         let identifier = "network-available"

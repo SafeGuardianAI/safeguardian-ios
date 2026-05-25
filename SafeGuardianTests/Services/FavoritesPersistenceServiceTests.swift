@@ -1,6 +1,6 @@
 import XCTest
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @MainActor
 final class FavoritesPersistenceServiceTests: XCTestCase {

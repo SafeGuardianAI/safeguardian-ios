@@ -3892,8 +3892,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         let hugsMe = tokens.contains { message.content.contains("hugs \($0)") } || message.content.contains("hugs you")
         let slapsMe = tokens.contains { message.content.contains("slaps \($0) around") } || message.content.contains("slaps you around")
 
-        let isHugForMe = message.content.contains("🫂") && hugsMe
-        let isSlapForMe = message.content.contains("🐟") && slapsMe
+        let isHugForMe = message.content.contains("") && hugsMe
+        let isSlapForMe = message.content.contains("") && slapsMe
         
         if isHugForMe && message.sender != nickname {
             // Long warm haptic for hugs

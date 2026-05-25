@@ -3,6 +3,10 @@ import SwiftUI
 struct AppInfoView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @State private var novaResetConfirm = false
+    @State private var mlxService = MLXInferenceService.shared
+    @State private var newModelID = ""
+    @State private var showAddModelAlert = false
     
     private var backgroundColor: Color {
         colorScheme == .dark ? Color.black : Color.white
@@ -188,8 +192,109 @@ struct AppInfoView: View {
 
                 FeatureRow(info: Strings.Privacy.panic)
             }
+
+            // Nova on-device AI
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader("on-device ai")
+
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "cpu")
+                        .font(.safeguardianSystem(size: 20))
+                        .foregroundColor(textColor)
+                        .frame(width: 30)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        let activeModelBinding = Binding(
+                            get: { mlxService.activeModelID },
+                            set: { mlxService.selectModel($0) }
+                        )
+                        
+                        HStack {
+                            Picker("active model", selection: activeModelBinding) {
+                                ForEach(mlxService.savedModelIDs, id: \.self) { id in
+                                    Text(id.components(separatedBy: "/").last ?? id)
+                                        .tag(id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .accentColor(textColor)
+                            .font(.safeguardianSystem(size: 14, weight: .semibold, design: .monospaced))
+                            
+                            Spacer()
+                            
+                            Button(action: { showAddModelAlert = true }) {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(textColor)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if mlxService.activeModelID != MLXInferenceService.defaultModelID {
+                                Button(action: { mlxService.removeModel(mlxService.activeModelID) }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        Text("type @nova <message> in the chat composer to query the on-device model. responses are private and never sent to the mesh.")
+                            .font(.safeguardianSystem(size: 12, design: .monospaced))
+                            .foregroundColor(secondaryTextColor)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        if mlxService.isLoading {
+                            ProgressView(value: mlxService.downloadProgress)
+                                .accentColor(textColor)
+                                .padding(.top, 4)
+                            Text("downloading model: \(Int(mlxService.downloadProgress * 100))%")
+                                .font(.safeguardianSystem(size: 10, design: .monospaced))
+                                .foregroundColor(secondaryTextColor)
+                        }
+                    }
+                    Spacer()
+                }
+
+                Button(action: {
+                    novaResetConfirm = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("reset nova session")
+                    }
+                    .font(.safeguardianSystem(size: 13, design: .monospaced))
+                    .foregroundColor(textColor)
+                    .padding(.leading, 42)
+                }
+                .buttonStyle(.plain)
+                .confirmationDialog("reset nova session?", isPresented: $novaResetConfirm, titleVisibility: .visible) {
+                    Button("reset", role: .destructive) {
+                        mlxService.resetSession()
+                    }
+                    Button("cancel", role: .cancel) {}
+                } message: {
+                    Text("clears the downloaded model and conversation history. nova will re-download on next use.")
+                }
+            }
         }
         .padding()
+        .alert("add huggingface model", isPresented: $showAddModelAlert) {
+            TextField("org/model-name", text: $newModelID)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                #endif
+            Button("add") {
+                mlxService.addModel(newModelID)
+                newModelID = ""
+            }
+            Button("cancel", role: .cancel) {
+                newModelID = ""
+            }
+        } message: {
+            Text("enter a raw huggingface repo ID (e.g. mlx-community/Qwen3-0.6B-4bit). make sure it is an mlx-compatible 4-bit model.")
+        }
     }
 }
 

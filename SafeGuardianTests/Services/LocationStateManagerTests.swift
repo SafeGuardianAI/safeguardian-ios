@@ -1,7 +1,7 @@
 import CoreLocation
 import MapKit
 import XCTest
-@testable import bitchat
+@testable import SafeGuardian
 
 @MainActor
 final class LocationStateManagerTests: XCTestCase {

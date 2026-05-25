@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import bitchat
+@testable import SafeGuardian
 
 @Suite("AutocompleteService Tests")
 struct AutocompleteServiceTests {

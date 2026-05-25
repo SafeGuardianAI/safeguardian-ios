@@ -58,14 +58,14 @@ struct SafeGuardianPeer: Equatable {
     var statusIcon: String {
         switch connectionState {
         case .bluetoothConnected:
-            return "📻" // Radio icon for mesh connection
+            return "" // Radio icon for mesh connection
         case .meshReachable:
-            return "📡" // Antenna for mesh reachable
+            return "" // Antenna for mesh reachable
         case .nostrAvailable:
-            return "🌐" // Purple globe for Nostr
+            return "" // Purple globe for Nostr
         case .offline:
             if theyFavoritedUs && !isFavorite {
-                return "🌙" // Crescent moon - they favorited us but we didn't reciprocate
+                return "" // Crescent moon - they favorited us but we didn't reciprocate
             } else {
                 return ""
             }

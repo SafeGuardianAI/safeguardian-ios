@@ -5,7 +5,7 @@ import UIKit
 #else
 import AppKit
 #endif
-@testable import bitchat
+@testable import SafeGuardian
 
 private func makeTemporaryFileURL(_ name: String) -> URL {
     FileManager.default.temporaryDirectory.appendingPathComponent(name)

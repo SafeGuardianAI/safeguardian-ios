@@ -8,7 +8,7 @@
 
 import Foundation
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 final class MockIdentityManager: SecureIdentityStateManagerProtocol {
     private let keychain: KeychainManagerProtocol

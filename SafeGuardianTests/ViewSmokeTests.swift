@@ -9,7 +9,7 @@ import UIKit
 import AppKit
 #endif
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @MainActor
 private func makeSmokeViewModel() -> (viewModel: ChatViewModel, transport: MockTransport, identityManager: MockIdentityManager) {

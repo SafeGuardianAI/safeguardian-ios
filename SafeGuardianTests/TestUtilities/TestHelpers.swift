@@ -9,7 +9,7 @@
 import Foundation
 import CryptoKit
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 final class TestHelpers {
     

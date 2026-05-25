@@ -1,5 +1,5 @@
 import XCTest
-@testable import bitchat
+@testable import SafeGuardian
 
 final class VerificationServiceTests: XCTestCase {
     func test_buildMyQRString_roundTripsSuccessfully() throws {

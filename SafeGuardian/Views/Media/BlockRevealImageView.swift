@@ -103,7 +103,7 @@ struct BlockRevealImageView: View {
         .onAppear {
             loadImage()
         }
-        .onChange(of: url) { _ in
+        .onChange(of: url) { _, _ in
             // URL changed means a new image — re-apply the initial blur policy.
             isBlurred = initiallyBlurred
             loadImage()

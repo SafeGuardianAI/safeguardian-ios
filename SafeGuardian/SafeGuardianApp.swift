@@ -12,11 +12,22 @@ import BitFoundation
 import UserNotifications
 
 @main
+struct SafeGuardianMain {
+    static func main() {
+        if ProcessInfo.processInfo.arguments.contains("--tui") {
+            runHeadlessTUI()
+        } else {
+            SafeGuardianApp.main()
+        }
+    }
+}
+
 struct SafeGuardianApp: App {
     static let bundleID = Bundle.main.bundleIdentifier ?? "chat.safeguardian"
     static let groupID = "group.\(bundleID)"
     
     @StateObject private var chatViewModel: ChatViewModel
+
     #if os(iOS)
     @Environment(\.scenePhase) var scenePhase
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -75,7 +86,7 @@ struct SafeGuardianApp: App {
                     handleURL(url)
                 }
                 #if os(iOS)
-                .onChange(of: scenePhase) { newPhase in
+                .onChange(of: scenePhase) { _, newPhase in
                     switch newPhase {
                     case .background:
                         // Keep BLE mesh running in background; BLEService adapts scanning automatically

@@ -9,7 +9,7 @@
 import Foundation
 import Testing
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @Suite("NostrTransport Tests")
 struct NostrTransportTests {

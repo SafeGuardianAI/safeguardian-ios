@@ -7,7 +7,7 @@
 
 import Testing
 import Foundation
-@testable import bitchat
+@testable import SafeGuardian
 
 // MARK: - Test Helpers
 

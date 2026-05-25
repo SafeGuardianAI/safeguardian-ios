@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import BitFoundation
-@testable import bitchat
+@testable import SafeGuardian
 
 @Suite("SafeGuardianPeer Tests")
 struct SafeGuardianPeerTests {
@@ -33,7 +33,7 @@ struct SafeGuardianPeerTests {
         peer.favoriteStatus = makeRelationship(isFavorite: false, theyFavoritedUs: true)
 
         #expect(peer.displayName == String(peerID.id.prefix(8)))
-        #expect(peer.statusIcon == "🌙")
+        #expect(peer.statusIcon == "")
     }
 
     @Test("Mutual offline peers show Nostr icon")
@@ -43,7 +43,7 @@ struct SafeGuardianPeerTests {
         var peer = SafeGuardianPeer(peerID: peerID, noisePublicKey: noiseKey, nickname: "Peer", isConnected: false, isReachable: false)
         peer.favoriteStatus = makeRelationship(isFavorite: true, theyFavoritedUs: true)
 
-        #expect(peer.statusIcon == "🌐")
+        #expect(peer.statusIcon == "")
         #expect(peer.isFavorite)
         #expect(peer.isMutualFavorite)
         #expect(peer.theyFavoritedUs)

@@ -317,8 +317,8 @@
 				CC1111111111111111111A02 /* MLXLLM */,
 				CC1111111111111111111A03 /* MLXLMCommon */,
 				CC1111111111111111111A04 /* MLXHuggingFace */,
-				DD1111111111111111111B02 /* Tokenizers (iOS) */,
-				DD1111111111111111111C02 /* HuggingFace (iOS) */,
+				DD1111111111111111111B02 /* Transformers */,
+				DD1111111111111111111C02 /* HuggingFace */,
 			);
 			productName = SafeGuardian_iOS;
 			productReference = 96D0D41CA19EE5A772AA8434 /* SafeGuardian.app */;
@@ -1000,6 +1000,22 @@
 				minimumVersion = 0.1.0;
 			};
 		};
+		DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
+		DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1087,6 +1103,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXHuggingFace;
+		};
+		DD1111111111111111111B02 /* Transformers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Transformers;
+		};
+		DD1111111111111111111C02 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

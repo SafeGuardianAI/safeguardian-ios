@@ -13991,6 +13991,17 @@
         }
       }
     },
+    "content.commands.gps" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "show location; p to share publicly"
+          }
+        }
+      }
+    },
     "content.commands.favorite" : {
       "extractionState" : "manual",
       "localizations" : {

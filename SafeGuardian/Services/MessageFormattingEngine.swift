@@ -118,6 +118,8 @@ final class MessageFormattingEngine {
         // Format system messages differently
         if message.sender == "system" {
             result = formatSystemMessage(message, isDark: isDark)
+        } else if message.sender == "local" {
+            result = formatLocalMessage(message, isDark: isDark)
         } else {
             // Format sender header
             result = formatSenderHeader(
@@ -204,10 +206,28 @@ final class MessageFormattingEngine {
         contentStyle.font = .safeguardianSystem(size: 12, design: .monospaced).italic()
         result.append(content.mergingAttributes(contentStyle))
 
-        // Add timestamp
         let timestamp = AttributedString(" [\(message.formattedTimestamp)]")
         var timestampStyle = AttributeContainer()
         timestampStyle.foregroundColor = Color.gray.opacity(0.5)
+        timestampStyle.font = .safeguardianSystem(size: 10, design: .monospaced)
+        result.append(timestamp.mergingAttributes(timestampStyle))
+
+        return result
+    }
+
+    // Local-only messages (GPS output, future on-device AI) render in teal to signal device-private.
+    private static func formatLocalMessage(_ message: SafeGuardianMessage, isDark: Bool) -> AttributedString {
+        var result = AttributedString()
+
+        let content = AttributedString("* \(message.content) *")
+        var contentStyle = AttributeContainer()
+        contentStyle.foregroundColor = Color.teal
+        contentStyle.font = .safeguardianSystem(size: 12, design: .monospaced).italic()
+        result.append(content.mergingAttributes(contentStyle))
+
+        let timestamp = AttributedString(" [\(message.formattedTimestamp)]")
+        var timestampStyle = AttributeContainer()
+        timestampStyle.foregroundColor = Color.teal.opacity(0.5)
         timestampStyle.font = .safeguardianSystem(size: 10, design: .monospaced)
         result.append(timestamp.mergingAttributes(timestampStyle))
 

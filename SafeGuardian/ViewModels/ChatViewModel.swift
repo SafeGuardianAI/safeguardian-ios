@@ -158,6 +158,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         }
     }
     
+    // MARK: - Pending Command State
+
+    private var pendingGPSShareConfirmation = false
+
     // MARK: - Service Delegates
 
     let commandProcessor: CommandProcessor
@@ -993,6 +997,12 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Ignore messages that are empty or whitespace-only to prevent blank lines
         guard let trimmed = content.trimmedOrNilIfEmpty else { return }
 
+        // Resolve pending inline confirmations before normal routing
+        if pendingGPSShareConfirmation {
+            handleGPSShareConfirmation(trimmed)
+            return
+        }
+
         // Check for commands
         if content.hasPrefix("/") {
             Task { @MainActor in
@@ -1349,6 +1359,48 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         if privateChats[peerID] == nil { privateChats[peerID] = [] }
         privateChats[peerID]?.append(systemMessage)
         objectWillChange.send()
+    }
+
+    /// Inject a device-local message into the current chat context. Never sent to the mesh.
+    @MainActor
+    func addLocalMessage(_ content: String) {
+        let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
+        if let peer = selectedPrivateChatPeer {
+            if privateChats[peer] == nil { privateChats[peer] = [] }
+            privateChats[peer]?.append(msg)
+        } else {
+            messages.append(msg)
+        }
+        objectWillChange.send()
+    }
+
+    /// Begin a GPS share confirmation flow. Sets pending state and injects the prompt as a local message.
+    @MainActor
+    func promptGPSShare() {
+        pendingGPSShareConfirmation = true
+        addLocalMessage("share your location publicly? type y to confirm or n to cancel")
+    }
+
+    @MainActor
+    private func handleGPSShareConfirmation(_ input: String) {
+        switch input.lowercased() {
+        case "y":
+            pendingGPSShareConfirmation = false
+            if let loc = LocationStateManager.shared.currentLocation {
+                let lat = loc.coordinate.latitude
+                let lon = loc.coordinate.longitude
+                let accuracy = Int(loc.horizontalAccuracy.rounded())
+                let text = String(format: "location: %.4f, %.4f (±%dm)", lat, lon, accuracy)
+                sendPublicRaw(text)
+            } else {
+                addLocalMessage("location not available — cannot share")
+            }
+        case "n":
+            pendingGPSShareConfirmation = false
+            addLocalMessage("cancelled")
+        default:
+            addLocalMessage("type y to confirm or n to cancel")
+        }
     }
     
     // MARK: - Bluetooth State Management

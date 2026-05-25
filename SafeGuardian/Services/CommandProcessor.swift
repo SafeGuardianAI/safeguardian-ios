@@ -6,6 +6,7 @@
 // This is free and unencumbered software released into the public domain.
 //
 
+import CoreLocation
 import Foundation
 import BitFoundation
 
@@ -51,6 +52,10 @@ protocol CommandContextProvider: AnyObject {
     // MARK: - Favorites
     func toggleFavorite(peerID: PeerID)
     func sendFavoriteNotification(to peerID: PeerID, isFavorite: Bool)
+
+    // MARK: - Local Messages
+    func addLocalMessage(_ content: String)
+    func promptGPSShare()
 }
 
 /// Processes chat commands in a focused, efficient way
@@ -83,6 +88,8 @@ final class CommandProcessor {
         let inGeoDM = contextProvider?.selectedPrivateChatPeer?.isGeoDM == true
 
         switch cmd {
+        case "/gps":
+            return handleGPS(args)
         case "/m", "/msg":
             return handleMessage(args)
         case "/w", "/who":
@@ -109,7 +116,41 @@ final class CommandProcessor {
     }
 
     // MARK: - Command Handlers
-    
+
+    private func handleGPS(_ args: String) -> CommandResult {
+        let locationManager = LocationStateManager.shared
+
+        switch locationManager.permissionState {
+        case .denied, .restricted:
+            contextProvider?.addLocalMessage("location permission denied — enable in Settings > Privacy > Location")
+            return .handled
+        case .notDetermined:
+            contextProvider?.addLocalMessage("location not enabled — turn on location channels first")
+            return .handled
+        case .authorized:
+            break
+        }
+
+        let share = args.trimmed.lowercased() == "p"
+
+        guard let loc = locationManager.currentLocation else {
+            contextProvider?.addLocalMessage("location not available yet — try again in a moment")
+            return .handled
+        }
+
+        let lat = loc.coordinate.latitude
+        let lon = loc.coordinate.longitude
+        let accuracy = Int(loc.horizontalAccuracy.rounded())
+        let formatted = String(format: "location: %.4f, %.4f (±%dm)", lat, lon, accuracy)
+
+        if share {
+            contextProvider?.promptGPSShare()
+        } else {
+            contextProvider?.addLocalMessage(formatted)
+        }
+        return .handled
+    }
+
     private func handleMessage(_ args: String) -> CommandResult {
         let parts = args.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false)
         guard !parts.isEmpty else {

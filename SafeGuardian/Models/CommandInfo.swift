@@ -13,6 +13,7 @@ import Foundation
 enum CommandInfo: String, Identifiable {
     case block
     case clear
+    case gps
     case hug
     case message = "dm"
     case slap
@@ -20,24 +21,27 @@ enum CommandInfo: String, Identifiable {
     case who
     case favorite
     case unfavorite
-    
+
     var id: String { rawValue }
-    
+
     var alias: String { "/" + rawValue }
-    
+
     var placeholder: String? {
         switch self {
         case .block, .hug, .message, .slap, .unblock, .favorite, .unfavorite:
             return "<" + String(localized: "content.input.nickname_placeholder") + ">"
+        case .gps:
+            return "[p]"
         case .clear, .who:
             return nil
         }
     }
-    
+
     var description: String {
         switch self {
         case .block:        String(localized: "content.commands.block")
         case .clear:        String(localized: "content.commands.clear")
+        case .gps:          String(localized: "content.commands.gps")
         case .hug:          String(localized: "content.commands.hug")
         case .message:      String(localized: "content.commands.message")
         case .slap:         String(localized: "content.commands.slap")
@@ -47,9 +51,9 @@ enum CommandInfo: String, Identifiable {
         case .unfavorite:   String(localized: "content.commands.unfavorite")
         }
     }
-    
+
     static func all(isGeoPublic: Bool, isGeoDM: Bool) -> [CommandInfo] {
-        let baseCommands: [CommandInfo] = [.block, .unblock, .clear, .hug, .message, .slap, .who]
+        let baseCommands: [CommandInfo] = [.block, .unblock, .clear, .gps, .hug, .message, .slap, .who]
         if isGeoPublic || isGeoDM {
             return baseCommands + [.favorite, .unfavorite]
         }

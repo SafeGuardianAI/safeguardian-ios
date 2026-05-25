@@ -3137,7 +3137,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 guard let name = unifiedPeerService.getPeer(by: peerID)?.nickname,
                       let (foundPeerID, idx) = findMessageIndex(messageID: messageID, peerID: peerID) else { return }
 
-                if var messages = privateChats[foundPeerID], idx < messages.count {
+                if let messages = privateChats[foundPeerID], idx < messages.count {
                     // Don't downgrade from .read to .delivered
                     if case .read = messages[idx].deliveryStatus { return }
                     messages[idx].deliveryStatus = .delivered(to: name, at: Date())

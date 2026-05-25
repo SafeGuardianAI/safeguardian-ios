@@ -73,8 +73,10 @@ final class TestHelpers {
     
     static func generateRandomData(length: Int) -> Data {
         var data = Data(count: length)
-        _ = data.withUnsafeMutableBytes { bytes in
-            SecRandomCopyBytes(kSecRandomDefault, length, bytes.baseAddress!)
+        data.withUnsafeMutableBytes { bytes in
+            if let base = bytes.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, length, base)
+            }
         }
         return data
     }

@@ -121,11 +121,16 @@ final class CommandProcessor {
         let locationManager = LocationStateManager.shared
 
         switch locationManager.permissionState {
-        case .denied, .restricted:
-            contextProvider?.addLocalMessage("location permission denied — enable in Settings > Privacy > Location")
+        case .denied:
+            contextProvider?.addLocalMessage("location permission denied — opening Settings")
+            SystemSettings.location.open()
+            return .handled
+        case .restricted:
+            contextProvider?.addLocalMessage("location permission restricted by device policy")
             return .handled
         case .notDetermined:
-            contextProvider?.addLocalMessage("location not enabled — turn on location channels first")
+            contextProvider?.addLocalMessage("requesting location permission — accept the system prompt, then run /gps again")
+            locationManager.enableLocationChannels()
             return .handled
         case .authorized:
             break

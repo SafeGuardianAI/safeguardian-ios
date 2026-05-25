@@ -3264,7 +3264,11 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         }
         // Generate nonceA
         var nonce = Data(count: 16)
-        _ = nonce.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 16, $0.baseAddress!) }
+        nonce.withUnsafeMutableBytes { ptr in
+            if let base = ptr.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, ptr.count, base)
+            }
+        }
         var pending = PendingVerification(noiseKeyHex: qr.noiseKeyHex, signKeyHex: qr.signKeyHex, nonceA: nonce, startedAt: Date(), sent: false)
         pendingQRVerifications[peerID] = pending
         // If Noise session is established, send immediately; otherwise trigger handshake and send on auth

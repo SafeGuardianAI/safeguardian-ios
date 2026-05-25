@@ -97,8 +97,10 @@ final class NostrIdentityBridge {
             return existing
         }
         var seed = Data(count: 32)
-        _ = seed.withUnsafeMutableBytes { ptr in
-            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        seed.withUnsafeMutableBytes { ptr in
+            if let base = ptr.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, ptr.count, base)
+            }
         }
         // Ensure availability after first unlock to prevent unintended rotation when locked
         keychain.save(key: deviceSeedKey, data: seed, service: keychainService, accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)

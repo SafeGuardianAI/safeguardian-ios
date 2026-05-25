@@ -4,11 +4,11 @@ This test suite uses an in-memory networking harness to make end-to-end and inte
 
 ## In-Memory Bus
 
-- **File:** `bitchatTests/Mocks/MockBLEService.swift`
+- **File:** `SafeGuardianTests/Mocks/MockBLEService.swift`
 - **Registry/Adjacency:** Global `registry` maps `peerID` to a `MockBLEService` instance; `adjacency` records simulated links between peers.
 - **Setup:** Call `MockBLEService.resetTestBus()` in `setUp()` to clear state between tests.
 - **Topology:** Use `simulateConnectedPeer(_:)` and `simulateDisconnectedPeer(_:)` to add/remove links. `connectFullMesh()` helpers in tests build larger topologies.
-- **Handlers:** Tests can observe data via `messageDeliveryHandler` (decoded `BitchatMessage`) and `packetDeliveryHandler` (raw `BitchatPacket`).
+- **Handlers:** Tests can observe data via `messageDeliveryHandler` (decoded `SafeGuardianMessage`) and `packetDeliveryHandler` (raw `SafeGuardianPacket`).
 - **De‑duplication:** A thread-safe `seenMessageIDs` prevents duplicate deliveries during flooding/relays.
 
 ## Broadcast Flooding

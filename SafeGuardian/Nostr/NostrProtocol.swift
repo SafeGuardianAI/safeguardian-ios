@@ -291,8 +291,10 @@ struct NostrProtocol {
         
         // 24-byte random nonce for XChaCha20-Poly1305
         var nonce24 = Data(count: 24)
-        _ = nonce24.withUnsafeMutableBytes { ptr in
-            SecRandomCopyBytes(kSecRandomDefault, 24, ptr.baseAddress!)
+        nonce24.withUnsafeMutableBytes { ptr in
+            if let base = ptr.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, ptr.count, base)
+            }
         }
         
         let pt = Data(plaintext.utf8)
@@ -516,8 +518,10 @@ struct NostrEvent: Codable {
         // Sign with Schnorr (BIP-340)
         var messageBytes = [UInt8](eventIdHash)
         var auxRand = [UInt8](repeating: 0, count: 32)
-        _ = auxRand.withUnsafeMutableBytes { ptr in
-            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        auxRand.withUnsafeMutableBytes { ptr in
+            if let base = ptr.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, ptr.count, base)
+            }
         }
         let schnorrSignature = try key.signature(message: &messageBytes, auxiliaryRand: &auxRand)
         

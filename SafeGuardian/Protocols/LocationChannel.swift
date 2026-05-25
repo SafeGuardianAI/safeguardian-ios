@@ -131,3 +131,12 @@ enum ChannelID: Equatable, Codable {
         }
     }
 }
+
+extension ChannelID {
+    var contextKey: String {
+        switch self {
+        case .mesh:             "mesh"
+        case .location(let ch): "geo:\(ch.geohash)"
+        }
+    }
+}

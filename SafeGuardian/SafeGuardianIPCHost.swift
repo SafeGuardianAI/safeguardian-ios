@@ -185,16 +185,33 @@ final class SafeGuardianIPCHost {
                 .sink { [weak self] _ in
                     DispatchQueue.main.async {
                         for msg in chatViewModel.messages {
+                            let content = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !content.isEmpty else { continue }
+                            
                             if !knownMessageIDs.contains(msg.id) {
                                 knownMessageIDs.insert(msg.id)
-                                lastRenderedContent[msg.id] = msg.content
-                                self?.broadcast("\n[\(msg.sender)] \(msg.content)\n")
-                            } else if let lastContent = lastRenderedContent[msg.id], lastContent != msg.content {
-                                lastRenderedContent[msg.id] = msg.content
-                                // Use carriage return to overwrite line for streaming (requires smart terminal)
-                                self?.broadcast("\r[\(msg.sender)] \(msg.content)")
-                                if !msg.content.hasPrefix("[") && !msg.content.hasSuffix("]") {
-                                    self?.broadcast("\n")
+                                lastRenderedContent[msg.id] = content
+                                // New message: print with sender label
+                                self?.broadcast("\n[\(msg.sender)] \(content)\n")
+                            } else if let lastContent = lastRenderedContent[msg.id], lastContent != content {
+                                lastRenderedContent[msg.id] = content
+                                
+                                // Update existing message (e.g. Nova streaming or status change)
+                                if content.hasPrefix("[") && content.hasSuffix("]") {
+                                    // Status update: use \r to overwrite in-place
+                                    self?.broadcast("\r[\(msg.sender)] \(content)")
+                                } else {
+                                    // Actual token content: check if we were previously in a status state
+                                    if lastContent.hasPrefix("[") && lastContent.hasSuffix("]") {
+                                        // Transition from [thinking] to text: newline first
+                                        self?.broadcast("\n[\(msg.sender)] \(content)")
+                                    } else {
+                                        // Consecutive tokens: append smoothly
+                                        // This assumes the terminal client handles the stream correctly.
+                                        // To be safe for simple 'nc' we re-print the line or just the diff.
+                                        // Let's do a smooth re-print of the current response line.
+                                        self?.broadcast("\r[\(msg.sender)] \(content)")
+                                    }
                                 }
                             }
                         }

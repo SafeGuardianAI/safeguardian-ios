@@ -47,7 +47,7 @@ patch-for-macos: backup
 # Build the macOS app
 build: #check generate
     @echo "Building SafeGuardian for macOS..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 
 # Run the macOS app
 run: build
@@ -70,7 +70,7 @@ clean: restore
 # Quick run without cleaning (for development)
 dev-run: check
     @echo "Quick development build..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
     @find ~/Library/Developer/Xcode/DerivedData -name "SafeGuardian.app" -path "*/Debug/*" -not -path "*/Index.noindex/*" | head -1 | xargs -I {} open "{}"
 
 # Show app info
@@ -94,13 +94,11 @@ info:
     @echo "• Use /msg @user for private messages"
     @echo "• Triple-tap logo for emergency wipe"
 
-# Query Nova on-device (macOS native binary)
-nova prompt:
-    @echo "[*] Nova is loading native infra..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build > /dev/null
-    @DERIVED_DATA=$(xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug -showBuildSettings | grep -m 1 "TARGET_BUILD_DIR" | cut -d '=' -f 2 | xargs); \
-    swift -I $$DERIVED_DATA \
-           -F $$DERIVED_DATA \
-           -L $$DERIVED_DATA \
-           -l SafeGuardian.debug \
-           NovaCLI/main.swift "{{prompt}}"
+# Force clean everything (nuclear option)
+nuke:
+    @echo "🧨 Nuclear clean - removing all build artifacts and backups..."
+    @rm -rf ~/Library/Developer/Xcode/DerivedData/SafeGuardian-* 2>/dev/null || true
+    @# Restore iOS-specific files if they were moved
+    @if [ -f SafeGuardian/LaunchScreen.storyboard.ios ]; then mv SafeGuardian/LaunchScreen.storyboard.ios SafeGuardian/LaunchScreen.storyboard; fi
+    @git checkout SafeGuardian.xcodeproj/project.pbxproj SafeGuardian/Info.plist 2>/dev/null || echo "⚠️  Not a git repo or no changes to restore"
+    @echo "✅ Nuclear clean complete"

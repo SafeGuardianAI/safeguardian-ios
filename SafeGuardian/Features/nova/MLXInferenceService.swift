@@ -67,6 +67,8 @@ final class MLXInferenceService {
 
     // MARK: - Inference
 
+    private var lastSystemPrompt: String?
+
     func generate(
         systemPrompt: String? = nil,
         userMessage: String,
@@ -76,6 +78,7 @@ final class MLXInferenceService {
     ) {
         activeTask?.cancel()
         let modelID = activeModelID
+        
         activeTask = Task {
             do {
                 if container == nil {
@@ -99,25 +102,33 @@ final class MLXInferenceService {
                     }
                     isLoading = false
                     container = loaded
+                    session = nil // Force new session for new container
                 }
                 
-                if session == nil, let container {
+                // If system prompt changed, we must reset the session to apply new state context
+                if session == nil || (systemPrompt != nil && systemPrompt != lastSystemPrompt) {
                     onStatus("[starting session...]")
-                    session = ChatSession(
-                        container,
-                        instructions: systemPrompt,
-                        generateParameters: GenerateParameters(temperature: 0.7)
-                    )
+                    lastSystemPrompt = systemPrompt
+                    if let container {
+                        session = ChatSession(
+                            container,
+                            instructions: systemPrompt,
+                            generateParameters: GenerateParameters(temperature: 0.7)
+                        )
+                    }
                 }
 
                 guard let session, !Task.isCancelled else { return }
                 onStatus("[thinking...]")
                 for try await token in session.streamResponse(to: userMessage) {
+                    // Log token to console for live tracing
+                    print("Nova Token: \(token)")
                     onToken(token)
                     if Task.isCancelled { break }
                 }
             } catch {
-                onStatus("[error: model failed to load]")
+                print("Nova Error: \(error)")
+                onStatus("[error: \(error.localizedDescription)]")
             }
             onComplete()
         }

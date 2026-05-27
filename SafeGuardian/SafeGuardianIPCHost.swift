@@ -69,6 +69,7 @@ final class SafeGuardianIPCHost {
         let clientSocket = accept(listeningSocket, nil, nil)
         guard clientSocket >= 0 else { return }
         
+        print("[IPC] New terminal client connected.")
         activeClients.append(clientSocket)
         sendToClient(clientSocket, "========================================\n")
         sendToClient(clientSocket, " SafeGuardian Terminal Interface v1.0\n")
@@ -115,6 +116,7 @@ final class SafeGuardianIPCHost {
     }
     
     private func broadcast(_ message: String) {
+        print("[IPC] Broadcasting: \(message.trimmingCharacters(in: .whitespacesAndNewlines))")
         for client in activeClients {
             sendToClient(client, message)
         }

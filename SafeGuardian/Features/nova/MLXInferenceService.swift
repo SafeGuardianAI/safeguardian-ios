@@ -69,6 +69,25 @@ final class MLXInferenceService {
 
     private var lastSystemPrompt: String?
 
+    private func log(_ message: String) {
+        let timestamp = Date().description
+        let logLine = "[MLX] [\(timestamp)] \(message)\n"
+        print(logLine) // Console
+        
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let logPath = paths[0].appendingPathComponent("chat.safeguardian").appendingPathComponent("tui.log").path
+        
+        if let data = logLine.data(using: .utf8) {
+            if !FileManager.default.fileExists(atPath: logPath) {
+                FileManager.default.createFile(atPath: logPath, contents: data)
+            } else if let handle = FileHandle(forWritingAtPath: logPath) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            }
+        }
+    }
+
     func generate(
         systemPrompt: String? = nil,
         userMessage: String,
@@ -78,6 +97,7 @@ final class MLXInferenceService {
     ) {
         activeTask?.cancel()
         let modelID = activeModelID
+        log("Generating for model: \(modelID)")
         
         activeTask = Task {
             do {
@@ -85,6 +105,7 @@ final class MLXInferenceService {
                     isLoading = true
                     downloadProgress = 0
                     onStatus("[initializing...]")
+                    log("Initializing model container...")
                     Memory.cacheLimit = 20 * 1024 * 1024
                     let downloader = #hubDownloader()
                     let loader = #huggingFaceTokenizerLoader()
@@ -103,11 +124,13 @@ final class MLXInferenceService {
                     isLoading = false
                     container = loaded
                     session = nil // Force new session for new container
+                    log("Model loaded successfully.")
                 }
                 
                 // If system prompt changed, we must reset the session to apply new state context
                 if session == nil || (systemPrompt != nil && systemPrompt != lastSystemPrompt) {
                     onStatus("[starting session...]")
+                    log("Starting new session. Prompt changed: \(systemPrompt != lastSystemPrompt)")
                     lastSystemPrompt = systemPrompt
                     if let container {
                         session = ChatSession(
@@ -118,16 +141,46 @@ final class MLXInferenceService {
                     }
                 }
 
-                guard let session, !Task.isCancelled else { return }
+                guard let session, !Task.isCancelled else { 
+                    log("Session or task cancelled.")
+                    return 
+                }
+                
+                if userMessage.isEmpty {
+                    onStatus("[error: empty prompt]")
+                    onComplete()
+                    return
+                }
+
                 onStatus("[thinking...]")
-                for try await token in session.streamResponse(to: userMessage) {
-                    // Log token to console for live tracing
-                    print("Nova Token: \(token)")
+                log("Streaming response for prompt: \(userMessage)")
+                
+                // Add a timeout for the first token
+                let stream = session.streamResponse(to: userMessage)
+                var iterator = stream.makeAsyncIterator()
+                
+                while !Task.isCancelled {
+                    let next = try await withThrowingTaskGroup(of: String?.self) { group in
+                        group.addTask {
+                            return try await iterator.next()
+                        }
+                        group.addTask {
+                            try await Task.sleep(nanoseconds: 30 * 1_000_000_000) // 30s timeout
+                            throw NSError(domain: "Nova", code: 408, userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
+                        }
+                        let first = try await group.next()
+                        group.cancelAll()
+                        return first ?? nil
+                    }
+                    
+                    guard let token = next else { 
+                        log("Stream completed.")
+                        break 
+                    }
                     onToken(token)
-                    if Task.isCancelled { break }
                 }
             } catch {
-                print("Nova Error: \(error)")
+                log("Nova Error: \(error.localizedDescription)")
                 onStatus("[error: \(error.localizedDescription)]")
             }
             onComplete()

@@ -6,7 +6,34 @@ import BitFoundation
 
 final class SafeGuardianIPCHost {
     static let shared = SafeGuardianIPCHost()
-    private let socketPath = "/tmp/safeguardian.sock"
+    private var socketPath: String {
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let appSupport = paths[0].appendingPathComponent("chat.safeguardian", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        return appSupport.appendingPathComponent("tui.sock").path
+    }
+    
+    private var logPath: String {
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let appSupport = paths[0].appendingPathComponent("chat.safeguardian", isDirectory: true)
+        return appSupport.appendingPathComponent("tui.log").path
+    }
+
+    private func log(_ message: String) {
+        let timestamp = Date().description
+        let logLine = "[\(timestamp)] \(message)\n"
+        print("[IPC] \(message)") // Console
+        if let data = logLine.data(using: .utf8) {
+            if !FileManager.default.fileExists(atPath: logPath) {
+                FileManager.default.createFile(atPath: logPath, contents: data)
+            } else if let handle = FileHandle(forWritingAtPath: logPath) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            }
+        }
+    }
+
     private var source: DispatchSourceRead?
     private var listeningSocket: Int32 = -1
     private var activeClients: [Int32] = []
@@ -18,25 +45,21 @@ final class SafeGuardianIPCHost {
     
     func start(chatViewModel: ChatViewModel) {
         self.chatViewModel = chatViewModel
+        log("Starting IPC Host...")
         
-        // Remove old socket if exists
-        unlink(socketPath)
+        let path = socketPath
+        unlink(path)
         
         listeningSocket = socket(AF_UNIX, SOCK_STREAM, 0)
         guard listeningSocket >= 0 else {
-            print("Failed to create IPC socket")
+            log("Failed to create socket")
             return
         }
         
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
-        let pathBytes = socketPath.utf8CString
-        withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
-            let boundPtr = ptr.withMemoryRebound(to: CChar.self, capacity: pathBytes.count) { $0 }
-            for (i, byte) in pathBytes.enumerated() {
-                boundPtr[i] = CChar(byte)
-            }
-        }
+        let pathLen = path.withCString { Int(strlen($0)) }
+        _ = path.withCString { strncpy(&addr.sun_path.0, $0, Int(MemoryLayout.size(ofValue: addr.sun_path))) }
         addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.stride)
         
         var bindAddr = addr
@@ -47,14 +70,17 @@ final class SafeGuardianIPCHost {
         }
         
         guard bindResult >= 0 else {
-            print("Failed to bind IPC socket")
+            let error = String(cString: strerror(errno))
+            log("Failed to bind socket to \(path): \(error) (errno: \(errno))")
             return
         }
         
         guard listen(listeningSocket, 5) >= 0 else {
-            print("Failed to listen on IPC socket")
+            log("Failed to listen")
             return
         }
+        
+        log("Listening on \(path)")
         
         source = DispatchSource.makeReadSource(fileDescriptor: listeningSocket, queue: DispatchQueue.global())
         source?.setEventHandler { [weak self] in
@@ -69,7 +95,7 @@ final class SafeGuardianIPCHost {
         let clientSocket = accept(listeningSocket, nil, nil)
         guard clientSocket >= 0 else { return }
         
-        print("[IPC] New terminal client connected.")
+        log("New terminal client connected.")
         activeClients.append(clientSocket)
         sendToClient(clientSocket, "========================================\n")
         sendToClient(clientSocket, " SafeGuardian Terminal Interface v1.0\n")
@@ -116,7 +142,7 @@ final class SafeGuardianIPCHost {
     }
     
     private func broadcast(_ message: String) {
-        print("[IPC] Broadcasting: \(message.trimmingCharacters(in: .whitespacesAndNewlines))")
+        log("Broadcasting: \(message.trimmingCharacters(in: .whitespacesAndNewlines))")
         for client in activeClients {
             sendToClient(client, message)
         }

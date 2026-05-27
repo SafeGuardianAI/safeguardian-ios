@@ -48,19 +48,9 @@ extension ChatViewModel {
         var raw = ""
         var inThink = false
 
-        // Build conversation history context (capped at 10 turns for token efficiency)
-        let prior = (privateChats[Self.novaPeerID] ?? []).suffix(10)
-        var context = ""
-        for msg in prior {
-            let label = msg.sender == Self.novaPeerID.id ? "Nova" : "User"
-            context += "\n\(label): \(msg.content)"
-        }
-        
-        let fullPrompt = "\(context)\nUser: \(prompt)\nNova:"
-
         service.generate(
             systemPrompt: dynamicSystemPrompt,
-            userMessage: fullPrompt,
+            userMessage: prompt,
             onStatus: { [weak response, weak self] status in
                 guard let response, let self else { return }
                 response.content = status

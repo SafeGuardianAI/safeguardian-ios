@@ -47,7 +47,7 @@ patch-for-macos: backup
 # Build the macOS app
 build: #check generate
     @echo "Building SafeGuardian for macOS..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS="" build
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build
 
 # Run the macOS app
 run: build
@@ -70,7 +70,7 @@ clean: restore
 # Quick run without cleaning (for development)
 dev-run: check
     @echo "Quick development build..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS="" build
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build
     @find ~/Library/Developer/Xcode/DerivedData -name "SafeGuardian.app" -path "*/Debug/*" -not -path "*/Index.noindex/*" | head -1 | xargs -I {} open "{}"
 
 # Show app info
@@ -97,7 +97,7 @@ info:
 # Query Nova on-device (macOS native binary)
 nova prompt:
     @echo "[*] Nova is loading native infra..."
-    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS="" build > /dev/null
+    @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGN_IDENTITY="-" build > /dev/null
     @DERIVED_DATA=$(xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug -showBuildSettings | grep -m 1 "TARGET_BUILD_DIR" | cut -d '=' -f 2 | xargs); \
     swift -I $$DERIVED_DATA \
            -F $$DERIVED_DATA \

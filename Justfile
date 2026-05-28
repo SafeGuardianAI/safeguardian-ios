@@ -6,6 +6,7 @@
 # These are additive to the Debug.xcconfig settings (singlefile + no index store).
 BUILD_FLAGS := "-jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"
 SCHEME_MACOS := "SafeGuardian (macOS)"
+SCHEME_IOS   := "SafeGuardian (iOS)"
 
 default:
     @echo "SafeGuardian macOS Build Commands:"
@@ -35,7 +36,7 @@ run: build
 build-ios:
     @echo "Building SafeGuardian (iOS)..."
     @xcodebuild -project SafeGuardian.xcodeproj \
-        -scheme SafeGuardian_iOS \
+        -scheme "{{SCHEME_IOS}}" \
         -destination "generic/platform=iOS" \
         -configuration Debug \
         CODE_SIGN_STYLE=Automatic \

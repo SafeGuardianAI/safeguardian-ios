@@ -1005,13 +1005,25 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             return
         }   
             
-        // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh
+        // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh.
+        // Also intercept plain messages sent while already inside an agent DM so follow-up turns
+        // don't fall through to BLE routing against a synthetic peer that doesn't exist.
         let lower = trimmed.lowercased()
-        for agent in agents where agent.shouldHandle(lower) {
-            let prefix = agent.triggerPrefix
-            let stripped = lower == prefix ? "" : String(trimmed.dropFirst(prefix.count + 1)).trimmingCharacters(in: .whitespaces)
+        for agent in agents {
+            let triggeredByPrefix = agent.shouldHandle(lower)
+            let inAgentDM = selectedPrivateChatPeer == agent.peerID
+            guard triggeredByPrefix || inAgentDM else { continue }
+
+            let stripped: String
+            if triggeredByPrefix {
+                let prefix = agent.triggerPrefix
+                stripped = lower == prefix ? "" : String(trimmed.dropFirst(prefix.count + 1)).trimmingCharacters(in: .whitespaces)
+            } else {
+                stripped = trimmed
+            }
+
             if stripped.isEmpty {
-                addLocalMessage("usage: \(prefix) <message>")
+                addLocalMessage("usage: \(agent.triggerPrefix) <message>")
             } else {
                 let userTurn = SafeGuardianMessage(sender: nickname, content: stripped, timestamp: Date(), isRelay: false)
                 if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }

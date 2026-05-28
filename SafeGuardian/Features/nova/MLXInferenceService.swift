@@ -143,7 +143,7 @@ final class MLXInferenceService {
                             container,
                             instructions: systemPrompt,
                             history: history,
-                            generateParameters: GenerateParameters(maxTokens: NovaConfig.maxTokens, temperature: NovaConfig.temperature)
+                            generateParameters: GenerateParameters(temperature: NovaConfig.temperature)
                         )
                     }
                 }

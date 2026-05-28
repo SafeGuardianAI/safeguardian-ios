@@ -48,6 +48,14 @@ Root cause: `privateChats` on `ChatViewModel` is declared `[PeerID: [SafeGuardia
 
 Fix: use `PeerID(str: "nova-local")` to construct the key. `PeerID` has a public `init(str:)` convenience initializer that accepts any `StringProtocol` and normalizes it to lowercase. Declare the constant as `static let novaPeerID = PeerID(str: "nova-local")` and reference `Self.novaPeerID` throughout the extension. Remember to `import BitFoundation` in the extension file.
 
+## Qwen3 chain-of-thought causes RAM exhaustion and no visible output
+
+Symptom: memory spikes to several gigabytes within seconds of a prompt, CPU pegs to 100%, and the UI shows `[thinking...]` for the entire duration with no visible tokens, eventually displaying `[no response]`.
+
+Root cause: Qwen3 models default to chain-of-thought mode, emitting thousands of `<think>...</think>` tokens before producing any visible output. The original per-token callback accumulated the full streamed string and reprocessed it from scratch on each token (O(n²) in token count), while a `Task { @MainActor in }` dispatch was spawned for every token. With 5,000 or more think tokens, this produces tens of millions of string operations and an equal number of task allocations before the model emits a single visible character. The `drainVisible` function correctly suppresses the think blocks, so the UI updates stayed on `[thinking...]` throughout.
+
+Fix: append `\n/no_think` to every system prompt. This is the model-level instruction to skip chain-of-thought entirely, and it is the only correct solution — a token cap cannot substitute for it because a cap set low enough to prevent runaway generation is also low enough to truncate real responses. `NovaConfig.noThinkSuffix` holds this value and `NovaAgent` appends it to every system prompt it constructs. `GenerateParameters.maxTokens` is left at its default `nil` (uncapped) because the cap is model-dependent and unnecessary once think-mode is disabled.
+
 ## SourceKit false positives on MLX files
 
 SourceKit consistently reports "no such module 'MLX'" and "Loading the standard library failed" on files that import MLX modules. These are spurious diagnostics caused by the xcframework and local package setup and do not represent real errors. The only reliable build signal is `xcodebuild ... build 2>&1 | grep "error:"`. Never act on SourceKit diagnostics alone when working with MLX.

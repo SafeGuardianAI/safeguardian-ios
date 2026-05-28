@@ -1012,8 +1012,11 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if prompt.isEmpty {
                 addLocalMessage("usage: @nova <message>")
             } else {
+                let userTurn = SafeGuardianMessage(sender: "local", content: prompt, timestamp: Date(), isRelay: false)
+                if privateChats[NovaAgent.novaPeerID] == nil { privateChats[NovaAgent.novaPeerID] = [] }
+                privateChats[NovaAgent.novaPeerID]?.append(userTurn)
                 novaAgent.handle(prompt: prompt, context: self)
-            } 
+            }
             return
         }
 

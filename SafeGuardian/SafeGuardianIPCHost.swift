@@ -41,10 +41,10 @@ final class SafeGuardianIPCHost {
 
     private var source: DispatchSourceRead?
     private var listeningSocket: Int32 = -1
-    private var activeClients: [Int32: Data] = [:] // Map socket to its receive buffer
-    
+    private var activeClients: [Int32: Data] = [:]
+    private var clientCancellables: [Int32: Set<AnyCancellable>] = [:]
+
     private var chatViewModel: ChatViewModel?
-    private var cancellables = Set<AnyCancellable>()
     
     private init() {}
     
@@ -158,6 +158,7 @@ final class SafeGuardianIPCHost {
         source.cancel()
         close(clientSocket)
         activeClients.removeValue(forKey: clientSocket)
+        clientCancellables.removeValue(forKey: clientSocket)
     }
     
     private func handleInput(_ input: String) {
@@ -192,7 +193,8 @@ final class SafeGuardianIPCHost {
     
     private func setupSubscriptions(for socket: Int32, connectionTime: Date) {
         guard let chatViewModel = chatViewModel else { return }
-        
+        clientCancellables[socket] = Set<AnyCancellable>()
+
         Task { @MainActor in
             var knownMessageIDs = Set<String>()
             var lastRenderedContent: [String: String] = [:]
@@ -205,7 +207,7 @@ final class SafeGuardianIPCHost {
                     let status = isReady ? "Ready" : "Bootstrapping / Offline"
                     self?.sendToClient(socket, "\n[Tor Status]: \(status)\n")
                 }
-                .store(in: &cancellables)
+                .store(in: &clientCancellables[socket, default: Set<AnyCancellable>()])
                 
             LocationChannelManager.shared.$availableChannels
                 .dropFirst()
@@ -214,7 +216,7 @@ final class SafeGuardianIPCHost {
                     let names = channels.map { $0.geohash }.joined(separator: ", ")
                     self?.sendToClient(socket, "\n[Location Channels Updated]: \(names)\n")
                 }
-                .store(in: &cancellables)
+                .store(in: &clientCancellables[socket, default: Set<AnyCancellable>()])
 
             chatViewModel.objectWillChange
                 .receive(on: DispatchQueue.main)
@@ -272,7 +274,7 @@ final class SafeGuardianIPCHost {
                         }
                     }
                 }
-                .store(in: &cancellables)
+                .store(in: &clientCancellables[socket, default: Set<AnyCancellable>()])
         }
     }
 }

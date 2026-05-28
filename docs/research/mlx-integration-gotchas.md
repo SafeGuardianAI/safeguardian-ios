@@ -10,6 +10,14 @@ Root cause: `#hubDownloader()` and `#huggingFaceTokenizerLoader()` are expressio
 
 Fix: add `swift-huggingface` and `swift-transformers` as explicit SPM dependencies in the Xcode project, then add `import HuggingFace` and `import Tokenizers` to any file that calls those macros.
 
+## Keep Xcode package object IDs unique
+
+Symptom: Xcode package resolution or target dependency behavior appears inconsistent even though the visible package list looks correct.
+
+Root cause: manual `project.pbxproj` edits can accidentally create duplicate object IDs in `XCRemoteSwiftPackageReference` or `XCSwiftPackageProductDependency` sections. A duplicate key is project-file corruption, not an SPM dependency issue. Xcode may rewrite, discard, or interpret duplicate entries unpredictably.
+
+Fix: before adding or changing MLX-related packages, inspect `SafeGuardian.xcodeproj/project.pbxproj` for duplicate object IDs. Keep one package reference per remote package. Use separate product dependency IDs only where Xcode target references genuinely require separate product objects. Do not resurrect the deleted first-draft Nova MLX task instructions from git history; they encoded known-bad patterns.
+
 ## swift-transformers product name is Transformers, not Tokenizers
 
 Symptom: adding a product named `Tokenizers` to the Xcode project target fails with "Missing package product 'Tokenizers'".
@@ -17,6 +25,8 @@ Symptom: adding a product named `Tokenizers` to the Xcode project target fails w
 Root cause: `Tokenizers` is a build target (module) within the `swift-transformers` package. The library product exposed for SPM consumption is named `Transformers` (it bundles the `Tokenizers`, `Generation`, and `Models` targets). The `Tokenizers` module becomes importable once the `Transformers` product is linked.
 
 Fix: use `productName = Transformers` in `project.pbxproj`, not `Tokenizers`.
+
+Also keep pbxproj comments aligned with the product. A target dependency comment like `/* Tokenizers (macOS) */` on a `Transformers` product is harmless to the compiler but harmful to future manual edits.
 
 ## Use ChatSession, not container.perform, for text generation
 
@@ -59,3 +69,45 @@ Fix: `NovaAgent.drainVisible` processes only the newly arrived token against a s
 ## SourceKit false positives on MLX files
 
 SourceKit consistently reports "no such module 'MLX'" and "Loading the standard library failed" on files that import MLX modules. These are spurious diagnostics caused by the xcframework and local package setup and do not represent real errors. The only reliable build signal is `xcodebuild ... build 2>&1 | grep "error:"`. Never act on SourceKit diagnostics alone when working with MLX.
+
+## AnyLanguageModel traits require a shim package in Xcode projects
+
+Symptom: trying to adopt `huggingface/AnyLanguageModel` with MLX support from an Xcode project runs into confusing package-trait or dependency-resolution problems.
+
+Root cause: AnyLanguageModel uses Swift 6.1 package traits such as `MLX`, `CoreML`, and `Llama` to avoid linking heavy backends by default. SwiftPM supports traits, but Xcode project package dependency UI does not provide a clean way to declare them. AnyLanguageModel's own README also notes an SPM resolver issue where enabling traits may require explicitly adding the underlying backend dependencies.
+
+Fix: if SafeGuardian evaluates AnyLanguageModel, create a local Swift 6.1 shim package and add that local package to the Xcode target. The shim should depend on AnyLanguageModel with the selected traits and re-export the module. Do not hand-edit AnyLanguageModel traits into `project.pbxproj`.
+
+Recommended shape:
+
+```swift
+// swift-tools-version: 6.1
+import PackageDescription
+
+let package = Package(
+    name: "SafeGuardianModelKit",
+    platforms: [.iOS(.v17), .macOS(.v14)],
+    products: [.library(name: "SafeGuardianModelKit", targets: ["SafeGuardianModelKit"])],
+    dependencies: [
+        .package(
+            url: "https://github.com/huggingface/AnyLanguageModel",
+            from: "0.8.0",
+            traits: ["MLX"]
+        )
+    ],
+    targets: [
+        .target(
+            name: "SafeGuardianModelKit",
+            dependencies: [.product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+        )
+    ]
+)
+```
+
+Then add `@_exported import AnyLanguageModel` in the shim target. If SPM resolution fails, add the trait's underlying dependency directly in the shim package, not in the app target.
+
+## AnyLanguageModel is a provider option, not an immediate replacement
+
+AnyLanguageModel has useful architecture patterns: provider protocol, session object, transcript, typed generation, custom generation options, MLX model cache, in-flight load coalescing, active/idle GPU memory policy, per-session KV cache, and tool execution delegates.
+
+SafeGuardian should borrow those patterns first. If the package is adopted later, put it behind a SafeGuardian model-provider facade so Nova/Trek/Apex logic does not depend directly on one inference library.

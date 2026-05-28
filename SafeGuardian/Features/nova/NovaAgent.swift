@@ -19,14 +19,9 @@ final class NovaAgent: AgentProcessor {
         let service = MLXInferenceService.shared
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
-        if service.isLoading {
-            let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
-            context.addAgentLocalMessage("nova · \(shortID) · loading, please wait...", to: peerID)
-            return
-        }
         if !service.isModelLoaded {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
-            context.addAgentLocalMessage("nova · \(shortID) · initializing...", to: peerID)
+            context.addAgentLocalMessage("nova · \(shortID) · \(service.isLoading ? "downloading..." : "initializing...")", to: peerID)
         }
 
         let response = context.addResponse(

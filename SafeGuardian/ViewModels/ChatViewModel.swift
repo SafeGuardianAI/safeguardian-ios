@@ -2200,11 +2200,26 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             return cachedText
         }
         
+        // Device-local messages (GPS status, agent feedback) — teal italic, no sender prefix.
+        if message.sender == "local" {
+            var result = AttributedString()
+            var contentStyle = AttributeContainer()
+            contentStyle.foregroundColor = Color.teal
+            contentStyle.font = .safeguardianSystem(size: 12, design: .monospaced).italic()
+            result.append(AttributedString("* \(message.content) *").mergingAttributes(contentStyle))
+            var tsStyle = AttributeContainer()
+            tsStyle.foregroundColor = Color.teal.opacity(0.5)
+            tsStyle.font = .safeguardianSystem(size: 10, design: .monospaced)
+            result.append(AttributedString(" [\(message.formattedTimestamp)]").mergingAttributes(tsStyle))
+            message.setCachedFormattedText(result, isDark: isDark, isSelf: isSelf)
+            return result
+        }
+
         // Not cached, format the message
         var result = AttributedString()
-        
+
         let baseColor: Color = isSelf ? .orange : peerColor(for: message, isDark: isDark)
-        
+
         if message.sender != "system" {
             // Sender (at the beginning) with light-gray suffix styling if present
             let (baseName, suffix) = message.sender.splitSuffix()

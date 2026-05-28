@@ -16,12 +16,7 @@ final class NovaAgent: AgentProcessor {
     func handle(prompt: String, context: AgentContext) {
         let service = MLXInferenceService.shared
         
-        // Strip the trigger prefix (e.g. "@nova ")
-        let cleanPrompt = if prompt.lowercased().hasPrefix(triggerPrefix + " ") {
-            String(prompt.dropFirst(triggerPrefix.count + 1)).trimmingCharacters(in: .whitespaces)
-        } else {
-            prompt.trimmingCharacters(in: .whitespaces)
-        }
+        let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
         
         if service.isLoading {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
@@ -48,15 +43,14 @@ final class NovaAgent: AgentProcessor {
             dynamicSystemPrompt += "\n- Transport: \(tick.transportTier.rawValue)"
         }
 
-        // Build conversation history for the MLX service
         let prior = (context.privateChats[Self.novaPeerID] ?? []).suffix(NovaConfig.historyWindowSize)
         let history = prior.compactMap { msg -> Chat.Message? in
             let role: Chat.Message.Role = (msg.sender == Self.novaPeerID.id) ? .assistant : .user
+            // Status messages are formatted as "[...]"; exclude them from conversation history.
             guard !msg.content.hasPrefix("[") || !msg.content.hasSuffix("]") else { return nil }
             return Chat.Message(role: role, content: msg.content)
         }
 
-        // Record the turn in the private Nova thread
         let response = context.addResponse(sender: Self.novaPeerID.id, content: "[thinking...]", privatePeerID: Self.novaPeerID)
         context.notifyChange()
 
@@ -137,10 +131,8 @@ final class NovaAgent: AgentProcessor {
                 result.append(input[i])
                 i = input.index(after: i)
             } else {
-                // inThink=true; guard against a partial </think> close tag that spans
-                // the boundary into the next token. Without this, a split like
-                // "</thi" + "nk>" silently discards the close tag and Nova stays
-                // invisible for the remainder of the response.
+                // Buffer a potential partial </think> spanning the next token;
+                // without this, a split close tag is silently discarded.
                 let remaining = input[i...]
                 if remaining.count < tagMaxLen, "</think>".hasPrefix(String(remaining)) { break }
                 i = input.index(after: i)

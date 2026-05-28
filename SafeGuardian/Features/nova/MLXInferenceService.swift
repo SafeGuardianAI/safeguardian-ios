@@ -76,7 +76,7 @@ final class MLXInferenceService {
     private func log(_ message: String) {
         let timestamp = Date().description
         let logLine = "[MLX] [\(timestamp)] \(message)\n"
-        print(logLine) // Console
+        print(logLine)
         
         let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
         let logPath = paths[0].appendingPathComponent("chat.safeguardian").appendingPathComponent("tui.log").path
@@ -110,6 +110,7 @@ final class MLXInferenceService {
             do {
                 if container == nil {
                     isLoading = true
+                    defer { isLoading = false }
                     downloadProgress = 0
                     onStatus("[initializing...]")
                     log("Initializing model container...")
@@ -128,9 +129,8 @@ final class MLXInferenceService {
                             self?.downloadProgress = progress.fractionCompleted
                         }
                     }
-                    isLoading = false
                     container = loaded
-                    session = nil // Force new session for new container
+                    session = nil
                     log("Model loaded successfully.")
                 }
                 
@@ -148,9 +148,10 @@ final class MLXInferenceService {
                     }
                 }
 
-                guard let session, !Task.isCancelled else { 
+                guard let session, !Task.isCancelled else {
                     log("Session or task cancelled.")
-                    return 
+                    onComplete()
+                    return
                 }
                 
                 if userMessage.isEmpty {

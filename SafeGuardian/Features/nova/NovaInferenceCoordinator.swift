@@ -39,7 +39,9 @@ import MLXLMCommon
         activeTask = Task {
             do {
                 onStatus("[initializing...]")
-                let model = try await loader.container(modelID: modelID) { _ in }
+                let model = try await loader.container(modelID: modelID) { progress in
+                    onStatus("[downloading: \(Int(progress * 100))%]")
+                }
                 guard !Task.isCancelled else { onComplete(); return }
 
                 let session = sessionPool.session(

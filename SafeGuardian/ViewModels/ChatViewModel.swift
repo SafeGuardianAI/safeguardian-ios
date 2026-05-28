@@ -171,7 +171,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     let autocompleteService: AutocompleteService
     let deduplicationService: MessageDeduplicationService  // internal for test access
     let novaBroadcaster: NovaBroadcaster
-    private let novaAgent = NovaAgent()
+    private let agents: [any AgentProcessor] = [NovaAgent()]
 
     // Computed properties for compatibility
     @MainActor
@@ -1005,17 +1005,18 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             return
         }   
             
-        // Route @nova mentions to on-device inference; never sent to the mesh
+        // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh
         let lower = trimmed.lowercased()
-        if lower == "@nova" || lower.hasPrefix("@nova ") {
-            let prompt = lower == "@nova" ? "" : String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
-            if prompt.isEmpty {
-                addLocalMessage("usage: @nova <message>")
+        for agent in agents where agent.shouldHandle(lower) {
+            let prefix = agent.triggerPrefix
+            let stripped = lower == prefix ? "" : String(trimmed.dropFirst(prefix.count + 1)).trimmingCharacters(in: .whitespaces)
+            if stripped.isEmpty {
+                addLocalMessage("usage: \(prefix) <message>")
             } else {
-                let userTurn = SafeGuardianMessage(sender: "local", content: prompt, timestamp: Date(), isRelay: false)
-                if privateChats[NovaAgent.novaPeerID] == nil { privateChats[NovaAgent.novaPeerID] = [] }
-                privateChats[NovaAgent.novaPeerID]?.append(userTurn)
-                novaAgent.handle(prompt: prompt, context: self)
+                let userTurn = SafeGuardianMessage(sender: "local", content: stripped, timestamp: Date(), isRelay: false)
+                if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
+                privateChats[agent.peerID]?.append(userTurn)
+                agent.handle(prompt: stripped, context: self)
             }
             return
         }

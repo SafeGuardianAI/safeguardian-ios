@@ -7,10 +7,13 @@ import BitFoundation
 protocol AgentProcessor: Sendable {
     /// The unique identifier for the agent (e.g., "nova", "trek").
     var agentID: String { get }
-    
+
     /// The trigger prefix this agent responds to (e.g., "@nova").
     var triggerPrefix: String { get }
-    
+
+    /// The PeerID used for this agent's private chat thread.
+    var peerID: PeerID { get }
+
     /// Determines if this agent should handle the given message.
     func shouldHandle(_ message: String) -> Bool
     

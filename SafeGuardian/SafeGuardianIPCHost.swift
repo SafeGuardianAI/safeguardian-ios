@@ -65,13 +65,16 @@ final class SafeGuardianIPCHost {
         guard listen(listeningSocket, 5) >= 0 else { log("Listen failed"); return }
         log("Listening on \(path)")
         source = DispatchSource.makeReadSource(fileDescriptor: listeningSocket, queue: .global())
-        source?.setEventHandler { [weak self] in Task { @MainActor in self?.acceptConnection() } }
+        source?.setEventHandler { [weak self] in
+            guard let self else { return }
+            let fd = accept(self.listeningSocket, nil, nil)
+            guard fd >= 0 else { return }
+            Task { @MainActor [weak self] in self?.handleNewConnection(fd) }
+        }
         source?.resume()
     }
 
-    func acceptConnection() {
-        let fd = accept(listeningSocket, nil, nil)
-        guard fd >= 0 else { return }
+    func handleNewConnection(_ fd: Int32) {
         log("Terminal client connected.")
         activeClients[fd] = Data()
         sendToClient(fd, "SafeGuardian\n")
@@ -80,11 +83,13 @@ final class SafeGuardianIPCHost {
         setupSubscriptions(for: fd, connectionTime: Date())
         let src = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .global())
         src.setEventHandler { [weak self] in
-            Task { @MainActor in
-                var buf = [UInt8](repeating: 0, count: 4096)
-                let n = read(fd, &buf, buf.count)
-                if n <= 0 { self?.closeClient(fd, source: src) }
-                else { self?.processClientData(fd, data: Data(buf[0..<n])) }
+            var buf = [UInt8](repeating: 0, count: 4096)
+            let n = read(fd, &buf, buf.count)
+            if n <= 0 {
+                Task { @MainActor [weak self] in self?.closeClient(fd, source: src) }
+            } else {
+                let data = Data(buf[0..<n])
+                Task { @MainActor [weak self] in self?.processClientData(fd, data: data) }
             }
         }
         src.resume()

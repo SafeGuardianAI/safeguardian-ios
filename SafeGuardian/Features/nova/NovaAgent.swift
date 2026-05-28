@@ -6,6 +6,7 @@ import MLXLMCommon
 final class NovaAgent: AgentProcessor {
     let agentID = "nova"
     let triggerPrefix = "@nova"
+    let peerID = PeerID(str: "nova-local")
     static let novaPeerID = PeerID(str: "nova-local")
 
     func shouldHandle(_ message: String) -> Bool {

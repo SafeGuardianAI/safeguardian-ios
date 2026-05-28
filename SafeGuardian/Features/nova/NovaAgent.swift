@@ -68,19 +68,27 @@ final class NovaAgent: AgentProcessor {
             },
             onToken: { token in
                 Task { @MainActor in
-                    state.pending += token
-                    let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
-                    state.visible += visible
-                    state.pending = remaining
-                    if state.visible.isEmpty {
-                        if state.inThink { state.thinkTokens += 1 }
-                        response.content = state.thinkTokens > 0
-                            ? "[thinking... \(state.thinkTokens)t]"
-                            : "[thinking...]"
-                    } else {
-                        response.content = state.visible
+                    autoreleasepool {
+                        state.pending += token
+                        let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
+                        state.visible += visible
+                        state.pending = remaining
+                        if state.visible.isEmpty {
+                            if state.inThink { state.thinkTokens += 1 }
+                            response.content = state.thinkTokens > 0
+                                ? "[thinking... \(state.thinkTokens)t]"
+                                : "[thinking...]"
+                        } else {
+                            response.content = state.visible
+                        }
+
+                        // Throttle updates to ~10 FPS (100ms) to prevent main thread saturation and memory leaks
+                        let now = Date().timeIntervalSince1970
+                        if now - state.lastUpdate >= 0.1 {
+                            state.lastUpdate = now
+                            context.notifyChange()
+                        }
                     }
-                    context.notifyChange()
                 }
             },
             onComplete: {
@@ -106,6 +114,7 @@ final class NovaAgent: AgentProcessor {
         var visible: String = ""
         var inThink: Bool = false
         var thinkTokens: Int = 0  // tokens consumed inside think blocks
+        var lastUpdate: TimeInterval = 0
     }
 
     // Drains all complete visible characters from `input`, leaving any incomplete tag suffix

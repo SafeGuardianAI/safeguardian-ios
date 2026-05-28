@@ -35,11 +35,11 @@ public final class SafeGuardianMessage: Codable {
     private var _cachedFormattedText: [String: AttributedString] = [:]
     
     public func getCachedFormattedText(isDark: Bool, isSelf: Bool) -> AttributedString? {
-        return _cachedFormattedText["\(isDark)-\(isSelf)"]
+        return nil // Disabled for Nova CLI leak investigation
     }
     
     public func setCachedFormattedText(_ text: AttributedString, isDark: Bool, isSelf: Bool) {
-        _cachedFormattedText["\(isDark)-\(isSelf)"] = text
+        // Disabled for Nova CLI leak investigation
     }
     
     // Codable implementation

@@ -28,6 +28,7 @@ extension SafeGuardianIPCHost {
 
         vm.$messages
             .receive(on: DispatchQueue.main)
+            .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] messages in
                 guard let self, self.activeClients[fd] != nil else { return }
 
@@ -61,6 +62,7 @@ extension SafeGuardianIPCHost {
         // Nova private channel — responses go to privateChats[novaPeerID], not $messages.
         vm.privateChatManager.$privateChats
             .receive(on: DispatchQueue.main)
+            .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] chats in
                 guard let self, self.activeClients[fd] != nil else { return }
                 let novaMessages = chats[NovaAgent.novaPeerID] ?? []

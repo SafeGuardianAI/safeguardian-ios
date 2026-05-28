@@ -24,6 +24,7 @@ final class SafeGuardianIPCHost {
     var activeClients: [Int32: Data] = [:]
     var clientCancellables: [Int32: Set<AnyCancellable>] = [:]
     var chatViewModel: ChatViewModel?
+    private let ioQueue = DispatchQueue(label: "chat.safeguardian.ipc.io")
 
     private init() {}
 
@@ -106,7 +107,9 @@ final class SafeGuardianIPCHost {
 
     func sendToClient(_ fd: Int32, _ text: String) {
         let data = Data(text.utf8)
-        data.withUnsafeBytes { write(fd, $0.baseAddress, data.count) }
+        ioQueue.async {
+            _ = data.withUnsafeBytes { write(fd, $0.baseAddress, data.count) }
+        }
     }
 
     func log(_ message: String) {

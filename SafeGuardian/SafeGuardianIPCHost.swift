@@ -23,7 +23,7 @@ final class SafeGuardianIPCHost {
     public func log(_ message: String) {
         let timestamp = Date().description
         let logLine = "[\(timestamp)] \(message)\n"
-        print("[IPC] \(message)") // Console
+        print("[IPC] \(message)")
         if let data = logLine.data(using: .utf8) {
             let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             let appSupport = paths[0].appendingPathComponent("chat.safeguardian", isDirectory: true)
@@ -225,8 +225,6 @@ final class SafeGuardianIPCHost {
                         // Ensure client is still connected
                         guard self?.activeClients[socket] != nil else { return }
 
-                        // SHEPHERD FIX: On the very first trigger, index all current messages
-                        // to ensure startup is perfectly silent.
                         if isFirstTrigger {
                             isFirstTrigger = false
                             for msg in chatViewModel.messages {
@@ -238,38 +236,27 @@ final class SafeGuardianIPCHost {
                             return
                         }
 
-                        // SHEPHERD FIX: Only look at the latest message to prevent O(N^2) flood
                         guard let msg = chatViewModel.messages.last else { return }
                         
-                        // Ignore messages that occurred before this connection
                         guard msg.timestamp >= connectionTime else { return }
 
                         let content = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !content.isEmpty else { return }
-                        
+
                         if !knownMessageIDs.contains(msg.id) {
                             knownMessageIDs.insert(msg.id)
                             lastRenderedContent[msg.id] = content
-                            // New message: print with sender label
                             self?.sendToClient(socket, "\n[\(msg.sender)] \(content)\n")
                         } else if let lastContent = lastRenderedContent[msg.id], lastContent != content {
                             lastRenderedContent[msg.id] = content
-                            
                             if content.hasPrefix("[") && content.hasSuffix("]") {
-                                // Status update: overwrite in-place
                                 self?.sendToClient(socket, "\r[\(msg.sender)] \(content)")
+                            } else if lastContent.hasPrefix("[") && lastContent.hasSuffix("]") {
+                                self?.sendToClient(socket, "\n[\(msg.sender)] \(content)")
+                            } else if content.hasPrefix(lastContent) {
+                                self?.sendToClient(socket, String(content.dropFirst(lastContent.count)))
                             } else {
-                                // Transition from [status] to text
-                                if lastContent.hasPrefix("[") && lastContent.hasSuffix("]") {
-                                    self?.sendToClient(socket, "\n[\(msg.sender)] \(content)")
-                                } else if content.hasPrefix(lastContent) {
-                                    // Append only new tokens
-                                    let newSuffix = String(content.dropFirst(lastContent.count))
-                                    self?.sendToClient(socket, newSuffix)
-                                } else {
-                                    // Fallback: overwrite the current line
-                                    self?.sendToClient(socket, "\r[\(msg.sender)] \(content)")
-                                }
+                                self?.sendToClient(socket, "\r[\(msg.sender)] \(content)")
                             }
                         }
                     }

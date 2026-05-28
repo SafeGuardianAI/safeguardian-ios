@@ -11,7 +11,6 @@ import SwiftUI
 import BitFoundation
 import UserNotifications
 
-@main
 struct SafeGuardianApp: App {
     static let bundleID = Bundle.main.bundleIdentifier ?? "chat.safeguardian"
     static let groupID = "group.\(bundleID)"

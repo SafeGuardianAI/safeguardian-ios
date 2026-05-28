@@ -31,6 +31,10 @@ final class MLXInferenceService {
     private var session: ChatSession?
     private var activeTask: Task<Void, Never>?
 
+    var isModelLoaded: Bool {
+        container != nil
+    }
+
     private init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.savedModelsKey) ?? []
         let initialSaved = stored.isEmpty ? [Self.defaultModelID] : stored
@@ -90,16 +94,19 @@ final class MLXInferenceService {
 
     func generate(
         systemPrompt: String? = nil,
+        history: [Chat.Message] = [],
         userMessage: String,
         onStatus: @escaping @Sendable (String) -> Void,
         onToken: @escaping @Sendable (String) -> Void,
         onComplete: @escaping @Sendable () -> Void
     ) {
-        activeTask?.cancel()
         let modelID = activeModelID
-        log("Generating for model: \(modelID)")
+        log("[Generate] Starting for prompt: \(userMessage.prefix(30))...")
+        
+        activeTask?.cancel()
         
         activeTask = Task {
+            log("[Generate] Task started.")
             do {
                 if container == nil {
                     isLoading = true
@@ -127,15 +134,15 @@ final class MLXInferenceService {
                     log("Model loaded successfully.")
                 }
                 
-                // If system prompt changed, we must reset the session to apply new state context
                 if session == nil || (systemPrompt != nil && systemPrompt != lastSystemPrompt) {
                     onStatus("[starting session...]")
-                    log("Starting new session. Prompt changed: \(systemPrompt != lastSystemPrompt)")
+                    log("Starting new session. History turns: \(history.count)")
                     lastSystemPrompt = systemPrompt
                     if let container {
                         session = ChatSession(
                             container,
                             instructions: systemPrompt,
+                            history: history,
                             generateParameters: GenerateParameters(temperature: 0.7)
                         )
                     }

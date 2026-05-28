@@ -18,6 +18,8 @@ import UIKit
 /// Constructed by ChatViewModel alongside UnifiedPeerService.
 @MainActor
 final class NovaBroadcaster: ObservableObject {
+    /// Global access for state-aware agents. Set by ChatViewModel on boot.
+    static var shared: NovaBroadcaster?
 
     // MARK: - Published Output
 

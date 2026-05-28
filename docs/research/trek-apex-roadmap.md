@@ -11,6 +11,16 @@ The current headless TUI implementation boots a duplicate instance of the app, c
 - [ ] **Wire Socket to ViewModels**: Connect the socket's read stream to `ChatViewModel.sendMessage()` and its write stream to Combine subscribers (`$messages`, `$availableChannels`, `$isReady`).
 - [ ] **Rewrite CLI Launcher**: Update the `safeguardian` root script to use `nc -U /tmp/safeguardian.sock` to pipe standard input/output directly to the running GUI app.
 
+## Phase 1.5: Resident Agent Stress Doctrine (High Priority Hardening)
+Before adding Identity, the Gateway must be proven as reliable infrastructure. This phase ensures the daemon survives hostile launch orders, crashes, and concurrent clients without "splitting its brain."
+
+- [ ] **Single Brain Enforcement**: Implement "First-to-Bind" logic with stale socket detection. Ensure no launch sequence can result in two independent SafeGuardian runtimes.
+- [ ] **Instance & Sequence ID**: Add a UUID `GatewayInstanceID` generated on every daemon boot and a monotonically increasing `MessageSequenceNumber` for all events (messages and tokens).
+- [ ] **Gateway Health Snapshot**: Define a `GatewayHealthSnapshot` struct that reports the daemon's internal state (uptime, client count, registered agents, model status).
+- [ ] **Socket & Stream Recovery**: Harden `GatewayIPCHost` to handle partial reads, broken pipes, and client reconnects without replaying or losing message content.
+- [ ] **Observability Hardening**: Log every startup, shutdown, client transition, and stream event to `daemon.log`.
+- [ ] **Heartbeat Discipline**: Refine `HeartbeatService` to follow strict policies (Startup, Shutdown, Threshold, Interval) ensuring `HEARTBEAT.md` remains a readable record, not a spam log.
+
 ## Phase 2: Trek Identity & Authentication
 Responders require elevated trust and privacy scopes, authenticated mathematically rather than via passwords.
 

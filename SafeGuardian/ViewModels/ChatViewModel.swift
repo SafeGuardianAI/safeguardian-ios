@@ -171,7 +171,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     let autocompleteService: AutocompleteService
     let deduplicationService: MessageDeduplicationService  // internal for test access
     let novaBroadcaster: NovaBroadcaster
-    
+    private let novaAgent = NovaAgent()
+
     // Computed properties for compatibility
     @MainActor
     var connectedPeers: Set<PeerID> { unifiedPeerService.connectedPeerIDs }
@@ -450,6 +451,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         self.autocompleteService = AutocompleteService()
         self.deduplicationService = MessageDeduplicationService()
         self.novaBroadcaster = NovaBroadcaster(peerService: self.unifiedPeerService)
+        NovaBroadcaster.shared = self.novaBroadcaster
 
         // Wire up dependencies
         self.commandProcessor.contextProvider = self
@@ -1010,7 +1012,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if prompt.isEmpty {
                 addLocalMessage("usage: @nova <message>")
             } else {
-                routeToNova(prompt)
+                novaAgent.handle(prompt: prompt, context: self)
             } 
             return
         }

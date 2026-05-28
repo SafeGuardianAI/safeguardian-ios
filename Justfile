@@ -52,7 +52,7 @@ build: #check generate
 # Run the macOS app
 run: build
     @echo "Launching SafeGuardian..."
-    @find ~/Library/Developer/Xcode/DerivedData -name "SafeGuardian.app" -path "*/Debug/*" -not -path "*/Index.noindex/*" | head -1 | xargs -I {} open "{}"
+    @ls -td ~/Library/Developer/Xcode/DerivedData/SafeGuardian-*/Build/Products/Debug/SafeGuardian.app 2>/dev/null | head -1 | xargs open
 
 # Clean build artifacts and restore original files
 clean: restore
@@ -68,10 +68,10 @@ clean: restore
     @echo "✅ Cleaned and restored original files"
 
 # Quick run without cleaning (for development)
-dev-run: check
+dev-run:
     @echo "Quick development build..."
     @xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-    @find ~/Library/Developer/Xcode/DerivedData -name "SafeGuardian.app" -path "*/Debug/*" -not -path "*/Index.noindex/*" | head -1 | xargs -I {} open "{}"
+    @ls -td ~/Library/Developer/Xcode/DerivedData/SafeGuardian-*/Build/Products/Debug/SafeGuardian.app 2>/dev/null | head -1 | xargs open
 
 # Show app info
 info:

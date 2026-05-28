@@ -4,6 +4,7 @@ import Combine
 import Tor
 import BitFoundation
 
+@MainActor
 final class SafeGuardianIPCHost {
     static let shared = SafeGuardianIPCHost()
     private var socketPath: String {
@@ -19,11 +20,15 @@ final class SafeGuardianIPCHost {
         return appSupport.appendingPathComponent("tui.log").path
     }
 
-    private func log(_ message: String) {
+    public func log(_ message: String) {
         let timestamp = Date().description
         let logLine = "[\(timestamp)] \(message)\n"
         print("[IPC] \(message)") // Console
         if let data = logLine.data(using: .utf8) {
+            let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            let appSupport = paths[0].appendingPathComponent("chat.safeguardian", isDirectory: true)
+            let logPath = appSupport.appendingPathComponent("tui.log").path
+            
             if !FileManager.default.fileExists(atPath: logPath) {
                 FileManager.default.createFile(atPath: logPath, contents: data)
             } else if let handle = FileHandle(forWritingAtPath: logPath) {
@@ -36,7 +41,7 @@ final class SafeGuardianIPCHost {
 
     private var source: DispatchSourceRead?
     private var listeningSocket: Int32 = -1
-    private var activeClients: [Int32] = []
+    private var activeClients: [Int32: Data] = [:] // Map socket to its receive buffer
     
     private var chatViewModel: ChatViewModel?
     private var cancellables = Set<AnyCancellable>()
@@ -58,8 +63,17 @@ final class SafeGuardianIPCHost {
         
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
-        let pathLen = path.withCString { Int(strlen($0)) }
-        _ = path.withCString { strncpy(&addr.sun_path.0, $0, Int(MemoryLayout.size(ofValue: addr.sun_path))) }
+        
+        // Safer path copying to avoid memory corruption
+        let pathData = path.data(using: .utf8)!
+        pathData.withUnsafeBytes { ptr in
+            withUnsafeMutablePointer(to: &addr.sun_path) { sunPtr in
+                let dest = UnsafeMutableRawPointer(sunPtr).assumingMemoryBound(to: UInt8.self)
+                let count = min(pathData.count, 103) // sun_path size is 104, leave room for null
+                dest.update(from: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), count: count)
+                dest[count] = 0 // Null terminate
+            }
+        }
         addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.stride)
         
         var bindAddr = addr
@@ -84,19 +98,21 @@ final class SafeGuardianIPCHost {
         
         source = DispatchSource.makeReadSource(fileDescriptor: listeningSocket, queue: DispatchQueue.global())
         source?.setEventHandler { [weak self] in
-            self?.acceptConnection()
+            Task { @MainActor in
+                self?.acceptConnection()
+            }
         }
         source?.resume()
-        
-        setupSubscriptions()
     }
     
     private func acceptConnection() {
         let clientSocket = accept(listeningSocket, nil, nil)
         guard clientSocket >= 0 else { return }
         
+        let connectionTime = Date()
         log("New terminal client connected.")
-        activeClients.append(clientSocket)
+        activeClients[clientSocket] = Data()
+        
         sendToClient(clientSocket, "========================================\n")
         sendToClient(clientSocket, " SafeGuardian Terminal Interface v1.0\n")
         sendToClient(clientSocket, "========================================\n")
@@ -105,26 +121,43 @@ final class SafeGuardianIPCHost {
         sendToClient(clientSocket, "    Type /exit to quit.\n")
         sendToClient(clientSocket, "----------------------------------------\n")
         
+        setupSubscriptions(for: clientSocket, connectionTime: connectionTime)
+        
         let clientSource = DispatchSource.makeReadSource(fileDescriptor: clientSocket, queue: DispatchQueue.global())
         clientSource.setEventHandler { [weak self] in
-            var buffer = [UInt8](repeating: 0, count: 1024)
-            let bytesRead = read(clientSocket, &buffer, buffer.count)
-            if bytesRead <= 0 {
-                self?.closeClient(clientSocket, source: clientSource)
-            } else {
-                let data = Data(buffer[0..<bytesRead])
-                if let str = String(data: data, encoding: .utf8) {
-                    self?.handleInput(str)
+            Task { @MainActor in
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                let bytesRead = read(clientSocket, &buffer, buffer.count)
+                if bytesRead <= 0 {
+                    self?.closeClient(clientSocket, source: clientSource)
+                } else {
+                    self?.processClientData(clientSocket, data: Data(buffer[0..<bytesRead]))
                 }
             }
         }
         clientSource.resume()
     }
     
+    private func processClientData(_ socket: Int32, data: Data) {
+        guard var buffer = activeClients[socket] else { return }
+        buffer.append(data)
+        
+        // Scan for newlines
+        while let newlineIndex = buffer.firstIndex(of: 10) { // '\n'
+            let lineData = buffer[..<newlineIndex]
+            if let line = String(data: lineData, encoding: .utf8) {
+                handleInput(line)
+            }
+            buffer.removeSubrange(..<buffer.index(after: newlineIndex))
+        }
+        
+        activeClients[socket] = buffer
+    }
+    
     private func closeClient(_ clientSocket: Int32, source: DispatchSourceRead) {
         source.cancel()
         close(clientSocket)
-        activeClients.removeAll { $0 == clientSocket }
+        activeClients.removeValue(forKey: clientSocket)
     }
     
     private func handleInput(_ input: String) {
@@ -135,6 +168,8 @@ final class SafeGuardianIPCHost {
             return
         }
         
+        log("Processing Input: \(trimmed.prefix(50))...")
+        
         // Pass to main app
         Task { @MainActor in
             chatViewModel?.sendMessage(trimmed)
@@ -143,7 +178,7 @@ final class SafeGuardianIPCHost {
     
     private func broadcast(_ message: String) {
         log("Broadcasting: \(message.trimmingCharacters(in: .whitespacesAndNewlines))")
-        for client in activeClients {
+        for client in activeClients.keys {
             sendToClient(client, message)
         }
     }
@@ -155,16 +190,20 @@ final class SafeGuardianIPCHost {
         }
     }
     
-    private func setupSubscriptions() {
+    private func setupSubscriptions(for socket: Int32, connectionTime: Date) {
         guard let chatViewModel = chatViewModel else { return }
         
         Task { @MainActor in
+            var knownMessageIDs = Set<String>()
+            var lastRenderedContent: [String: String] = [:]
+            var isFirstTrigger = true
+
             TorManager.shared.$isReady
                 .dropFirst()
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] isReady in
                     let status = isReady ? "Ready" : "Bootstrapping / Offline"
-                    self?.broadcast("\n[Tor Status]: \(status)\n")
+                    self?.sendToClient(socket, "\n[Tor Status]: \(status)\n")
                 }
                 .store(in: &cancellables)
                 
@@ -173,45 +212,61 @@ final class SafeGuardianIPCHost {
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] channels in
                     let names = channels.map { $0.geohash }.joined(separator: ", ")
-                    self?.broadcast("\n[Location Channels Updated]: \(names)\n")
+                    self?.sendToClient(socket, "\n[Location Channels Updated]: \(names)\n")
                 }
                 .store(in: &cancellables)
-
-            var knownMessageIDs = Set<String>()
-            var lastRenderedContent: [String: String] = [:]
 
             chatViewModel.objectWillChange
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in
                     DispatchQueue.main.async {
-                        for msg in chatViewModel.messages {
-                            let content = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !content.isEmpty else { continue }
-                            
-                            if !knownMessageIDs.contains(msg.id) {
+                        // Ensure client is still connected
+                        guard self?.activeClients[socket] != nil else { return }
+
+                        // SHEPHERD FIX: On the very first trigger, index all current messages
+                        // to ensure startup is perfectly silent.
+                        if isFirstTrigger {
+                            isFirstTrigger = false
+                            for msg in chatViewModel.messages {
                                 knownMessageIDs.insert(msg.id)
-                                lastRenderedContent[msg.id] = content
-                                // New message: print with sender label
-                                self?.broadcast("\n[\(msg.sender)] \(content)\n")
-                            } else if let lastContent = lastRenderedContent[msg.id], lastContent != content {
-                                lastRenderedContent[msg.id] = content
-                                
-                                // Update existing message (e.g. Nova streaming or status change)
-                                if content.hasPrefix("[") && content.hasSuffix("]") {
-                                    // Status update: use \r to overwrite in-place
-                                    self?.broadcast("\r[\(msg.sender)] \(content)")
+                                // Standardize trimming for history too
+                                lastRenderedContent[msg.id] = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                            self?.log("TUI Warm Start complete. \(knownMessageIDs.count) history messages indexed.")
+                            return
+                        }
+
+                        // SHEPHERD FIX: Only look at the latest message to prevent O(N^2) flood
+                        guard let msg = chatViewModel.messages.last else { return }
+                        
+                        // Ignore messages that occurred before this connection
+                        guard msg.timestamp >= connectionTime else { return }
+
+                        let content = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !content.isEmpty else { return }
+                        
+                        if !knownMessageIDs.contains(msg.id) {
+                            knownMessageIDs.insert(msg.id)
+                            lastRenderedContent[msg.id] = content
+                            // New message: print with sender label
+                            self?.sendToClient(socket, "\n[\(msg.sender)] \(content)\n")
+                        } else if let lastContent = lastRenderedContent[msg.id], lastContent != content {
+                            lastRenderedContent[msg.id] = content
+                            
+                            if content.hasPrefix("[") && content.hasSuffix("]") {
+                                // Status update: overwrite in-place
+                                self?.sendToClient(socket, "\r[\(msg.sender)] \(content)")
+                            } else {
+                                // Transition from [status] to text
+                                if lastContent.hasPrefix("[") && lastContent.hasSuffix("]") {
+                                    self?.sendToClient(socket, "\n[\(msg.sender)] \(content)")
+                                } else if content.hasPrefix(lastContent) {
+                                    // Append only new tokens
+                                    let newSuffix = String(content.dropFirst(lastContent.count))
+                                    self?.sendToClient(socket, newSuffix)
                                 } else {
-                                    // Actual token content: check if we were previously in a status state
-                                    if lastContent.hasPrefix("[") && lastContent.hasSuffix("]") {
-                                        // Transition from [thinking] to text: newline first
-                                        self?.broadcast("\n[\(msg.sender)] \(content)")
-                                    } else {
-                                        // Consecutive tokens: append smoothly
-                                        // This assumes the terminal client handles the stream correctly.
-                                        // To be safe for simple 'nc' we re-print the line or just the diff.
-                                        // Let's do a smooth re-print of the current response line.
-                                        self?.broadcast("\r[\(msg.sender)] \(content)")
-                                    }
+                                    // Fallback: overwrite the current line
+                                    self?.sendToClient(socket, "\r[\(msg.sender)] \(content)")
                                 }
                             }
                         }

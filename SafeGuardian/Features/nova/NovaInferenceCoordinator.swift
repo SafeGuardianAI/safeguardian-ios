@@ -105,13 +105,10 @@ import MLXLMCommon
     }
 
     private func decoratePrompt(_ prompt: String, tick: NovaStateTick?) -> String {
-        // /no_think suppresses Qwen3 chain-of-thought blocks; without it every turn
-        // after the first enters thinking mode and the visible output is empty.
-        let noThink = " /no_think"
-        guard let tick else { return prompt + noThink }
+        guard let tick else { return prompt }
         let battery = Int(tick.batteryPct * 100)
         let loc = String(format: "%.4f,%.4f", tick.lat, tick.lon)
-        return "[state: battery \(battery)%, loc \(loc), \(tick.peerCount) peers] \(prompt)\(noThink)"
+        return "[state: battery \(battery)%, loc \(loc), \(tick.peerCount) peers] \(prompt)"
     }
 
     private func log(_ message: String) {

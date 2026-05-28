@@ -1,7 +1,7 @@
 import Foundation
 
 enum NovaConfig {
-    static let defaultModelID = "mlx-community/Qwen3-0.6B-4bit"
+    static let defaultModelID = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
     static let temperature: Float = 0.7
     static let generationTimeoutSeconds: UInt64 = 300
     static let historyWindowSize = 10

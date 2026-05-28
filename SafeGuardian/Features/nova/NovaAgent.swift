@@ -24,18 +24,22 @@ final class NovaAgent: AgentProcessor {
         }
         
         if service.isLoading {
-            context.addLocalMessage("nova is loading the model, please wait...")
+            let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
+            context.addLocalMessage("nova · \(shortID) · loading, please wait...")
             return
         }
 
-        // Build dynamic system prompt with current device state
-        // (Note: This currently reaches into a singleton for now, but adheres to the protocol)
+        if !service.isModelLoaded {
+            let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
+            context.addLocalMessage("nova · \(shortID) · initializing...")
+        }
+
         var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief."
-        
-        if let tick = NovaBroadcaster.shared?.latestTick {
+
+        if let tick = context.deviceTick {
             let battery = Int(tick.batteryPct * 100)
             let loc = String(format: "%.4f, %.4f", tick.lat, tick.lon)
-            let geohash = LocationChannelManager.shared.selectedChannel.nostrGeohashTag ?? "mesh"
+            let geohash = context.selectedGeohash ?? "mesh"
             
             dynamicSystemPrompt += "\n\nCurrent Device State:"
             dynamicSystemPrompt += "\n- Battery: \(battery)%"
@@ -70,13 +74,18 @@ final class NovaAgent: AgentProcessor {
             },
             onToken: { token in
                 Task { @MainActor in
-                    // Process only the new token incrementally against the pending buffer.
-                    // This avoids reprocessing the entire accumulated string on every token (O(n²)).
                     state.pending += token
                     let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
                     state.visible += visible
                     state.pending = remaining
-                    response.content = state.visible.isEmpty ? "[thinking...]" : state.visible
+                    if state.visible.isEmpty {
+                        if state.inThink { state.thinkTokens += 1 }
+                        response.content = state.thinkTokens > 0
+                            ? "[thinking... \(state.thinkTokens)t]"
+                            : "[thinking...]"
+                    } else {
+                        response.content = state.visible
+                    }
                     context.notifyChange()
                 }
             },
@@ -99,9 +108,10 @@ final class NovaAgent: AgentProcessor {
     }
 
     private class NovaStreamState {
-        var pending: String = ""  // buffered input not yet processed
-        var visible: String = ""  // accumulated output text
+        var pending: String = ""
+        var visible: String = ""
         var inThink: Bool = false
+        var thinkTokens: Int = 0  // tokens consumed inside think blocks
     }
 
     // Drains all complete visible characters from `input`, leaving any incomplete tag suffix
@@ -127,6 +137,12 @@ final class NovaAgent: AgentProcessor {
                 result.append(input[i])
                 i = input.index(after: i)
             } else {
+                // inThink=true; guard against a partial </think> close tag that spans
+                // the boundary into the next token. Without this, a split like
+                // "</thi" + "nk>" silently discards the close tag and Nova stays
+                // invisible for the remainder of the response.
+                let remaining = input[i...]
+                if remaining.count < tagMaxLen, "</think>".hasPrefix(String(remaining)) { break }
                 i = input.index(after: i)
             }
         }

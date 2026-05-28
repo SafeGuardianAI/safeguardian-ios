@@ -27,6 +27,8 @@ protocol AgentProcessor: Sendable {
 protocol AgentContext {
     var nickname: String { get }
     var privateChats: [PeerID: [SafeGuardianMessage]] { get }
+    var deviceTick: NovaStateTick? { get }
+    var selectedGeohash: String? { get }
     func addLocalMessage(_ content: String)
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage
     func notifyChange()

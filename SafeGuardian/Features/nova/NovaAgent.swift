@@ -30,7 +30,7 @@ final class NovaAgent: AgentProcessor {
         }
 
         let response = context.addResponse(
-            sender: Self.novaPeerID.id, content: "[thinking...]", privatePeerID: Self.novaPeerID
+            sender: displayName, content: "[thinking...]", privatePeerID: Self.novaPeerID
         )
         context.notifyChange()
 

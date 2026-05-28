@@ -28,7 +28,9 @@ The original analysis misidentified the bug as missing content in the equality c
 
 ## HIGH — Status messages appear in public feed [FIXED]
 
-`AgentProcessor.swift` — added `addAgentLocalMessage(_:to:)` to `AgentContext`. `NovaAgent` now calls this instead of `addLocalMessage`, routing status messages directly into the agent's private chat thread rather than the main feed. The `startPrivateChat(with: agent.peerID)` call was also moved before `handle()` in the dispatch loop so the private thread is always open before any message is injected.
+`AgentContext` protocol (`AgentProcessor.swift`) gained `addAgentLocalMessage(_:to:)`, implemented in `ChatViewModel+AgentContext.swift`. It creates a `sender: "local"` message and appends it directly to `privateChats[peerID]`, bypassing the `selectedPrivateChatPeer` lookup that caused `addLocalMessage` to fall through to the public feed. `NovaAgent` now calls `addAgentLocalMessage` instead of `addLocalMessage`.
+
+`startPrivateChat(with: agent.peerID)` is called before `agent.handle()` in the dispatch loop. This does not affect message routing — `addAgentLocalMessage` initializes `privateChats[peerID]` itself if needed. The ordering matters for navigation: the UI sheet opens to the correct DM before the first response appears.
 
 ---
 
@@ -52,7 +54,7 @@ The original analysis misidentified the bug as missing content in the equality c
 
 ## LOW/MEDIUM — Tap-to-mention inserts invalid handles [FIXED]
 
-`MessageListView.swift` — the tap handler now checks `viewModel.agents.contains(where: { $0.peerID.id == message.sender || $0.displayName == message.sender })` and skips mention insertion for agent messages. Nova response messages (sender "Nova") and user turns in agent threads are both excluded.
+`MessageListView.swift` — the tap handler now checks `viewModel.agents.contains(where: { $0.peerID.id == message.sender || $0.displayName == message.sender })` and skips mention insertion when true. This catches Nova response messages (sender `"Nova"`, matched by `displayName`) and defensively handles any stale messages with `sender: "nova-local"` (matched by `peerID.id`). User turns in agent DMs have `sender: nickname` — neither condition matches, so tapping them inserts `@nickname`, which is the user's own handle and is harmless.
 
 ---
 
@@ -71,7 +73,7 @@ Not in the original list. When the user was already in an agent DM and typed a f
 | 1 | HIGH | addResponse unconditional append | ChatViewModel+AgentContext.swift |
 | 2 | HIGH | MessageDisplayItem compared live property to itself | MessageRowView.swift — contentSnapshot |
 | 3 | HIGH | Format cache not invalidated on content mutation | SafeGuardianMessage.swift — content didSet |
-| 4 | HIGH | addLocalMessage routed status to public feed | AgentProcessor.swift — addAgentLocalMessage |
+| 4 | HIGH | addLocalMessage routed status to public feed | NovaAgent.swift + ChatViewModel+AgentContext.swift — addAgentLocalMessage |
 | 5 | MEDIUM | No sidebar entry for synthetic agents | ContentView.swift — agents section |
 | 6 | MEDIUM | Header resolution skipped agent peers | ContentView.swift — makePrivateHeaderContext |
 | 7 | MEDIUM | User prompts stored as sender "local" | ChatViewModel.swift — sender: nickname |

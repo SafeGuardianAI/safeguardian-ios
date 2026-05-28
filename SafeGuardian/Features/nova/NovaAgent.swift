@@ -30,7 +30,7 @@ final class NovaAgent: AgentProcessor {
 
         // Build dynamic system prompt with current device state
         // (Note: This currently reaches into a singleton for now, but adheres to the protocol)
-        var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief." + NovaConfig.noThinkSuffix
+        var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief."
         
         if let tick = NovaBroadcaster.shared?.latestTick {
             let battery = Int(tick.batteryPct * 100)

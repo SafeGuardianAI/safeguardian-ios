@@ -48,13 +48,13 @@ Root cause: `privateChats` on `ChatViewModel` is declared `[PeerID: [SafeGuardia
 
 Fix: use `PeerID(str: "nova-local")` to construct the key. `PeerID` has a public `init(str:)` convenience initializer that accepts any `StringProtocol` and normalizes it to lowercase. Declare the constant as `static let novaPeerID = PeerID(str: "nova-local")` and reference `Self.novaPeerID` throughout the extension. Remember to `import BitFoundation` in the extension file.
 
-## Qwen3 chain-of-thought causes RAM exhaustion and no visible output
+## Qwen3 chain-of-thought caused RAM exhaustion — fixed by O(1) incremental drain, not model suppression
 
-Symptom: memory spikes to several gigabytes within seconds of a prompt, CPU pegs to 100%, and the UI shows `[thinking...]` for the entire duration with no visible tokens, eventually displaying `[no response]`.
+Symptom (historical): memory spikes to several gigabytes within seconds of a prompt, CPU pegs to 100%, and the UI shows `[thinking...]` for the entire duration with no visible tokens, eventually displaying `[no response]`.
 
-Root cause: Qwen3 models default to chain-of-thought mode, emitting thousands of `<think>...</think>` tokens before producing any visible output. The original per-token callback accumulated the full streamed string and reprocessed it from scratch on each token (O(n²) in token count), while a `Task { @MainActor in }` dispatch was spawned for every token. With 5,000 or more think tokens, this produces tens of millions of string operations and an equal number of task allocations before the model emits a single visible character. The `drainVisible` function correctly suppresses the think blocks, so the UI updates stayed on `[thinking...]` throughout.
+Root cause: The original per-token callback accumulated the full streamed string and reprocessed it from scratch on each token (O(n²) in token count), while a `Task { @MainActor in }` dispatch was spawned for every token. With thousands of `<think>...</think>` tokens, this produced tens of millions of string operations and an equal number of task allocations.
 
-Fix: append `\n/no_think` to every system prompt. This is the model-level instruction to skip chain-of-thought entirely, and it is the only correct solution — a token cap cannot substitute for it because a cap set low enough to prevent runaway generation is also low enough to truncate real responses. `NovaConfig.noThinkSuffix` holds this value and `NovaAgent` appends it to every system prompt it constructs. `GenerateParameters.maxTokens` is left at its default `nil` (uncapped) because the cap is model-dependent and unnecessary once think-mode is disabled.
+Fix: `NovaAgent.drainVisible` processes only the newly arrived token against a small pending buffer, keeping the operation O(1) per token regardless of how long the think block runs. `<think>` and `</think>` boundaries are detected incrementally; content inside them is discarded and content outside them is appended to the visible string. The model is allowed to reason freely — think blocks are handled in code, not suppressed at the prompt level. `GenerateParameters.maxTokens` is `nil` (no cap) because the correct cap is model-dependent.
 
 ## SourceKit false positives on MLX files
 

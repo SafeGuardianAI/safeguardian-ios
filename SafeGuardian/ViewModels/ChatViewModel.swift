@@ -1013,7 +1013,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if stripped.isEmpty {
                 addLocalMessage("usage: \(prefix) <message>")
             } else {
-                let userTurn = SafeGuardianMessage(sender: "local", content: stripped, timestamp: Date(), isRelay: false)
+                let userTurn = SafeGuardianMessage(sender: nickname, content: stripped, timestamp: Date(), isRelay: false)
                 if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
                 privateChats[agent.peerID]?.append(userTurn)
                 agent.handle(prompt: stripped, context: self)

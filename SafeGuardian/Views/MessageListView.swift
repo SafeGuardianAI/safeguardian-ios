@@ -82,7 +82,8 @@ struct MessageListView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                if message.sender != "system" {
+                                let isAgentMessage = viewModel.agents.contains(where: { $0.peerID.id == message.sender })
+                                if message.sender != "system" && !isAgentMessage {
                                     messageText = "@\(message.sender) "
                                     isTextFieldFocused.wrappedValue = true
                                 }

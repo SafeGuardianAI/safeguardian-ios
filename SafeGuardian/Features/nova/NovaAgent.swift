@@ -7,59 +7,36 @@ final class NovaAgent: AgentProcessor {
     let agentID = "nova"
     let triggerPrefix = "@nova"
     static let novaPeerID = PeerID(str: "nova-local")
-    
+
     func shouldHandle(_ message: String) -> Bool {
         let lower = message.trimmed.lowercased()
         return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
     }
-    
+
     func handle(prompt: String, context: AgentContext) {
         let service = MLXInferenceService.shared
-        
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
-        
+
         if service.isLoading {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
             context.addLocalMessage("nova · \(shortID) · loading, please wait...")
             return
         }
-
         if !service.isModelLoaded {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
             context.addLocalMessage("nova · \(shortID) · initializing...")
         }
 
-        var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief."
-
-        if let tick = context.deviceTick {
-            let battery = Int(tick.batteryPct * 100)
-            let loc = String(format: "%.4f, %.4f", tick.lat, tick.lon)
-            let geohash = context.selectedGeohash ?? "mesh"
-            
-            dynamicSystemPrompt += "\n\nCurrent Device State:"
-            dynamicSystemPrompt += "\n- Battery: \(battery)%"
-            dynamicSystemPrompt += "\n- Location: \(loc) (geohash: \(geohash))"
-            dynamicSystemPrompt += "\n- Mesh Peers Nearby: \(tick.peerCount)"
-            dynamicSystemPrompt += "\n- Transport: \(tick.transportTier.rawValue)"
-        }
-
-        let prior = (context.privateChats[Self.novaPeerID] ?? []).suffix(NovaConfig.historyWindowSize)
-        let history = prior.compactMap { msg -> Chat.Message? in
-            let role: Chat.Message.Role = (msg.sender == Self.novaPeerID.id) ? .assistant : .user
-            // Status messages are formatted as "[...]"; exclude them from conversation history.
-            guard !msg.content.hasPrefix("[") || !msg.content.hasSuffix("]") else { return nil }
-            return Chat.Message(role: role, content: msg.content)
-        }
-
-        let response = context.addResponse(sender: Self.novaPeerID.id, content: "[thinking...]", privatePeerID: Self.novaPeerID)
+        let response = context.addResponse(
+            sender: Self.novaPeerID.id, content: "[thinking...]", privatePeerID: Self.novaPeerID
+        )
         context.notifyChange()
 
         let state = NovaStreamState()
 
         service.generate(
-            systemPrompt: dynamicSystemPrompt,
-            history: history,
-            userMessage: cleanPrompt,
+            prompt: cleanPrompt,
+            tick: context.deviceTick,
             onStatus: { status in
                 Task { @MainActor in
                     response.content = status
@@ -93,16 +70,9 @@ final class NovaAgent: AgentProcessor {
             },
             onComplete: {
                 Task { @MainActor in
-                    // Flush any pending buffer content that didn't contain a complete tag boundary.
-                    if !state.inThink {
-                        state.visible += state.pending
-                    }
+                    if !state.inThink { state.visible += state.pending }
                     state.pending = ""
-                    if state.visible.isEmpty {
-                        response.content = "[no response]"
-                    } else {
-                        response.content = state.visible
-                    }
+                    response.content = state.visible.isEmpty ? "[no response]" : state.visible
                     context.notifyChange()
                 }
             }
@@ -131,8 +101,6 @@ final class NovaAgent: AgentProcessor {
                 inThink = false
                 i = input.index(i, offsetBy: 8, limitedBy: input.endIndex) ?? input.endIndex
             } else if !inThink {
-                // Stop before a potential partial tag at the end so we don't emit characters
-                // that might be the start of a <think> or </think> spanning the next token.
                 let remaining = input[i...]
                 let couldBeTag = remaining.count < tagMaxLen &&
                     ("<think>".hasPrefix(String(remaining)) || "</think>".hasPrefix(String(remaining)))
@@ -140,8 +108,6 @@ final class NovaAgent: AgentProcessor {
                 result.append(input[i])
                 i = input.index(after: i)
             } else {
-                // Buffer a potential partial </think> spanning the next token;
-                // without this, a split close tag is silently discarded.
                 let remaining = input[i...]
                 if remaining.count < tagMaxLen, "</think>".hasPrefix(String(remaining)) { break }
                 i = input.index(after: i)

@@ -29,5 +29,9 @@ extension ChatViewModel: AgentContext {
     @MainActor
     func notifyChange() {
         objectWillChange.send()
+        // Poke privateChatManager so its $privateChats publisher fires — the TUI
+        // subscription watches $privateChats and would otherwise miss streaming token updates
+        // since those mutate SafeGuardianMessage.content in-place without replacing the dict.
+        privateChatManager.privateChats = privateChatManager.privateChats
     }
 }

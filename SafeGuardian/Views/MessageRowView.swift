@@ -13,8 +13,9 @@ struct MessageDisplayItem: Identifiable, Equatable {
     let message: SafeGuardianMessage
     
     static func == (lhs: MessageDisplayItem, rhs: MessageDisplayItem) -> Bool {
-        lhs.id == rhs.id && 
-        lhs.message === rhs.message && 
+        lhs.id == rhs.id &&
+        lhs.message === rhs.message &&
+        lhs.message.content == rhs.message.content &&
         lhs.message.deliveryStatus == rhs.message.deliveryStatus
     }
 }

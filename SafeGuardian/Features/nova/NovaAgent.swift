@@ -20,12 +20,12 @@ final class NovaAgent: AgentProcessor {
 
         if service.isLoading {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
-            context.addLocalMessage("nova · \(shortID) · loading, please wait...")
+            context.addAgentLocalMessage("nova · \(shortID) · loading, please wait...", to: peerID)
             return
         }
         if !service.isModelLoaded {
             let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
-            context.addLocalMessage("nova · \(shortID) · initializing...")
+            context.addAgentLocalMessage("nova · \(shortID) · initializing...", to: peerID)
         }
 
         let response = context.addResponse(

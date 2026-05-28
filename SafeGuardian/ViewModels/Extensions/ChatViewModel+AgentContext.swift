@@ -6,13 +6,22 @@ extension ChatViewModel: AgentContext {
     var selectedGeohash: String? { LocationChannelManager.shared.selectedChannel.nostrGeohashTag }
 
     @MainActor
+    func addAgentLocalMessage(_ content: String, to peerID: PeerID) {
+        let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
+        if privateChats[peerID] == nil { privateChats[peerID] = [] }
+        privateChats[peerID]?.append(msg)
+        objectWillChange.send()
+    }
+
+    @MainActor
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage {
         let msg = SafeGuardianMessage(sender: sender, content: content, timestamp: Date(), isRelay: false)
         if let peerID = privatePeerID {
             if privateChats[peerID] == nil { privateChats[peerID] = [] }
             privateChats[peerID]?.append(msg)
+        } else {
+            messages.append(msg)
         }
-        messages.append(msg)
         objectWillChange.send()
         return msg
     }

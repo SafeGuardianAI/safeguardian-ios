@@ -33,6 +33,7 @@ protocol AgentContext {
     var deviceTick: NovaStateTick? { get }
     var selectedGeohash: String? { get }
     func addLocalMessage(_ content: String)
+    func addAgentLocalMessage(_ content: String, to peerID: PeerID)
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage
     func notifyChange()
 }

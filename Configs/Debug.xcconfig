@@ -2,3 +2,9 @@
 
 // Optional include of local configs
 #include? "Local.xcconfig"
+
+// Compiler RAM guardrails — keep debug builds from eating all memory.
+// Index store is only needed for Xcode's jump-to-definition; CI/CLI builds don't need it.
+COMPILER_INDEX_STORE_ENABLE = NO
+// Explicit singlefile matches the Xcode default but overrides any parent xcconfig that sets wholemodule.
+SWIFT_COMPILATION_MODE = singlefile

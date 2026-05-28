@@ -11,12 +11,24 @@ import BitFoundation
 struct MessageDisplayItem: Identifiable, Equatable {
     let id: String
     let message: SafeGuardianMessage
-    
+    // Snapshots capture values at render time so equality checks across renders
+    // reflect actual changes rather than comparing a live property against itself
+    // through the same reference (which is always equal).
+    let contentSnapshot: String
+    let deliveryStatusSnapshot: DeliveryStatus?
+
+    init(id: String, message: SafeGuardianMessage) {
+        self.id = id
+        self.message = message
+        self.contentSnapshot = message.content
+        self.deliveryStatusSnapshot = message.deliveryStatus
+    }
+
     static func == (lhs: MessageDisplayItem, rhs: MessageDisplayItem) -> Bool {
         lhs.id == rhs.id &&
         lhs.message === rhs.message &&
-        lhs.message.content == rhs.message.content &&
-        lhs.message.deliveryStatus == rhs.message.deliveryStatus
+        lhs.contentSnapshot == rhs.contentSnapshot &&
+        lhs.deliveryStatusSnapshot == rhs.deliveryStatusSnapshot
     }
 }
 

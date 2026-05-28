@@ -270,7 +270,7 @@ struct AppInfoView: View {
                 .buttonStyle(.plain)
                 .confirmationDialog("reset nova session?", isPresented: $novaResetConfirm, titleVisibility: .visible) {
                     Button("reset", role: .destructive) {
-                        mlxService.resetSession()
+                        mlxService.dropSession()
                     }
                     Button("cancel", role: .cancel) {}
                 } message: {

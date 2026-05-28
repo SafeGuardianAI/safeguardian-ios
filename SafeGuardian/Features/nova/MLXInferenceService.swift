@@ -1,10 +1,5 @@
 import Foundation
-import HuggingFace
-import MLX
-import MLXHuggingFace
-import MLXLLM
 import MLXLMCommon
-@preconcurrency import Tokenizers
 
 @Observable @MainActor
 final class MLXInferenceService {
@@ -14,36 +9,29 @@ final class MLXInferenceService {
     private static let activeModelKey = "nova.activeModelID"
     private static let savedModelsKey  = "nova.savedModelIDs"
 
-    private(set) var isLoading = false
-    private(set) var downloadProgress: Double = 0
+    private let loader = MLXModelLoader()
 
-    // Persisted list of user-managed model IDs, always containing at least the default.
+    var isLoading: Bool { loader.isLoading }
+    var downloadProgress: Double { loader.downloadProgress }
+
     private(set) var savedModelIDs: [String] {
         didSet { UserDefaults.standard.set(savedModelIDs, forKey: Self.savedModelsKey) }
     }
-
-    // The model that will be used on the next generate call.
     private(set) var activeModelID: String {
         didSet { UserDefaults.standard.set(activeModelID, forKey: Self.activeModelKey) }
     }
 
-    private var container: ModelContainer?
     private var session: ChatSession?
     private var activeTask: Task<Void, Never>?
+    private var lastSystemPrompt: String?
 
-    var isModelLoaded: Bool {
-        container != nil
-    }
+    var isModelLoaded: Bool { loader.isLoaded }
 
     private init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.savedModelsKey) ?? []
-        let initialSaved = stored.isEmpty ? [Self.defaultModelID] : stored
-
+        savedModelIDs = stored.isEmpty ? [Self.defaultModelID] : stored
         let active = UserDefaults.standard.string(forKey: Self.activeModelKey) ?? Self.defaultModelID
-        let initialActive = initialSaved.contains(active) ? active : Self.defaultModelID
-        
-        self.savedModelIDs = initialSaved
-        self.activeModelID = initialActive
+        activeModelID = savedModelIDs.contains(active) ? active : Self.defaultModelID
     }
 
     // MARK: - Model management
@@ -51,46 +39,23 @@ final class MLXInferenceService {
     func selectModel(_ id: String) {
         guard id != activeModelID else { return }
         activeModelID = id
-        resetSession()
+        dropSession()
+        loader.invalidate()
     }
 
     func addModel(_ id: String) {
-        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !savedModelIDs.contains(trimmed) else { return }
-        savedModelIDs.append(trimmed)
+        let t = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, !savedModelIDs.contains(t) else { return }
+        savedModelIDs.append(t)
     }
 
     func removeModel(_ id: String) {
         guard id != Self.defaultModelID else { return }
         savedModelIDs.removeAll { $0 == id }
-        if activeModelID == id {
-            activeModelID = Self.defaultModelID
-            resetSession()
-        }
+        if activeModelID == id { selectModel(Self.defaultModelID) }
     }
 
     // MARK: - Inference
-
-    private var lastSystemPrompt: String?
-
-    private func log(_ message: String) {
-        let timestamp = Date().description
-        let logLine = "[MLX] [\(timestamp)] \(message)\n"
-        print(logLine)
-        
-        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-        let logPath = paths[0].appendingPathComponent("chat.safeguardian").appendingPathComponent("tui.log").path
-        
-        if let data = logLine.data(using: .utf8) {
-            if !FileManager.default.fileExists(atPath: logPath) {
-                FileManager.default.createFile(atPath: logPath, contents: data)
-            } else if let handle = FileHandle(forWritingAtPath: logPath) {
-                handle.seekToEndOfFile()
-                handle.write(data)
-                try? handle.close()
-            }
-        }
-    }
 
     func generate(
         systemPrompt: String? = nil,
@@ -100,100 +65,75 @@ final class MLXInferenceService {
         onToken: @escaping @Sendable (String) -> Void,
         onComplete: @escaping @Sendable () -> Void
     ) {
-        let modelID = activeModelID
-        log("[Generate] Starting for prompt: \(userMessage.prefix(30))...")
-        
         activeTask?.cancel()
-        
+        let modelID = activeModelID
         activeTask = Task {
-            log("[Generate] Task started.")
+            log("Starting: \(userMessage.prefix(30))")
             do {
-                if container == nil {
-                    isLoading = true
-                    defer { isLoading = false }
-                    downloadProgress = 0
-                    onStatus("[initializing...]")
-                    log("Initializing model container...")
-                    Memory.cacheLimit = 20 * 1024 * 1024
-                    let downloader = #hubDownloader()
-                    let loader = #huggingFaceTokenizerLoader()
-                    let config = ModelConfiguration(id: modelID)
-                    let loaded = try await LLMModelFactory.shared.loadContainer(
-                        from: downloader,
-                        using: loader,
-                        configuration: config
-                    ) { [weak self] progress in
-                        let pct = Int(progress.fractionCompleted * 100)
-                        onStatus("[downloading model: \(pct)%]")
-                        Task { @MainActor [weak self] in
-                            self?.downloadProgress = progress.fractionCompleted
-                        }
-                    }
-                    container = loaded
-                    session = nil
-                    log("Model loaded successfully.")
-                }
-                
+                onStatus("[initializing...]")
+                // Local strong ref: keeps ModelContainer alive even if selectModel() fires
+                // mid-task and drops loader.state. Prevents the scheduler teardown race
+                // that caused SIGSEGV in mlx::core::detail::CompilerCache::find.
+                let model = try await loader.container(modelID: modelID) { _ in }
+                log("Container ready.")
+
                 if session == nil || (systemPrompt != nil && systemPrompt != lastSystemPrompt) {
-                    onStatus("[starting session...]")
-                    log("Starting new session. History turns: \(history.count)")
                     lastSystemPrompt = systemPrompt
-                    if let container {
-                        session = ChatSession(
-                            container,
-                            instructions: systemPrompt,
-                            history: history,
-                            generateParameters: GenerateParameters(temperature: NovaConfig.temperature)
-                        )
-                    }
+                    session = ChatSession(
+                        model,
+                        instructions: systemPrompt,
+                        history: history,
+                        generateParameters: GenerateParameters(temperature: NovaConfig.temperature)
+                    )
+                    log("New session, \(history.count) history turns.")
                 }
 
-                guard let session, !Task.isCancelled else {
-                    log("Session or task cancelled.")
-                    onComplete()
-                    return
-                }
-                
-                if userMessage.isEmpty {
-                    onStatus("[error: empty prompt]")
-                    onComplete()
-                    return
-                }
+                // Local ref: prevents session = nil from dropping it mid-stream.
+                guard let localSession = session, !Task.isCancelled else { onComplete(); return }
+                guard !userMessage.isEmpty else { onStatus("[error: empty prompt]"); onComplete(); return }
 
                 onStatus("[thinking...]")
-                log("Streaming response for prompt: \(userMessage)")
-
-                let stream = session.streamResponse(to: userMessage)
+                let stream = localSession.streamResponse(to: userMessage)
                 try await withThrowingTaskGroup(of: Void.self) { group in
-                    group.addTask { [self] in
+                    group.addTask {
                         for try await token in stream {
                             guard !Task.isCancelled else { break }
                             onToken(token)
                         }
-                        await self.log("Stream completed.")
+                        await self.log("Stream complete.")
                     }
                     group.addTask {
                         try await Task.sleep(nanoseconds: NovaConfig.generationTimeoutSeconds * 1_000_000_000)
-                        throw NSError(domain: "Nova", code: 408, userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
+                        throw NSError(domain: "Nova", code: 408,
+                                      userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
                     }
                     try await group.next()
                     group.cancelAll()
                 }
             } catch {
-                log("Nova Error: \(error.localizedDescription)")
+                log("Error: \(error.localizedDescription)")
                 onStatus("[error: \(error.localizedDescription)]")
             }
             onComplete()
         }
     }
 
-    func cancel() {
-        activeTask?.cancel()
-    }
+    func cancel() { activeTask?.cancel() }
 
-    func resetSession() {
+    func dropSession() {
         activeTask?.cancel()
         session = nil
-        container = nil
+        lastSystemPrompt = nil
+    }
+
+    private func log(_ message: String) {
+        let line = "[MLX] [\(Date())] \(message)\n"
+        print(line)
+        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("chat.safeguardian/tui.log")
+        guard let data = line.data(using: .utf8) else { return }
+        if let h = FileHandle(forWritingAtPath: url.path) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        } else { try? data.write(to: url) }
     }
 }

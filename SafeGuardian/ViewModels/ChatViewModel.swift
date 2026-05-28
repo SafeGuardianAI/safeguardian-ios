@@ -1016,6 +1016,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 let userTurn = SafeGuardianMessage(sender: nickname, content: stripped, timestamp: Date(), isRelay: false)
                 if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
                 privateChats[agent.peerID]?.append(userTurn)
+                startPrivateChat(with: agent.peerID)
                 agent.handle(prompt: stripped, context: self)
             }
             return

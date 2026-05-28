@@ -11,7 +11,14 @@ final class SafeGuardianIPCHost {
     private var socketPath: String {
         let dir = appSupportDir
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("tui.sock").path
+        let candidate = dir.appendingPathComponent("tui.sock").path
+        // sockaddr_un.sun_path is 103 bytes on macOS; sandbox container paths exceed this.
+        // Fall back to the temp directory whose path is always short enough.
+        guard candidate.utf8.count <= 103 else {
+            return FileManager.default.temporaryDirectory
+                .appendingPathComponent("sg.tui.sock").path
+        }
+        return candidate
     }
 
     private var appSupportDir: URL {

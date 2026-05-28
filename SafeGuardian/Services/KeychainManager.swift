@@ -63,7 +63,7 @@ final class KeychainManager: KeychainManagerProtocol {
             kSecValueData as String: data,
             kSecAttrService as String: service,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecAttrLabel as String: "bitchat-\(key)"
+            kSecAttrLabel as String: "safeguardian-\(key)"
         ]
         #if os(macOS)
         base[kSecAttrSynchronizable as String] = false
@@ -124,7 +124,8 @@ final class KeychainManager: KeychainManagerProtocol {
             kSecAttrAccount as String: key,
             kSecAttrService as String: service,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
         ]
 
         var result: AnyObject?
@@ -228,7 +229,7 @@ final class KeychainManager: KeychainManagerProtocol {
             kSecValueData as String: data,
             kSecAttrService as String: service,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecAttrLabel as String: "bitchat-\(key)"
+            kSecAttrLabel as String: "safeguardian-\(key)"
         ]
         #if os(macOS)
         base[kSecAttrSynchronizable as String] = false
@@ -268,13 +269,16 @@ final class KeychainManager: KeychainManagerProtocol {
     }
     
     private func retrieveData(forKey key: String) -> Data? {
-        // Base query
+        // Base query. kSecUseNoAuthenticationUI prevents blocking on an ACL dialog
+        // in headless contexts (daemon mode, background processes) — the call returns
+        // errSecInteractionNotAllowed immediately instead of waiting indefinitely.
         let base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecAttrService as String: service,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
         ]
 
         var result: AnyObject?
@@ -299,11 +303,11 @@ final class KeychainManager: KeychainManagerProtocol {
     }
     
     private func delete(forKey key: String) -> Bool {
-        // Base delete query
         let base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecAttrService as String: service
+            kSecAttrService as String: service,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
         ]
 
         func attempt(withAccessGroup: Bool) -> OSStatus {

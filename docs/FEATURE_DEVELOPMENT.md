@@ -86,25 +86,44 @@ If you added methods to `CommandContextProvider` in the previous step, implement
 
 ## Local-only messages
 
-Some command output should never leave the device — GPS coordinates shown to the user before they choose to share, on-device AI responses, debug readouts. These use `sender: "local"` in `SafeGuardianMessage` and are injected via `addLocalMessage(_:)`.
-
-```swift
-// ChatViewModel.swift
-func addLocalMessage(_ content: String) {
-    let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
-    if let peer = selectedPrivateChatPeer {
-        if privateChats[peer] == nil { privateChats[peer] = [] }
-        privateChats[peer]?.append(msg)
-    } else {
-        messages.append(msg)
-    }
-    objectWillChange.send()
-}
-```
-
-`MessageFormattingEngine` renders `sender == "local"` in teal italic — distinct from the gray italic of `sender == "system"`. The color convention is: orange = your own sent messages, gray = system/network events, teal = device-private. Any future feature that produces output only the local user sees should use `addLocalMessage` and will automatically render in teal.
+Some command output should never leave the device — GPS coordinates shown to the user before they choose to share, status feedback from commands. These use `sender: "local"` in `SafeGuardianMessage` and are injected via `addLocalMessage(_:)`. `MessageFormattingEngine` renders `sender == "local"` in teal italic — distinct from the gray italic of `sender == "system"`. The color convention is: orange = your own sent messages, gray = system/network events, teal = device-private.
 
 Local messages are ephemeral. They are appended directly to `messages` and do not go through the `PublicTimelineStore`, so they disappear when the user switches channels. This is intentional — they are not part of the mesh timeline.
+
+Agent status messages (loading state, errors) use a different method, `addAgentLocalMessage(_:to:)`, which routes the `sender: "local"` message into a specific agent's private chat thread rather than the main feed. Use this instead of `addLocalMessage` whenever the feedback belongs to an agent interaction.
+
+---
+
+## Adding an agent
+
+Agents are on-device or cloud-connected processors that intercept trigger-prefixed messages (e.g. `@nova`) and respond via a synthetic private chat thread. The system is intentionally generic: adding an agent means conforming to two protocols and registering the instance. No routing code, sidebar code, or header-resolution code needs to change.
+
+The two protocols are in `SafeGuardian/Protocols/AgentProcessor.swift`.
+
+`AgentProcessor` defines the agent's identity and message handling:
+
+- `agentID: String` — unique lowercase key (e.g. `"nova"`).
+- `displayName: String` — shown in the sidebar and DM header (e.g. `"Nova"`).
+- `triggerPrefix: String` — the string the user types to address this agent (e.g. `"@nova"`).
+- `peerID: PeerID` — the synthetic peer ID for this agent's DM thread. Must not collide with real BLE peer IDs. Use a short descriptive string like `PeerID(str: "nova-local")`.
+- `shouldHandle(_ message: String) -> Bool` — returns true when the message is addressed to this agent.
+- `handle(prompt: String, context: AgentContext)` — called with the stripped prompt (trigger prefix removed). Use `context.addResponse(sender: displayName, content: ..., privatePeerID: peerID)` to insert response messages and `context.notifyChange()` to push streaming updates to the UI.
+
+`AgentContext` is the restricted view of `ChatViewModel` exposed to agents. It provides `nickname`, `privateChats`, `deviceTick`, `selectedGeohash`, `addLocalMessage`, `addAgentLocalMessage`, `addResponse`, and `notifyChange`. Agents must not hold a direct reference to `ChatViewModel`.
+
+To register an agent, add it to the `agents` array in `ChatViewModel.swift`:
+
+```swift
+let agents: [any AgentProcessor] = [NovaAgent(), YourNewAgent()]
+```
+
+The `sendMessage` routing loop iterates `agents` and calls `shouldHandle` on each. It also intercepts follow-up messages sent while the user is already inside an agent's DM thread (without the trigger prefix), so multi-turn conversations work without requiring the user to re-type the prefix every turn.
+
+Agent response messages use `sender: displayName`, not `sender: "local"`. The DM header and sidebar resolve the display name through `viewModel.agents`, so the name shown to the user always matches `displayName` on the protocol.
+
+### Model capabilities
+
+If your agent uses an LLM that supports thinking mode (chain-of-thought), register it in `NovaConfig.capabilities(for:)` in `SafeGuardian/Features/nova/NovaConfig.swift`. The `ModelCapabilities` struct carries two fields: `hasThinkingMode: Bool` and `noThinkSuffix: String?`. `NovaInferenceCoordinator.decoratePrompt` reads this at generation time and appends the suppression suffix when present. For models where thinking cannot be suppressed via message text (e.g. DeepSeek-R1), set `noThinkSuffix: nil` and rely on the `drainVisible` token filter in `NovaAgent` to strip `<think>…</think>` blocks from the output.
 
 ---
 
@@ -201,15 +220,17 @@ For details on simulating broadcast flooding, TTL behavior, and Noise rehandshak
 
 ---
 
-## Extending Nova Behaviors
+## Extending Nova behaviors
 
-Nova behaviors are defined by the `NovaStateTick` struct, which corresponds to the `nova.state_tick` ADSP schema.
+The Nova subsystem has two orthogonal extension surfaces: the device-state tick and the inference layer.
 
-1. **Schema Alignment:** If adding new behavioral state (e.g., a new sensor reading), first ensure the field exists in the `nova_state_tick.schema.json` in the protocols directory.
-2. **Model Update:** Add the field to `NovaStateTick.swift`.
-3. **Broadcaster Logic:** Update `NovaBroadcaster.buildTick(batteryPct:)` to derive and include the new value.
+The tick (`NovaStateTick`) carries the ambient context injected as a prefix on every user message — battery level, geolocation, peer count. To add a new field: add it to `NovaStateTick.swift`, update `NovaBroadcaster.buildTick(batteryPct:)` to populate it, and update `NovaInferenceCoordinator.decoratePrompt` to include it in the injected prefix string. Ticks are ephemeral and signed; avoid putting high-bandwidth data in them.
 
-Nova ticks are ephemeral signed atoms emitted periodically. Avoid putting high-bandwidth or non-behavioral data in the tick; use a dedicated message type for that.
+The inference layer is `MLXInferenceService` → `NovaInferenceCoordinator` → `NovaSessionPool`. The coordinator manages a single active generation task and a session cache keyed by model ID and system-prompt hash. Switching the active model (`MLXInferenceService.selectModel`) invalidates the session cache and the loader state machine, ensuring the next generation downloads and loads the new model cleanly.
+
+To change how prompts are constructed without breaking session caching, modify `NovaInferenceCoordinator.decoratePrompt`. Device state is prepended as a bracketed prefix on the user message rather than injected into the system prompt, which keeps the session key (a hash of the stable system prompt) stable across state changes.
+
+`NovaConfig` is the single source of truth for default model ID, temperature, timeout, idle release interval, the stable system prompt, and the model capability registry. Changes to the stable system prompt invalidate all cached sessions on the next generation call.
 
 ---
 

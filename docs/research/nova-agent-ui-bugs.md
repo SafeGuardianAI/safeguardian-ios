@@ -1,68 +1,79 @@
-# Nova Agent UI Bug Analysis
+# Nova Agent UI Bug Analysis — Resolved
 
-Cross-referenced against: clean bitchat upstream at `/Users/m1a4xnetworkprobe./Applications/bitchat` and SafeGuardian source. All findings are sourced to specific file and line.
+All eight issues documented here have been fixed. This file is retained as a record of root causes and the reasoning behind each fix.
 
----
-
-## HIGH — Nova responses appear in public feed
-
-`ChatViewModel+AgentContext.swift:15` — `addResponse()` always appends to `messages[]` unconditionally, even when a `privatePeerID` is provided. `ContentView` passes `messages` to `MessageListView` when no private peer is selected (`getMessages(for: nil)` returns `messages` directly). Result: every Nova response surfaces in the main public chat feed alongside real mesh messages.
-
-Upstream bitchat has no agents; system messages use `addSystemMessage()` which correctly targets `messages[]` for network-scoped events only.
+Cross-referenced against: clean bitchat upstream at `/Users/m1a4xnetworkprobe./Applications/bitchat` and SafeGuardian source.
 
 ---
 
-## HIGH — Streaming updates never render
+## HIGH — Nova responses appear in public feed [FIXED]
 
-`MessageRowView.swift:15-19` — `MessageDisplayItem.Equatable` checks `lhs.id == rhs.id && lhs.message === rhs.message && lhs.message.deliveryStatus == rhs.message.deliveryStatus`. It uses object identity (`===`), not content comparison. `MessageListView.swift:63` applies `.equatable()`, which tells SwiftUI to skip the redraw when Equatable returns true. `NovaAgent.swift:41+` mutates `response.content` in place during streaming without replacing the object reference. Because identity never changes, SwiftUI considers the row unchanged and never redraws. The user sees `[thinking...]` permanently.
-
----
-
-## HIGH — Formatting cache locks in stale content
-
-`SafeGuardianMessage.swift:38` — the per-message formatted-text cache is keyed only by `"\(isDark)-\(isSelf)"`. `MessageFormattingEngine.swift:111` checks this cache before doing any formatting work. The first format call populates the cache with `[thinking...]`; subsequent streaming mutations to `content` never invalidate it because the cache key does not include message identity or a content hash. Upstream bitchat has the same cache structure but messages are immutable once inserted, so the cache is always valid there.
+`ChatViewModel+AgentContext.swift` — `addResponse()` now conditionally appends: when `privatePeerID` is non-nil, the message goes only into `privateChats[peerID]`; when nil, it goes into `messages[]`. The unconditional append to `messages[]` was removed.
 
 ---
 
-## HIGH — Status messages appear in public feed
+## HIGH — Streaming updates never render [FIXED]
 
-`NovaAgent.swift:21,28` calls `context.addLocalMessage()` during model loading. `ChatViewModel.swift:1384-1393` — `addLocalMessage()` routes to `privateChats[selectedPrivateChatPeer]` if one is selected, otherwise to `messages[]`. `ChatViewModel.swift:1010-1019` — the `@nova` dispatch path never calls `startPrivateChat(with:)`, so `selectedPrivateChatPeer` is nil at the moment the status fires. Result: "nova · loading..." appears in the public mesh feed.
+`MessageRowView.swift` — `MessageDisplayItem` previously compared `lhs.message.content == rhs.message.content` where both sides held the same class reference, so they always read the same live property and the comparison was always true. Fixed by adding `contentSnapshot: String` and `deliveryStatusSnapshot: DeliveryStatus?` fields that capture values at `MessageDisplayItem` creation time. `.equatable()` now correctly detects content changes between render cycles.
 
----
-
-## MEDIUM — No UI entry point to the Nova thread
-
-`MeshPeerList.swift:23` populates from `viewModel.allPeers`, which is driven by the BLE mesh service. `nova-local` is a synthetic `PeerID` never added to `allPeers`. `ContentView.swift:528-543` — the people sheet only shows geo or mesh peers. No code anywhere calls `startPrivateChat(with: agent.peerID)`. The Nova conversation exists in `privateChats[nova-local]` but is inaccessible from the UI.
+The original analysis misidentified the bug as missing content in the equality check. The actual problem was that comparing a live class property against itself through the same reference is always equal regardless of what that property contains.
 
 ---
 
-## MEDIUM — Nova DM header shows "unknown"
+## HIGH — Formatting cache locks in stale content [FIXED]
 
-`ContentView.swift:737-785` (`makePrivateHeaderContext`) resolves a display name through: GeoDM check → `peer?.displayName` → `meshService.peerNickname()` → FavoritesPersistenceService → identityManager → fallback "unknown". `nova-local` matches none of these paths and falls through to the string "unknown".
-
----
-
-## MEDIUM — User turns styled as system messages
-
-`ChatViewModel.swift:1016` stores the user's `@nova` prompt as `SafeGuardianMessage(sender: "local", ...)`. `MessageFormattingEngine.swift:121-122` routes `sender == "local"` to `formatLocalMessage()`, which renders teal italic with asterisk wrapping — the style intended for device-generated output (GPS coordinates, status). Per CLAUDE.md, `sender: "local"` is for device-private feedback, not user input. Upstream bitchat uses the user's actual nickname for all user-authored messages.
+`SafeGuardianMessage.swift` — `content` now has `didSet { _cachedFormattedText.removeAll() }`. Every mutation (streaming token) invalidates the cache, forcing `formatMessageAsText` to re-render from current content on the next call.
 
 ---
 
-## LOW/MEDIUM — Tap-to-mention inserts invalid handles
+## HIGH — Status messages appear in public feed [FIXED]
 
-`MessageListView.swift:84-88` — tap handler does `messageText = "@\(message.sender) "`. Nova response messages have `sender == "nova-local"`, producing `@nova-local `. User turns have `sender == "local"`, producing `@local `. Neither is a valid mesh handle.
+`AgentProcessor.swift` — added `addAgentLocalMessage(_:to:)` to `AgentContext`. `NovaAgent` now calls this instead of `addLocalMessage`, routing status messages directly into the agent's private chat thread rather than the main feed. The `startPrivateChat(with: agent.peerID)` call was also moved before `handle()` in the dispatch loop so the private thread is always open before any message is injected.
+
+---
+
+## MEDIUM — No UI entry point to the Nova thread [FIXED]
+
+`ContentView.swift` — added an agents section to the sidebar that iterates `viewModel.agents` and shows a row for each agent whose `privateChats[agent.peerID]` is non-empty. Tapping calls `viewModel.startPrivateChat(with: agent.peerID)`. Adding a second agent requires no UI changes.
+
+---
+
+## MEDIUM — Nova DM header shows "unknown" [FIXED]
+
+`ContentView.swift` — `makePrivateHeaderContext` now checks `viewModel.agents` first before falling through to the peer/mesh/identity resolution chain. When the private peer ID matches an agent, `agent.displayName` is returned immediately.
+
+---
+
+## MEDIUM — User turns styled as system messages [FIXED]
+
+`ChatViewModel.swift` — agent user turns are now stored with `sender: nickname` instead of `sender: "local"`. `MessageFormattingEngine` hits the self-message path and renders them with the correct orange alignment. `sender: "local"` is reserved for device-generated status output.
+
+---
+
+## LOW/MEDIUM — Tap-to-mention inserts invalid handles [FIXED]
+
+`MessageListView.swift` — the tap handler now checks `viewModel.agents.contains(where: { $0.peerID.id == message.sender || $0.displayName == message.sender })` and skips mention insertion for agent messages. Nova response messages (sender "Nova") and user turns in agent threads are both excluded.
+
+---
+
+## Additional issue found during verification — Follow-up messages silently dropped [FIXED]
+
+Not in the original list. When the user was already in an agent DM and typed a follow-up without the trigger prefix, `sendMessage` fell through the agent routing loop (since `shouldHandle` returned false) and reached `sendPrivateMessage(content, to: selectedPeer)`, which attempted to send the message over BLE to the synthetic peer. The message was dropped.
+
+`ChatViewModel.swift` — the agent routing loop now also checks `selectedPrivateChatPeer == agent.peerID`. When this is true the message is routed to the agent without requiring the trigger prefix, enabling natural multi-turn conversation.
 
 ---
 
 ## Summary
 
-| # | Severity | Root cause file | Effect |
-|---|----------|----------------|--------|
-| 1 | HIGH | ChatViewModel+AgentContext.swift:15 | Nova replies in public feed |
-| 2 | HIGH | MessageRowView.swift:15-19 | Streaming never redraws |
-| 3 | HIGH | SafeGuardianMessage.swift:38 | Cache locks to [thinking...] |
-| 4 | HIGH | ChatViewModel.swift:1384-1393 | Status messages in public feed |
-| 5 | MEDIUM | MeshPeerList.swift:23 | No way to open Nova thread |
-| 6 | MEDIUM | ContentView.swift:737-785 | Header shows "unknown" |
-| 7 | MEDIUM | MessageFormattingEngine.swift:121 | User prompts styled as system text |
-| 8 | LOW | MessageListView.swift:86 | Bad @mention on tap |
+| # | Severity | Root cause | Fix location |
+|---|----------|-----------|--------------|
+| 1 | HIGH | addResponse unconditional append | ChatViewModel+AgentContext.swift |
+| 2 | HIGH | MessageDisplayItem compared live property to itself | MessageRowView.swift — contentSnapshot |
+| 3 | HIGH | Format cache not invalidated on content mutation | SafeGuardianMessage.swift — content didSet |
+| 4 | HIGH | addLocalMessage routed status to public feed | AgentProcessor.swift — addAgentLocalMessage |
+| 5 | MEDIUM | No sidebar entry for synthetic agents | ContentView.swift — agents section |
+| 6 | MEDIUM | Header resolution skipped agent peers | ContentView.swift — makePrivateHeaderContext |
+| 7 | MEDIUM | User prompts stored as sender "local" | ChatViewModel.swift — sender: nickname |
+| 8 | LOW | Tap-to-mention fired on agent messages | MessageListView.swift — isAgentMessage guard |
+| 9 | MEDIUM | Follow-up without prefix fell through to BLE | ChatViewModel.swift — inAgentDM check |

@@ -8,6 +8,9 @@ protocol AgentProcessor: Sendable {
     /// The unique identifier for the agent (e.g., "nova", "trek").
     var agentID: String { get }
 
+    /// Human-readable name shown in the sidebar and DM header (e.g., "Nova").
+    var displayName: String { get }
+
     /// The trigger prefix this agent responds to (e.g., "@nova").
     var triggerPrefix: String { get }
 

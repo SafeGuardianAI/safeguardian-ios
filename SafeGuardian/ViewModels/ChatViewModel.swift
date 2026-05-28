@@ -171,7 +171,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     let autocompleteService: AutocompleteService
     let deduplicationService: MessageDeduplicationService  // internal for test access
     let novaBroadcaster: NovaBroadcaster
-    private let agents: [any AgentProcessor] = [NovaAgent()]
+    let agents: [any AgentProcessor] = [NovaAgent()]
 
     // Computed properties for compatibility
     @MainActor

@@ -541,6 +541,29 @@ struct ContentView: View {
                             }
                         )
                     }
+                    let activeAgents = viewModel.agents.filter {
+                        !(viewModel.privateChats[$0.peerID]?.isEmpty ?? true)
+                    }
+                    if !activeAgents.isEmpty {
+                        Divider().padding(.horizontal, 16).padding(.top, 4)
+                        ForEach(activeAgents, id: \.agentID) { agent in
+                            Button {
+                                viewModel.startPrivateChat(with: agent.peerID)
+                                showSidebar = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "sparkles")
+                                        .foregroundColor(textColor)
+                                    Text(agent.displayName)
+                                        .font(.safeguardianSystem(size: 14))
+                                        .foregroundColor(textColor)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                    }
                 }
                 .padding(.top, 4)
                 .id(viewModel.allPeers.map { "\($0.peerID)-\($0.isConnected)" }.joined())
@@ -739,6 +762,9 @@ struct ContentView: View {
         let peer = viewModel.getPeer(byID: headerPeerID)
 
         let displayName: String = {
+            if let agent = viewModel.agents.first(where: { $0.peerID == privatePeerID }) {
+                return agent.displayName
+            }
             if privatePeerID.isGeoDM, case .location(let ch) = locationManager.selectedChannel {
                 let disp = viewModel.geohashDisplayName(for: privatePeerID)
                 return "#\(ch.geohash)/@\(disp)"

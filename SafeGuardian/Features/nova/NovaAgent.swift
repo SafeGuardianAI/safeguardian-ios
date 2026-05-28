@@ -5,6 +5,7 @@ import MLXLMCommon
 @MainActor
 final class NovaAgent: AgentProcessor {
     let agentID = "nova"
+    let displayName = "Nova"
     let triggerPrefix = "@nova"
     let peerID = PeerID(str: "nova-local")
     static let novaPeerID = PeerID(str: "nova-local")

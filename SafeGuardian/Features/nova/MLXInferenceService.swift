@@ -29,9 +29,10 @@ final class MLXInferenceService {
 
     private init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.savedModelsKey) ?? []
-        savedModelIDs = stored.isEmpty ? [Self.defaultModelID] : stored
+        let initialSaved = stored.isEmpty ? [Self.defaultModelID] : stored
         let active = UserDefaults.standard.string(forKey: Self.activeModelKey) ?? Self.defaultModelID
-        activeModelID = savedModelIDs.contains(active) ? active : Self.defaultModelID
+        savedModelIDs = initialSaved
+        activeModelID = initialSaved.contains(active) ? active : Self.defaultModelID
     }
 
     // MARK: - Model management

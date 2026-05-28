@@ -1,4 +1,5 @@
 #if os(macOS)
+import BitFoundation
 import Combine
 import Foundation
 import Tor
@@ -51,7 +52,28 @@ extension SafeGuardianIPCHost {
                         self.sendToClient(fd, Self.format(msg) + "\n")
                     } else if let prev = lastContent[msg.id], prev != text {
                         lastContent[msg.id] = text
-                        // In-place overwrite for streaming responses (Nova tokens)
+                        self.sendToClient(fd, "\r" + Self.format(msg))
+                    }
+                }
+            }
+            .store(in: &clientCancellables[fd, default: Set()])
+
+        // Nova private channel — responses go to privateChats[novaPeerID], not $messages.
+        vm.privateChatManager.$privateChats
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] chats in
+                guard let self, self.activeClients[fd] != nil else { return }
+                let novaMessages = chats[NovaAgent.novaPeerID] ?? []
+                for msg in novaMessages {
+                    guard msg.timestamp >= connectionTime else { continue }
+                    let text = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !text.isEmpty else { continue }
+                    if !knownIDs.contains(msg.id) {
+                        knownIDs.insert(msg.id)
+                        lastContent[msg.id] = text
+                        self.sendToClient(fd, Self.format(msg) + "\n")
+                    } else if let prev = lastContent[msg.id], prev != text {
+                        lastContent[msg.id] = text
                         self.sendToClient(fd, "\r" + Self.format(msg))
                     }
                 }

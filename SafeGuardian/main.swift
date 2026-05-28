@@ -8,7 +8,7 @@ import AppKit
 if CommandLine.arguments.contains("--daemon") {
     let app = NSApplication.shared
     app.setActivationPolicy(.prohibited)
-    let delegate = SafeGuardianDaemonDelegate()
+    let delegate = MainActor.assumeIsolated { SafeGuardianDaemonDelegate() }
     app.delegate = delegate
     app.run()
 } else {

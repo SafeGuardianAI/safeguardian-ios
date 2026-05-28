@@ -12,7 +12,6 @@ import Foundation
 import SwiftUI
 
 /// Manages all private chat functionality
-@MainActor
 final class PrivateChatManager: ObservableObject {
     @Published var privateChats: [PeerID: [SafeGuardianMessage]] = [:]
     @Published var selectedPeer: PeerID? = nil
@@ -245,55 +244,6 @@ final class PrivateChatManager: ObservableObject {
                     sendReadReceipt(for: message)
                 }
             }
-        }
-    }
-    
-    /// Send a private message using the active transport
-    func sendPrivateMessage(_ content: String, to peerID: PeerID) {
-        guard !content.isEmpty, let meshService = meshService else { return }
-        let messageID = UUID().uuidString
-        let recipientNickname = meshService.peerNickname(peerID: peerID) ?? "user"
-        
-        let message = SafeGuardianMessage(
-            id: messageID,
-            sender: meshService.myNickname,
-            content: content,
-            timestamp: Date(),
-            isRelay: false,
-            isPrivate: true,
-            recipientNickname: recipientNickname,
-            senderPeerID: meshService.myPeerID,
-            deliveryStatus: .sending
-        )
-        
-        addPrivateMessage(message, for: peerID)
-        
-        if let router = messageRouter {
-            router.sendPrivate(content, to: peerID, recipientNickname: recipientNickname, messageID: messageID)
-        } else {
-            meshService.sendPrivateMessage(content, to: peerID, recipientNickname: recipientNickname, messageID: messageID)
-        }
-    }
-    
-    /// Add a message to a private chat store
-    func addPrivateMessage(_ message: SafeGuardianMessage, for peerID: PeerID) {
-        if privateChats[peerID] == nil {
-            privateChats[peerID] = []
-        }
-        privateChats[peerID]?.append(message)
-        sanitizeChat(for: peerID)
-        objectWillChange.send()
-    }
-    
-    /// Handle incoming private message packet (called by Gateway/Delegate)
-    func handlePrivateMessage(_ message: SafeGuardianMessage) {
-        guard let peerID = message.senderPeerID else { return }
-        addPrivateMessage(message, for: peerID)
-        
-        if selectedPeer != peerID {
-            unreadMessages.insert(peerID)
-        } else {
-            sendReadReceipt(for: message)
         }
     }
     

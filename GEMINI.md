@@ -9,7 +9,13 @@
     - `addLocalMessage(_:)` appends directly to the projection and is ephemeral (lost on channel switch).
 
 ## Core vs. Extension Preservation
-- **OG Bitchat Core**: Do NOT refactor or split files that were part of the original "bitchat" core (e.g., `BLEService.swift`, `NoiseProtocol.swift`, `BinaryProtocol.swift`). These files are considered foundational and should remain unchanged except for critical bug fixes.
+
+The bitchat-originated files are the upstream merge surface. Minimizing diffs in them keeps cherry-picks and rebases tractable. The rules:
+
+- **Never add new methods or properties directly to core bitchat files** (`ChatViewModel.swift`, `PrivateChatManager.swift`, `GeohashParticipantTracker.swift`, `BLEService.swift`, `NoiseProtocol.swift`, `BinaryProtocol.swift`, etc.). All SafeGuardian-specific logic must live in extension files (`ChatViewModel+Nova.swift`, `ChatViewModel+AgentContext.swift`, etc.) or new SafeGuardian-owned files.
+- **Never add `@MainActor` or change concurrency isolation on upstream classes.** Upstream may add code with different isolation assumptions and the merge will conflict or silently break. `PrivateChatManager` is NOT `@MainActor` — do not annotate it as such.
+- **Never widen access modifiers on upstream symbols without a live caller.** Changing `private` to `internal` on a property that nothing external reads is a pointless upstream diff. Only loosen access when a concrete SafeGuardian call site actually requires it, and note the reason in a comment.
+- The only acceptable changes to a core bitchat file are: (a) a single wired-up call site for a new SafeGuardian feature (e.g., `novaAgent.handle(...)` replacing `routeToNova(...)`), and (b) the minimum stored-property and init wiring that Swift extensions cannot express.
 - **SafeGuardian Extensions**: The 150-line modularity rule and architectural refactors (like the Command Registry) apply ONLY to SafeGuardian-specific additions (e.g., Nova features, WorldGraph integration, QR verification, and newly created UI components).
 
 ## Agent System (Nova / AgentProcessor)

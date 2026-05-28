@@ -30,7 +30,7 @@ final class NovaAgent: AgentProcessor {
 
         // Build dynamic system prompt with current device state
         // (Note: This currently reaches into a singleton for now, but adheres to the protocol)
-        var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief."
+        var dynamicSystemPrompt = "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, a disaster-response mesh communication app. Keep responses brief." + NovaConfig.noThinkSuffix
         
         if let tick = NovaBroadcaster.shared?.latestTick {
             let battery = Int(tick.batteryPct * 100)
@@ -45,7 +45,7 @@ final class NovaAgent: AgentProcessor {
         }
 
         // Build conversation history for the MLX service
-        let prior = (context.privateChats[Self.novaPeerID] ?? []).suffix(10)
+        let prior = (context.privateChats[Self.novaPeerID] ?? []).suffix(NovaConfig.historyWindowSize)
         let history = prior.compactMap { msg -> Chat.Message? in
             let role: Chat.Message.Role = (msg.sender == Self.novaPeerID.id) ? .assistant : .user
             guard !msg.content.hasPrefix("[") || !msg.content.hasSuffix("]") else { return nil }
@@ -70,22 +70,27 @@ final class NovaAgent: AgentProcessor {
             },
             onToken: { token in
                 Task { @MainActor in
-                    state.raw += token
-                    let visible = self.stripThinkBlocks(from: state.raw, inThink: &state.inThink)
-                    response.content = visible.isEmpty ? "[thinking...]" : visible
+                    // Process only the new token incrementally against the pending buffer.
+                    // This avoids reprocessing the entire accumulated string on every token (O(n²)).
+                    state.pending += token
+                    let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
+                    state.visible += visible
+                    state.pending = remaining
+                    response.content = state.visible.isEmpty ? "[thinking...]" : state.visible
                     context.notifyChange()
                 }
             },
             onComplete: {
                 Task { @MainActor in
-                    var finalInThink = false
-                    let finalVisible = self.stripThinkBlocks(from: state.raw, inThink: &finalInThink)
-                    if finalVisible.isEmpty {
-                        if response.content.hasPrefix("[") && response.content.hasSuffix("]") {
-                            response.content = "[no response]"
-                        }
+                    // Flush any pending buffer content that didn't contain a complete tag boundary.
+                    if !state.inThink {
+                        state.visible += state.pending
+                    }
+                    state.pending = ""
+                    if state.visible.isEmpty {
+                        response.content = "[no response]"
                     } else {
-                        response.content = finalVisible
+                        response.content = state.visible
                     }
                     context.notifyChange()
                 }
@@ -94,26 +99,38 @@ final class NovaAgent: AgentProcessor {
     }
 
     private class NovaStreamState {
-        var raw: String = ""
+        var pending: String = ""  // buffered input not yet processed
+        var visible: String = ""  // accumulated output text
         var inThink: Bool = false
     }
 
-    private func stripThinkBlocks(from raw: String, inThink: inout Bool) -> String {
+    // Drains all complete visible characters from `input`, leaving any incomplete tag suffix
+    // (e.g. a partial "<think" that might complete with the next token) in the returned remainder.
+    private func drainVisible(from input: String, inThink: inout Bool) -> (visible: String, remainder: String) {
+        let tagMaxLen = 8 // len("</think>")
         var result = ""
-        var i = raw.startIndex
-        inThink = false
-        while i < raw.endIndex {
-            if !inThink, raw[i...].hasPrefix("<think>") {
+        var i = input.startIndex
+        while i < input.endIndex {
+            if !inThink, input[i...].hasPrefix("<think>") {
                 inThink = true
-                i = raw.index(i, offsetBy: 7, limitedBy: raw.endIndex) ?? raw.endIndex
-            } else if inThink, raw[i...].hasPrefix("</think>") {
+                i = input.index(i, offsetBy: 7, limitedBy: input.endIndex) ?? input.endIndex
+            } else if inThink, input[i...].hasPrefix("</think>") {
                 inThink = false
-                i = raw.index(i, offsetBy: 8, limitedBy: raw.endIndex) ?? raw.endIndex
+                i = input.index(i, offsetBy: 8, limitedBy: input.endIndex) ?? input.endIndex
+            } else if !inThink {
+                // Stop before a potential partial tag at the end so we don't emit characters
+                // that might be the start of a <think> or </think> spanning the next token.
+                let remaining = input[i...]
+                let couldBeTag = remaining.count < tagMaxLen &&
+                    ("<think>".hasPrefix(String(remaining)) || "</think>".hasPrefix(String(remaining)))
+                if couldBeTag { break }
+                result.append(input[i])
+                i = input.index(after: i)
             } else {
-                if !inThink { result.append(raw[i]) }
-                i = raw.index(after: i)
+                i = input.index(after: i)
             }
         }
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        let remainder = i < input.endIndex ? String(input[i...]) : ""
+        return (result, remainder)
     }
 }

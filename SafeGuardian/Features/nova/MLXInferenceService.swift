@@ -10,7 +10,7 @@ import MLXLMCommon
 final class MLXInferenceService {
     static let shared = MLXInferenceService()
 
-    static let defaultModelID = "mlx-community/Qwen3-0.6B-4bit"
+    static let defaultModelID = NovaConfig.defaultModelID
     private static let activeModelKey = "nova.activeModelID"
     private static let savedModelsKey  = "nova.savedModelIDs"
 
@@ -143,7 +143,7 @@ final class MLXInferenceService {
                             container,
                             instructions: systemPrompt,
                             history: history,
-                            generateParameters: GenerateParameters(temperature: 0.7)
+                            generateParameters: GenerateParameters(maxTokens: NovaConfig.maxTokens, temperature: NovaConfig.temperature)
                         )
                     }
                 }
@@ -161,30 +161,22 @@ final class MLXInferenceService {
 
                 onStatus("[thinking...]")
                 log("Streaming response for prompt: \(userMessage)")
-                
-                // Add a timeout for the first token
+
                 let stream = session.streamResponse(to: userMessage)
-                var iterator = stream.makeAsyncIterator()
-                
-                while !Task.isCancelled {
-                    let next = try await withThrowingTaskGroup(of: String?.self) { group in
-                        group.addTask {
-                            return try await iterator.next()
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    group.addTask { [self] in
+                        for try await token in stream {
+                            guard !Task.isCancelled else { break }
+                            onToken(token)
                         }
-                        group.addTask {
-                            try await Task.sleep(nanoseconds: 30 * 1_000_000_000) // 30s timeout
-                            throw NSError(domain: "Nova", code: 408, userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
-                        }
-                        let first = try await group.next()
-                        group.cancelAll()
-                        return first ?? nil
+                        await self.log("Stream completed.")
                     }
-                    
-                    guard let token = next else { 
-                        log("Stream completed.")
-                        break 
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: NovaConfig.generationTimeoutSeconds * 1_000_000_000)
+                        throw NSError(domain: "Nova", code: 408, userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
                     }
-                    onToken(token)
+                    try await group.next()
+                    group.cancelAll()
                 }
             } catch {
                 log("Nova Error: \(error.localizedDescription)")

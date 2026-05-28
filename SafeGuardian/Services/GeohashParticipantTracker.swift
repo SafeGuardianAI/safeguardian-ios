@@ -38,7 +38,7 @@ public final class GeohashParticipantTracker: ObservableObject {
     public let activityCutoff: TimeInterval
 
     /// Per-geohash participant map: [geohash: [pubkeyHex: lastSeen]]
-    internal var participants: [String: [String: Date]] = [:]
+    private var participants: [String: [String: Date]] = [:]
 
     /// Currently visible people for the active geohash
     @Published public private(set) var visiblePeople: [GeoPerson] = []

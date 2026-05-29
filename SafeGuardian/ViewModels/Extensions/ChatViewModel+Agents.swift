@@ -4,6 +4,12 @@ import Foundation
 extension ChatViewModel: AgentContext {
     var deviceTick: NovaStateTick? { NovaBroadcaster.shared?.latestTick }
     var selectedGeohash: String? { LocationChannelManager.shared.selectedChannel.nostrGeohashTag }
+    var meshPeerIDs: Set<PeerID> { unifiedPeerService.connectedPeerIDs }
+
+    @MainActor
+    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID) {
+        sendPrivateMessage(AgentMeshRouting.format(agentID: agentID, content: content), to: peerID)
+    }
 
     @MainActor
     func addAgentLocalMessage(_ content: String, to peerID: PeerID) {

@@ -708,6 +708,14 @@ extension ChatViewModel {
             return 
         }
         
+        // Route agent-addressed messages to the local agent registry; never show in human UI.
+        if let route = AgentMeshRouting.parse(message.content) {
+            if let agent = agents.first(where: { $0.agentID == route.agentID }) {
+                agent.handle(prompt: route.content, context: self)
+            }
+            return
+        }
+
         // Check if this is a favorite/unfavorite notification
         if message.content.hasPrefix("[FAVORITED]") || message.content.hasPrefix("[UNFAVORITED]") {
             handleFavoriteNotificationFromMesh(message.content, from: peerID, senderNickname: message.sender)

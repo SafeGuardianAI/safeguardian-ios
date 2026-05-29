@@ -39,6 +39,9 @@ enum NovaConfig {
     static let generationTimeoutSeconds: UInt64 = 300
     static let historyWindowSize = 10
     static let idleTimeoutSeconds: Double = 300
+    /// Battery floor below which Nova skips mesh queries entirely to preserve power.
+    /// Local (@nova) queries are always served regardless of battery level.
+    static let meshQueryMinBatteryPct: Float = 0.10
 
     // Stable system prompt — device state is injected as a prefix on the user
     // message so the session key (which hashes this string) never changes mid-run.

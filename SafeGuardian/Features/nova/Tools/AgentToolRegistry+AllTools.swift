@@ -16,7 +16,8 @@ extension AgentToolRegistry {
                 .getMemory(),
                 .getDeviceState(),
                 .getStatus(),
-                .getFullStatus()
+                .getFullStatus(),
+                .skipReply()
             ],
             meshTools: [
                 .listPeers(),

@@ -16,6 +16,14 @@ final class NovaAgent: AgentProcessor {
     }
 
     func handle(prompt: String, context: AgentContext, replyTo: PeerID? = nil) {
+        // Layer 1: battery gate — skip mesh queries on critically low battery.
+        if replyTo != nil {
+            let battery = context.deviceTick?.batteryPct ?? 1.0
+            if Float(battery) < NovaConfig.meshQueryMinBatteryPct {
+                return
+            }
+        }
+
         let provider = AgentProviderRegistry.shared.activeProvider
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
@@ -38,7 +46,12 @@ final class NovaAgent: AgentProcessor {
         #endif
 
         Task { @MainActor in
-            let input = AgentPromptInput(text: cleanPrompt, tick: context.deviceTick, toolRegistry: toolRegistry)
+            let input = AgentPromptInput(
+                text: cleanPrompt,
+                tick: context.deviceTick,
+                toolRegistry: toolRegistry,
+                isMeshQuery: replyTo != nil
+            )
             for await event in provider.generate(input: input) {
                 switch event {
                 case .status(let s):
@@ -64,10 +77,19 @@ final class NovaAgent: AgentProcessor {
                 case .complete:
                     if !state.inThink { state.visible += state.pending }
                     state.pending = ""
-                    response.content = state.visible.isEmpty ? "[no response]" : state.visible
-                    context.notifyChange()
-                    if let peer = replyTo, !state.visible.isEmpty {
-                        context.sendMeshReply(agentID: agentID, content: state.visible, to: peer)
+                    // Layer 2: sentinel skip — model replied with SKIP (or tool-capable
+                    // model called skip_reply producing no visible text).
+                    let isSkip = state.visible.trimmingCharacters(in: .whitespacesAndNewlines) == "SKIP"
+                        || (state.visible.isEmpty && replyTo != nil)
+                    if isSkip {
+                        context.removeResponse(response, from: Self.novaPeerID)
+                        context.notifyChange()
+                    } else {
+                        response.content = state.visible.isEmpty ? "[no response]" : state.visible
+                        context.notifyChange()
+                        if let peer = replyTo, !state.visible.isEmpty {
+                            context.sendMeshReply(agentID: agentID, content: state.visible, to: peer)
+                        }
                     }
                     #if DEBUG
                     ConversationLogger.shared.record(

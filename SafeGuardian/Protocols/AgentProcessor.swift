@@ -76,6 +76,9 @@ protocol AgentContext {
     func addLocalMessage(_ content: String)
     func addAgentLocalMessage(_ content: String, to peerID: PeerID)
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage
+    /// Removes a previously added response from a thread — used to suppress
+    /// placeholder messages when an agent decides to skip a mesh query.
+    func removeResponse(_ response: SafeGuardianMessage, from threadID: PeerID)
     func notifyChange()
     /// Send a mesh private message to a specific peer, routing it to the named
     /// agent on the receiving device via AgentMeshRouting. Uses the existing

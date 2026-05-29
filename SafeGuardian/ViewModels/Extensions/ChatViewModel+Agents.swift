@@ -32,6 +32,12 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    func removeResponse(_ response: SafeGuardianMessage, from threadID: PeerID) {
+        privateChats[threadID]?.removeAll(where: { $0 === response })
+        objectWillChange.send()
+    }
+
+    @MainActor
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage {
         let msg = SafeGuardianMessage(sender: sender, content: content, timestamp: Date(), isRelay: false)
         if let peerID = privatePeerID {

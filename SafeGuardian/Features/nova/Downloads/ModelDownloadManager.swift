@@ -1,4 +1,5 @@
 import Foundation
+import HuggingFace
 import MLXLMCommon
 
 /// Manages the on-device HuggingFace model cache.
@@ -50,27 +51,51 @@ final class ModelDownloadManager {
 
     // MARK: - Storage pre-flight
 
-    /// Estimated download size in bytes for a model based on its ID.
-    /// Uses a size table — accurate enough for pre-flight checks, not for billing.
-    func estimatedDownloadSize(modelID: String) -> Int64 {
+    /// Fetches the real total file size for a model from the HuggingFace Hub API.
+    /// Falls back to the pattern estimate if offline or the model has no size metadata.
+    /// - Parameter modelID: HuggingFace model ID, e.g. "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+    func remoteSize(modelID: String) async -> Int64 {
+        let parts = modelID.split(separator: "/", maxSplits: 1)
+        guard parts.count == 2 else { return patternEstimate(modelID: modelID) }
+        let repoID = Repo.ID(namespace: String(parts[0]), name: String(parts[1]))
+        do {
+            let model = try await HubClient.default.getModel(repoID, filesMetadata: true)
+            let total = model.siblings?.compactMap { $0.size }.reduce(0, +) ?? 0
+            return total > 0 ? Int64(total) : patternEstimate(modelID: modelID)
+        } catch {
+            return patternEstimate(modelID: modelID)
+        }
+    }
+
+    /// Quick offline size estimate based on parameter count pattern in the model ID.
+    /// Used as the fallback when the Hub API is unreachable.
+    func patternEstimate(modelID: String) -> Int64 {
         let id = modelID.lowercased()
+            .replacingOccurrences(of: "4bit", with: "")
+            .replacingOccurrences(of: "8bit", with: "")
+            .replacingOccurrences(of: "3bit", with: "")
+            .replacingOccurrences(of: "2bit", with: "")
+            .replacingOccurrences(of: "6bit", with: "")
         switch true {
         case id.contains("0.5b"):  return 350_000_000
         case id.contains("1.5b"):  return 950_000_000
-        case id.contains("3b"):    return 1_900_000_000
-        case id.contains("4b"):    return 2_500_000_000
-        case id.contains("7b"):    return 4_500_000_000
-        case id.contains("8b"):    return 5_000_000_000
-        case id.contains("14b"):   return 9_000_000_000
+        case id.contains("72b"):   return 45_000_000_000
         case id.contains("32b"):   return 20_000_000_000
+        case id.contains("14b"):   return 9_000_000_000
+        case id.contains("8b"):    return 5_000_000_000
+        case id.contains("7b"):    return 4_500_000_000
+        case id.contains("4b"):    return 2_500_000_000
+        case id.contains("3b"):    return 1_900_000_000
+        case id.contains("1b"):    return 700_000_000
         default:                   return 2_000_000_000
         }
     }
 
-    /// Returns true if the device has enough storage to download the model.
-    /// Uses a 1.2× safety margin over the estimated size.
+    /// Returns true if the device has enough storage for the model.
+    /// Uses the pattern estimate (offline-safe) with a 1.2× safety margin.
+    /// Call remoteSize(modelID:) first if you want the precise value.
     func hasStorageForDownload(modelID: String) -> Bool {
-        let needed = Int64(Double(estimatedDownloadSize(modelID: modelID)) * 1.2)
+        let needed = Int64(Double(patternEstimate(modelID: modelID)) * 1.2)
         return DeviceMetrics.availableStorageBytes() >= needed
     }
 

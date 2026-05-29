@@ -43,7 +43,8 @@ import MLXLMCommon
                     }
                     guard !Task.isCancelled else { continuation.finish(); return }
                     let session = sessionPool.session(
-                        for: key, container: model, systemPrompt: NovaConfig.stableSystemPrompt
+                        for: key, container: model, systemPrompt: NovaConfig.stableSystemPrompt,
+                        toolRegistry: input.toolRegistry
                     )
                     guard !decorated.isEmpty, !Task.isCancelled else {
                         continuation.yield(.status("[error: empty prompt]"))

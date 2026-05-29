@@ -9,12 +9,19 @@ import MLXLMCommon
 
     private var sessions: [Key: ChatSession] = [:]
 
-    func session(for key: Key, container: ModelContainer, systemPrompt: String) -> ChatSession {
+    func session(
+        for key: Key,
+        container: ModelContainer,
+        systemPrompt: String,
+        toolRegistry: AgentToolRegistry? = nil
+    ) -> ChatSession {
         if let existing = sessions[key] { return existing }
         let s = ChatSession(
             container,
             instructions: systemPrompt,
-            generateParameters: GenerateParameters(temperature: NovaConfig.temperature)
+            generateParameters: GenerateParameters(temperature: NovaConfig.temperature),
+            tools: toolRegistry?.specs,
+            toolDispatch: toolRegistry?.dispatch
         )
         sessions[key] = s
         return s

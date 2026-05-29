@@ -28,13 +28,23 @@ final class NovaAgent: AgentProcessor {
         )
         context.notifyChange()
 
+        let toolRegistry: AgentToolRegistry? = {
+            guard provider.capabilities.modelCapabilities?.supportsToolCalling == true else { return nil }
+            return AgentToolRegistry.build(
+                agentID: agentID,
+                context: context,
+                meshTools: AgentToolEntry.meshTools(agentID: agentID)
+            )
+        }()
+
         let state = NovaStreamState()
         #if DEBUG
         let startedAt = Date()
         #endif
 
         Task { @MainActor in
-            for await event in provider.generate(input: AgentPromptInput(text: cleanPrompt, tick: context.deviceTick)) {
+            let input = AgentPromptInput(text: cleanPrompt, tick: context.deviceTick, toolRegistry: toolRegistry)
+            for await event in provider.generate(input: input) {
                 switch event {
                 case .status(let s):
                     response.content = s

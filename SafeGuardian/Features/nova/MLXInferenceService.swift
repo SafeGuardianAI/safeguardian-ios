@@ -7,7 +7,12 @@ final class MLXInferenceService: AgentLanguageProvider {
 
     let id = "mlx"
     let displayName = "MLX (on-device)"
-    let capabilities = AgentProviderCapabilities(requiresNetwork: false)
+    var capabilities: AgentProviderCapabilities {
+        AgentProviderCapabilities(
+            requiresNetwork: false,
+            modelCapabilities: NovaConfig.capabilities(for: activeModelID)
+        )
+    }
 
     static let defaultModelID = NovaConfig.defaultModelID
     private static let activeModelKey = "nova.activeModelID"

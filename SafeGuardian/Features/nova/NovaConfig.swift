@@ -9,6 +9,9 @@ struct ModelCapabilities {
     /// Appended verbatim to every user message to suppress thinking. Nil when
     /// hasThinkingMode is false or thinking cannot be suppressed via message text.
     let noThinkSuffix: String?
+    /// Model reliably emits structured tool call JSON. False for models below ~3B
+    /// parameters where tool calling format compliance is unreliable.
+    let supportsToolCalling: Bool
 }
 
 /// Provider-agnostic generation performance stats. MLX maps GenerateCompletionInfo here;
@@ -48,13 +51,18 @@ enum NovaConfig {
     static func capabilities(for modelID: String) -> ModelCapabilities {
         let id = modelID.lowercased()
         // Qwen3 and QwQ use chain-of-thought by default; /no_think suppresses it.
+        // Tool calling requires ~3B+ parameters for reliable format compliance.
+        let isLargeEnough = id.contains("3b") || id.contains("4b") || id.contains("7b") ||
+            id.contains("8b") || id.contains("14b") || id.contains("32b") || id.contains("72b")
         if id.contains("qwen3") || id.contains("qwq") {
-            return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: " /no_think")
+            return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: " /no_think",
+                                     supportsToolCalling: isLargeEnough)
         }
-        // DeepSeek-R1 distillations use thinking mode.
         if id.contains("deepseek-r1") {
-            return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: nil)
+            return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: nil,
+                                     supportsToolCalling: isLargeEnough)
         }
-        return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil)
+        return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
+                                 supportsToolCalling: isLargeEnough && id.contains("qwen"))
     }
 }

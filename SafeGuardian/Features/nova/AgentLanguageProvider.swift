@@ -3,6 +3,8 @@ import Foundation
 struct AgentPromptInput: Sendable {
     var text: String
     var tick: NovaStateTick?
+    /// Tool registry for this call. Nil when the model does not support tools.
+    var toolRegistry: AgentToolRegistry?
 
     func decorated(modelID: String) -> String {
         let caps = NovaConfig.capabilities(for: modelID)
@@ -21,6 +23,8 @@ struct AgentPromptInput: Sendable {
 
 struct AgentProviderCapabilities: Sendable {
     let requiresNetwork: Bool
+    /// Capability flags for the currently active model. Nil until a model is loaded.
+    var modelCapabilities: ModelCapabilities?
 }
 
 @MainActor

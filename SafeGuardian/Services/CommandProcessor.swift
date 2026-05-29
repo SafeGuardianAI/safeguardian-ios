@@ -41,6 +41,7 @@ protocol CommandContextProvider: AnyObject {
 
     func addLocalMessage(_ content: String)
     func promptGPSShare()
+    func broadcastAgentMessage(agentID: String, content: String)
 }
 
 /// Registry-based command dispatcher.
@@ -54,6 +55,7 @@ final class CommandProcessor {
 
     private let commands: [any Command] = {
         var cmds: [any Command] = [
+        AgentCommand(),
         BatteryCommand(),
         GPSCommand(),
         MessageCommand(),

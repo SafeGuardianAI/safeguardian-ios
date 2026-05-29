@@ -13,10 +13,22 @@ enum AgentMeshRouting {
         "[AGENT:\(agentID)] \(content)"
     }
 
+    static func formatReply(agentID: String, content: String) -> String {
+        "[AGENT_REPLY:\(agentID)] \(content)"
+    }
+
     static func parse(_ raw: String) -> (agentID: String, content: String)? {
-        guard raw.hasPrefix("[AGENT:"),
+        Self.extract(raw, prefix: "[AGENT:")
+    }
+
+    static func parseReply(_ raw: String) -> (agentID: String, content: String)? {
+        Self.extract(raw, prefix: "[AGENT_REPLY:")
+    }
+
+    private static func extract(_ raw: String, prefix: String) -> (agentID: String, content: String)? {
+        guard raw.hasPrefix(prefix),
               let closeIdx = raw.firstIndex(of: "]") else { return nil }
-        let agentID = String(raw[raw.index(raw.startIndex, offsetBy: 7)..<closeIdx])
+        let agentID = String(raw[raw.index(raw.startIndex, offsetBy: prefix.count)..<closeIdx])
         let afterBracket = raw.index(closeIdx, offsetBy: 1)
         guard afterBracket < raw.endIndex, raw[afterBracket] == " " else { return nil }
         let content = String(raw[raw.index(afterBracket, offsetBy: 1)...])
@@ -47,7 +59,8 @@ protocol AgentProcessor: Sendable {
     /// - Parameters:
     ///   - prompt: The user's input (stripped of the trigger prefix).
     ///   - context: Access to the ChatViewModel for message injection and state.
-    func handle(prompt: String, context: AgentContext)
+    ///   - replyTo: When non-nil the agent sends its final response back to this peer via AGENT_REPLY.
+    func handle(prompt: String, context: AgentContext, replyTo: PeerID?)
 }
 
 /// A restricted interface for agents to interact with the main application.
@@ -68,4 +81,8 @@ protocol AgentContext {
     /// agent on the receiving device via AgentMeshRouting. Uses the existing
     /// Noise-encrypted BLE private message path — no new transport needed.
     func sendMeshMessage(agentID: String, content: String, to peerID: PeerID)
+    /// Sends a reply using AGENT_REPLY prefix — does not trigger another agent invocation on the receiver.
+    func sendMeshReply(agentID: String, content: String, to peerID: PeerID)
+    /// Sends an AGENT message to the named agent on every connected peer.
+    func broadcastAgentMessage(agentID: String, content: String)
 }

@@ -12,6 +12,18 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    func sendMeshReply(agentID: String, content: String, to peerID: PeerID) {
+        sendPrivateMessage(AgentMeshRouting.formatReply(agentID: agentID, content: content), to: peerID)
+    }
+
+    @MainActor
+    func broadcastAgentMessage(agentID: String, content: String) {
+        for peerID in unifiedPeerService.connectedPeerIDs {
+            sendMeshMessage(agentID: agentID, content: content, to: peerID)
+        }
+    }
+
+    @MainActor
     func addAgentLocalMessage(_ content: String, to peerID: PeerID) {
         let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
         if privateChats[peerID] == nil { privateChats[peerID] = [] }

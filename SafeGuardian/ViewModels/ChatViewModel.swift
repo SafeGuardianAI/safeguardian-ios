@@ -1029,7 +1029,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
                 privateChats[agent.peerID]?.append(userTurn)
                 startPrivateChat(with: agent.peerID)
-                agent.handle(prompt: stripped, context: self)
+                agent.handle(prompt: stripped, context: self, replyTo: nil)
             }
             return
         }
@@ -1403,6 +1403,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             messages.append(msg)
         }
         objectWillChange.send()
+    }
+
+    @MainActor
+    func broadcastAgentMessage(agentID: String, content: String) {
+        for peerID in unifiedPeerService.connectedPeerIDs {
+            sendMeshMessage(agentID: agentID, content: content, to: peerID)
+        }
     }
 
     /// Begin a GPS share confirmation flow. Sets pending state and injects the prompt as a local message.

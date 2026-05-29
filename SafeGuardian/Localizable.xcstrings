@@ -36266,6 +36266,17 @@
           }
         }
       }
+    },
+    "content.commands.agent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "send message to agent on all peers"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

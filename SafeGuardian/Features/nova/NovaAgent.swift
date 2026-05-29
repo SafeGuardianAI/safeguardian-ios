@@ -15,7 +15,7 @@ final class NovaAgent: AgentProcessor {
         return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
     }
 
-    func handle(prompt: String, context: AgentContext) {
+    func handle(prompt: String, context: AgentContext, replyTo: PeerID? = nil) {
         let provider = AgentProviderRegistry.shared.activeProvider
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
@@ -66,6 +66,9 @@ final class NovaAgent: AgentProcessor {
                     state.pending = ""
                     response.content = state.visible.isEmpty ? "[no response]" : state.visible
                     context.notifyChange()
+                    if let peer = replyTo, !state.visible.isEmpty {
+                        context.sendMeshReply(agentID: agentID, content: state.visible, to: peer)
+                    }
                     #if DEBUG
                     ConversationLogger.shared.record(
                         agentThread: context.privateChats[Self.novaPeerID] ?? [],

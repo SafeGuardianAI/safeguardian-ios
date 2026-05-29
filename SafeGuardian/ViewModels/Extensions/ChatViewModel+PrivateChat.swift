@@ -708,10 +708,20 @@ extension ChatViewModel {
             return 
         }
         
+        // Incoming reply from a remote agent — inject into private chat with that peer as the agent's message.
+        if let reply = AgentMeshRouting.parseReply(message.content) {
+            let msg = SafeGuardianMessage(sender: reply.agentID.capitalized, content: reply.content,
+                                          timestamp: Date(), isRelay: false)
+            if privateChats[peerID] == nil { privateChats[peerID] = [] }
+            privateChats[peerID]?.append(msg)
+            objectWillChange.send()
+            return
+        }
+
         // Route agent-addressed messages to the local agent registry; never show in human UI.
         if let route = AgentMeshRouting.parse(message.content) {
             if let agent = agents.first(where: { $0.agentID == route.agentID }) {
-                agent.handle(prompt: route.content, context: self)
+                agent.handle(prompt: route.content, context: self, replyTo: peerID)
             }
             return
         }

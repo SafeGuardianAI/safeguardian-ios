@@ -79,6 +79,7 @@ final class ModelDownloadManager {
         switch true {
         case id.contains("0.5b"):  return 350_000_000
         case id.contains("1.5b"):  return 950_000_000
+        case id.contains("2b"):    return 1_300_000_000
         case id.contains("72b"):   return 45_000_000_000
         case id.contains("32b"):   return 20_000_000_000
         case id.contains("14b"):   return 9_000_000_000

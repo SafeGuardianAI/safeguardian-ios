@@ -31,6 +31,8 @@ struct AgentProviderCapabilities: Sendable {
 protocol AgentLanguageProvider: AnyObject {
     var id: String { get }
     var displayName: String { get }
+    /// The HuggingFace model ID currently active for this provider.
+    var activeModelID: String { get }
     var capabilities: AgentProviderCapabilities { get }
     var isLoading: Bool { get }
     var isModelLoaded: Bool { get }

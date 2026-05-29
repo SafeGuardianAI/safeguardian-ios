@@ -18,6 +18,13 @@ final class MLXInferenceService: AgentLanguageProvider {
     private static let activeModelKey = "nova.activeModelID"
     private static let savedModelsKey  = "nova.savedModelIDs"
 
+    // Models always present in the saved list regardless of UserDefaults state.
+    // Order determines the order they appear in the picker on first install.
+    private static let builtinModelIDs: [String] = [
+        "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+        "mlx-community/gemma-3-4b-it-4bit",
+    ]
+
     private let loader: MLXModelLoader
     let coordinator: MLXInferenceCoordinator
 
@@ -34,13 +41,15 @@ final class MLXInferenceService: AgentLanguageProvider {
 
     private init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.savedModelsKey) ?? []
-        let initialSaved = stored.isEmpty ? [Self.defaultModelID] : stored
+        // Merge builtins so new models added here appear for existing installs.
+        var merged = stored.isEmpty ? Self.builtinModelIDs : stored
+        for id in Self.builtinModelIDs where !merged.contains(id) { merged.append(id) }
         let active = UserDefaults.standard.string(forKey: Self.activeModelKey) ?? Self.defaultModelID
         let l = MLXModelLoader()
         loader = l
         coordinator = MLXInferenceCoordinator(loader: l)
-        savedModelIDs = initialSaved
-        activeModelID = initialSaved.contains(active) ? active : Self.defaultModelID
+        savedModelIDs = merged
+        activeModelID = merged.contains(active) ? active : Self.defaultModelID
     }
 
     // MARK: - Inference

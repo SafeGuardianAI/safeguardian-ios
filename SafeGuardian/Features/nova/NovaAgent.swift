@@ -72,6 +72,7 @@ final class NovaAgent: AgentProcessor {
                         systemPrompt: NovaConfig.stableSystemPrompt,
                         agentSenderID: displayName,
                         providerID: provider.id,
+                        modelID: provider.activeModelID,
                         tick: context.deviceTick,
                         startedAt: startedAt,
                         thinkingContent: state.thinking.isEmpty ? nil : state.thinking,

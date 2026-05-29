@@ -72,6 +72,7 @@ final class ConversationLogger {
         systemPrompt: String,
         agentSenderID: String,
         providerID: String,
+        modelID: String,
         tick: NovaStateTick?,
         startedAt: Date,
         thinkingContent: String? = nil,
@@ -91,7 +92,8 @@ final class ConversationLogger {
         guard turns.contains(where: { $0.role == "user" }),
               turns.contains(where: { $0.role == "assistant" }) else { return }
 
-        var metadata: [String: Any] = ["duration_ms": durationMs, "provider": providerID]
+        var metadata: [String: Any] = ["duration_ms": durationMs, "provider": providerID,
+                                       "model": modelID]
         if let tick {
             metadata["battery_pct"] = tick.batteryPct
             metadata["peer_count"] = tick.peerCount

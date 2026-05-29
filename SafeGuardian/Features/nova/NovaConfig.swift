@@ -52,8 +52,9 @@ enum NovaConfig {
         let id = modelID.lowercased()
         // Qwen3 and QwQ use chain-of-thought by default; /no_think suppresses it.
         // Tool calling requires ~3B+ parameters for reliable format compliance.
-        let isLargeEnough = id.contains("3b") || id.contains("4b") || id.contains("7b") ||
-            id.contains("8b") || id.contains("14b") || id.contains("32b") || id.contains("72b")
+        let isLargeEnough = id.contains("2b") || id.contains("3b") || id.contains("4b") ||
+            id.contains("7b") || id.contains("8b") || id.contains("14b") ||
+            id.contains("32b") || id.contains("72b")
         if id.contains("qwen3") || id.contains("qwq") {
             return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: " /no_think",
                                      supportsToolCalling: isLargeEnough)
@@ -61,6 +62,13 @@ enum NovaConfig {
         if id.contains("deepseek-r1") {
             return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: nil,
                                      supportsToolCalling: isLargeEnough)
+        }
+        if id.contains("gemma") {
+            // Gemma models support function calling from the 4B class upward.
+            let toolCapable = id.contains("4b") || id.contains("7b") || id.contains("8b") ||
+                id.contains("9b") || id.contains("27b")
+            return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
+                                     supportsToolCalling: toolCapable)
         }
         return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
                                  supportsToolCalling: isLargeEnough && id.contains("qwen"))

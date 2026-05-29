@@ -102,6 +102,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     @MainActor
     var canSendMediaInCurrentContext: Bool {
         if let peer = selectedPrivateChatPeer {
+            if agents.contains(where: { $0.peerID == peer }) { return false }
             return !(peer.isGeoDM || peer.isGeoChat)
         }
         switch activeChannel {
@@ -1692,7 +1693,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Send screenshot notification based on current context
         let screenshotMessage = "* \(nickname) took a screenshot *"
         
-        if let peerID = selectedPrivateChatPeer {
+        if let peerID = selectedPrivateChatPeer, !agents.contains(where: { $0.peerID == peerID }) {
             // In private chat - send to the other person
             if let peerNickname = meshService.peerNickname(peerID: peerID) {
                 // Only send screenshot notification if we have an established session

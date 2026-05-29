@@ -84,6 +84,18 @@ If the MLX trait is needed later (AnyLanguageModel's `MLXLanguageModel` vs our o
 - Command system — untouched
 - Everything in bitchat origin — untouched
 
-## Current State After onToken Fix
+## Current State (2026-05-28)
 
-`NovaGenerationEvent` is in `NovaConfig.swift`. `NovaInferenceCoordinator.generate()` returns `AsyncStream<NovaGenerationEvent>`. `MLXInferenceService.generate()` returns `AsyncStream<NovaGenerationEvent>`. `NovaAgent.handle()` consumes the stream in one `Task { @MainActor in for await }`. The per-token Task flood is fixed. Steps 1–4 above layer the provider abstraction on top of this.
+All types renamed to agnostic names: `AgentGenerationEvent`, `AgentGenerationStats`, `AgentPromptInput`, `AgentProviderCapabilities`, `AgentLanguageProvider`, `AgentProviderRegistry`, `MLXInferenceCoordinator`, `MLXSessionPool`, `ConversationLogger`.
+
+Steps 1–4 complete. `MLXInferenceService` conforms to `AgentLanguageProvider`. `NovaAgent` routes through `AgentProviderRegistry.shared.activeProvider`. Per-token Task flood eliminated — one `Task { @MainActor in for await }` consumes the stream.
+
+`AgentGenerationEvent` has a `.stats(AgentGenerationStats)` case. `MLXInferenceCoordinator` uses `ChatSession.streamDetails(to:images:videos:)` to receive `Generation.info` at completion, mapping it to `AgentGenerationStats` (prompt/generation token counts, prompt/generate milliseconds, tokens per second).
+
+`NovaAgent.drain()` (renamed from `drainVisible`) returns `(visible, thinking, remainder)`, accumulating `<think>...</think>` content in `NovaStreamState.thinking` rather than discarding it.
+
+`ConversationLogger` writes to `dev/conversations.jsonl`. Each entry: full multi-turn thread, optional top-level `"thinking"` field, and `metadata` with `prompt_tokens`, `generation_tokens`, `prompt_ms`, `generate_ms`, `tokens_per_sec`, `prompt_tokens_per_sec`, `battery_pct`, `peer_count`, `duration_ms`. Format toggleable between OpenAI JSONL and ShareGPT via `/log format`. All gated `#if DEBUG`.
+
+`scripts/check_agent_names.sh` enforces no agent names in infrastructure files or types. Runs in `just check`.
+
+Step 5 (OllamaNovaProvider) is next.

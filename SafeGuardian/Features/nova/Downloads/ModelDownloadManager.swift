@@ -71,7 +71,7 @@ final class ModelDownloadManager {
     /// Uses a 1.2× safety margin over the estimated size.
     func hasStorageForDownload(modelID: String) -> Bool {
         let needed = Int64(Double(estimatedDownloadSize(modelID: modelID)) * 1.2)
-        return DeviceToolEntry.availableStorageBytes() >= needed
+        return DeviceMetrics.availableStorageBytes() >= needed
     }
 
     // MARK: - Helpers
@@ -100,6 +100,3 @@ final class ModelDownloadManager {
     }
 }
 
-// Expose the storage check used by ModelDownloadManager to DeviceTools without
-// duplicating the implementation. DeviceTools already defines this as a static method.
-private typealias DeviceToolEntry = AgentToolEntry

@@ -50,4 +50,10 @@ struct NovaStateTick: Equatable {
     let peerCount: Int
     let tickSequence: Int
     let confidenceAtEmit: Double
+
+    /// Compact JSON representation used by agent tools. Single source of truth for
+    /// how a tick serializes for tool responses — avoids duplicating format across tool files.
+    var toolJSON: String {
+        #"{"battery_pct":\#(Int(batteryPct*100)),"location_confidence":\#(String(format:"%.2f",locationConfidence)),"peer_count":\#(peerCount),"transport_tier":"\#(transportTier.rawValue)"}"#
+    }
 }

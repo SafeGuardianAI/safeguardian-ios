@@ -28,14 +28,9 @@ final class NovaAgent: AgentProcessor {
         )
         context.notifyChange()
 
-        let toolRegistry: AgentToolRegistry? = {
-            guard provider.capabilities.modelCapabilities?.supportsToolCalling == true else { return nil }
-            return AgentToolRegistry.build(
-                agentID: agentID,
-                context: context,
-                meshTools: AgentToolEntry.meshTools(agentID: agentID)
-            )
-        }()
+        let toolRegistry: AgentToolRegistry? = provider.capabilities.modelCapabilities?.supportsToolCalling == true
+            ? AgentToolRegistry.standard(agentID: agentID, context: context)
+            : nil
 
         let state = NovaStreamState()
         #if DEBUG

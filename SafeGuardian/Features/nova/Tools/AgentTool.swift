@@ -12,11 +12,10 @@ final class AgentContextProxy: @unchecked Sendable {
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
-        let aid = senderAgentID
         _meshPeerIDs = { context.meshPeerIDs }
         _tick = { context.deviceTick }
         _sendMesh = { toAgentID, content, peerID in
-            context.sendMeshMessage(agentID: aid, content: content, to: peerID)
+            context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID)
         }
     }
 
@@ -38,11 +37,11 @@ struct AgentToolRegistry: Sendable {
     static func build(
         agentID: String,
         context: some AgentContext,
-        deviceTools: [AgentToolEntry] = AgentToolEntry.deviceTools(),
+        deviceTools: [AgentToolEntry],
         meshTools: [AgentToolEntry]
     ) -> AgentToolRegistry {
         let proxy = AgentContextProxy(senderAgentID: agentID, context: context)
-        let allTools = (deviceTools + meshTools)
+        let allTools = deviceTools + meshTools
         let lookup = Dictionary(uniqueKeysWithValues: allTools.map { ($0.name, $0) })
         let specs = allTools.map { $0.spec }
         let dispatch: @Sendable (ToolCall) async throws -> String = { toolCall in

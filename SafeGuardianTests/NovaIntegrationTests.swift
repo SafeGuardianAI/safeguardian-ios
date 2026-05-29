@@ -31,7 +31,7 @@ struct NovaIntegrationTests {
         
         viewModel.sendMessage("@nova \(prompt)")
         
-        let novaPeerID = ChatViewModel.novaPeerID
+        let novaPeerID = NovaAgent.novaPeerID
         let messages = viewModel.privateChats[novaPeerID]
         print("Nova messages count: \(messages?.count ?? 0)")
         
@@ -56,7 +56,7 @@ struct NovaIntegrationTests {
         
         viewModel.sendMessage("@nova test")
         
-        let novaPeerID = ChatViewModel.novaPeerID
+        let novaPeerID = NovaAgent.novaPeerID
         #expect(viewModel.privateChats[novaPeerID] != nil)
     }
 }

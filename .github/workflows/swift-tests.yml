@@ -7,6 +7,17 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check for emojis
+        run: python3 scripts/check_emojis.py
+
   test:
     name: Run Swift Tests (${{ matrix.name }})
     runs-on: macos-latest

@@ -7,12 +7,23 @@ struct AnnouncementPacket {
     let noisePublicKey: Data            // Noise static public key (Curve25519.KeyAgreement)
     let signingPublicKey: Data          // Ed25519 public key for signing
     let directNeighbors: [Data]?        // 8-byte peer IDs
+    var agentIDs: [String]
+
+    init(nickname: String, noisePublicKey: Data, signingPublicKey: Data,
+         directNeighbors: [Data]? = nil, agentIDs: [String] = []) {
+        self.nickname = nickname
+        self.noisePublicKey = noisePublicKey
+        self.signingPublicKey = signingPublicKey
+        self.directNeighbors = directNeighbors
+        self.agentIDs = agentIDs
+    }
 
     private enum TLVType: UInt8 {
         case nickname = 0x01
         case noisePublicKey = 0x02
         case signingPublicKey = 0x03
         case directNeighbors = 0x04
+        case agentIDs = 0x05
     }
 
     func encode() -> Data? {
@@ -48,6 +59,16 @@ struct AnnouncementPacket {
             }
         }
 
+        // TLV for agent IDs — comma-joined UTF-8, omitted when empty
+        if !agentIDs.isEmpty {
+            let joined = agentIDs.joined(separator: ",")
+            if let agentData = joined.data(using: .utf8), agentData.count <= 255 {
+                data.append(TLVType.agentIDs.rawValue)
+                data.append(UInt8(agentData.count))
+                data.append(agentData)
+            }
+        }
+
         return data
     }
 
@@ -57,6 +78,7 @@ struct AnnouncementPacket {
         var noisePublicKey: Data?
         var signingPublicKey: Data?
         var directNeighbors: [Data]?
+        var agentIDs: [String] = []
 
         while offset + 2 <= data.count {
             let typeRaw = data[offset]
@@ -87,6 +109,10 @@ struct AnnouncementPacket {
                         }
                         directNeighbors = neighbors
                     }
+                case .agentIDs:
+                    if let joined = String(data: value, encoding: .utf8), !joined.isEmpty {
+                        agentIDs = joined.split(separator: ",").map(String.init)
+                    }
                 }
             } else {
                 // Unknown TLV; skip (tolerant decoder for forward compatibility)
@@ -99,7 +125,8 @@ struct AnnouncementPacket {
             nickname: nickname,
             noisePublicKey: noisePublicKey,
             signingPublicKey: signingPublicKey,
-            directNeighbors: directNeighbors
+            directNeighbors: directNeighbors,
+            agentIDs: agentIDs
         )
     }
 }

@@ -71,6 +71,7 @@ final class BLEService: NSObject {
         var signingPublicKey: Data?
         var isVerifiedNickname: Bool
         var lastSeen: Date
+        var agentIDs: [String] = []
     }
     private var peers: [PeerID: PeerInfo] = [:]
     private var currentPeerIDs: [PeerID] {
@@ -489,7 +490,8 @@ final class BLEService: NSObject {
                     nickname: resolvedNames[info.peerID] ?? info.nickname,
                     isConnected: info.isConnected,
                     noisePublicKey: info.noisePublicKey,
-                    lastSeen: info.lastSeen
+                    lastSeen: info.lastSeen,
+                    agentIDs: info.agentIDs
                 )
             }
         }
@@ -499,7 +501,14 @@ final class BLEService: NSObject {
     
     var myPeerID = PeerID(str: "")
     var myNickname: String = "anon"
-    
+    var localAgentIDs: [String] = []
+
+    func getPeersWithAgent(_ agentID: String) -> [PeerID] {
+        collectionsQueue.sync {
+            peers.values.filter { $0.agentIDs.contains(agentID) }.map { $0.peerID }
+        }
+    }
+
     func setNickname(_ nickname: String) {
         self.myNickname = nickname
         // Send announce to notify peers of nickname change (force send)
@@ -1530,7 +1539,8 @@ final class BLEService: NSObject {
             nickname: myNickname,
             noisePublicKey: noisePub,
             signingPublicKey: signingPub,
-            directNeighbors: connectedPeerIDs
+            directNeighbors: connectedPeerIDs,
+            agentIDs: localAgentIDs
         )
         
         guard let payload = announcement.encode() else {
@@ -3916,7 +3926,8 @@ extension BLEService {
                     noisePublicKey: announcement.noisePublicKey,
                     signingPublicKey: announcement.signingPublicKey,
                     isVerifiedNickname: true,
-                    lastSeen: Date()
+                    lastSeen: Date(),
+                    agentIDs: announcement.agentIDs
                 )
             } else {
                 // New peer or reconnecting peer
@@ -3927,7 +3938,8 @@ extension BLEService {
                     noisePublicKey: announcement.noisePublicKey,
                     signingPublicKey: announcement.signingPublicKey,
                     isVerifiedNickname: true,
-                    lastSeen: Date()
+                    lastSeen: Date(),
+                    agentIDs: announcement.agentIDs
                 )
             }
             
@@ -4293,7 +4305,8 @@ extension BLEService {
                     nickname: display,
                     isConnected: info.isConnected,
                     noisePublicKey: info.noisePublicKey,
-                    lastSeen: info.lastSeen
+                    lastSeen: info.lastSeen,
+                    agentIDs: info.agentIDs
                 )
             }
         }

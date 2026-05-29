@@ -96,6 +96,9 @@ final class MockTransport: Transport {
         peerNicknames
     }
 
+    var localAgentIDs: [String] = []
+    func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
+
     func getFingerprint(for peerID: PeerID) -> String? {
         peerFingerprints[peerID]
     }

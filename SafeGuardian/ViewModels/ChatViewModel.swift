@@ -472,7 +472,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }
             .store(in: &cancellables)
         self.commandProcessor.meshService = meshService
-        
+        meshService.localAgentIDs = agents.map { $0.agentID }
+
         loadNickname()
         loadVerifiedFingerprints()
         meshService.delegate = self
@@ -2142,9 +2143,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }
         }()
 
+        // Include agent trigger names (e.g. "nova" from "@nova") so typing @n suggests @nova.
+        let agentNames = agents.map { String($0.triggerPrefix.dropFirst()) }
+        let allCandidates = peerCandidates + agentNames
+
         let (suggestions, range) = autocompleteService.getSuggestions(
             for: text,
-            peers: peerCandidates,
+            peers: allCandidates,
             cursorPosition: cursorPosition
         )
         

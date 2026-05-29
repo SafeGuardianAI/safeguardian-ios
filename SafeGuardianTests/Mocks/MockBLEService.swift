@@ -110,6 +110,9 @@ final class MockBLEService: NSObject {
         return getPeerNicknames()
     }
 
+    var localAgentIDs: [String] = []
+    func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
+
     /// Keep local echo synchronous so Swift Testing confirmations observe it deterministically.
     private func deliverLocalEcho(_ message: SafeGuardianMessage) {
         delegate?.didReceiveMessage(message)

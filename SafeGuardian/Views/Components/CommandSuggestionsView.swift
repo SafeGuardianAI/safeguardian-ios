@@ -45,15 +45,23 @@ struct CommandSuggestionsView: View {
         )
     }
     
+    private func placeholder(for command: CommandInfo) -> String? {
+        if command == .agent {
+            let ids = viewModel.agents.map { $0.agentID }.joined(separator: "|")
+            return "<\(ids)> <message>"
+        }
+        return command.placeholder
+    }
+
     private func buttonRow(for command: CommandInfo) -> some View {
         HStack {
             Text(command.alias)
                 .font(.safeguardianSystem(size: 11, design: .monospaced))
                 .foregroundColor(textColor)
                 .fontWeight(.medium)
-            
-            if let placeholder = command.placeholder {
-                Text(placeholder)
+
+            if let p = placeholder(for: command) {
+                Text(p)
                     .font(.safeguardianSystem(size: 10, design: .monospaced))
                     .foregroundColor(secondaryTextColor.opacity(0.8))
             }

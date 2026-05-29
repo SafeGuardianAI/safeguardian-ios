@@ -10,6 +10,7 @@ struct TransportPeerSnapshot: Equatable, Hashable {
     let isConnected: Bool
     let noisePublicKey: Data?
     let lastSeen: Date
+    var agentIDs: [String] = []
 }
 
 protocol Transport: AnyObject {
@@ -37,6 +38,8 @@ protocol Transport: AnyObject {
     func isPeerReachable(_ peerID: PeerID) -> Bool
     func peerNickname(peerID: PeerID) -> String?
     func getPeerNicknames() -> [PeerID: String]
+    func getPeersWithAgent(_ agentID: String) -> [PeerID]
+    var localAgentIDs: [String] { get set }
 
     // Protocol utilities
     func getFingerprint(for peerID: PeerID) -> String?
@@ -66,6 +69,7 @@ protocol Transport: AnyObject {
 }
 
 extension Transport {
+    func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
     func sendVerifyChallenge(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}
     func sendVerifyResponse(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}
     func sendFileBroadcast(_ packet: SafeGuardianFilePacket, transferId: String) {}

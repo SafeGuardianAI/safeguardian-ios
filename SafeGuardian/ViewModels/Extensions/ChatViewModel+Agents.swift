@@ -18,7 +18,11 @@ extension ChatViewModel: AgentContext {
 
     @MainActor
     func broadcastAgentMessage(agentID: String, content: String) {
-        for peerID in unifiedPeerService.connectedPeerIDs {
+        // Prefer peers that have advertised the agent; fall back to all connected peers
+        // when no capability data is available yet (e.g. before first announce exchange).
+        let targeted = meshService.getPeersWithAgent(agentID)
+        let targets = targeted.isEmpty ? Array(unifiedPeerService.connectedPeerIDs) : targeted
+        for peerID in targets {
             sendMeshMessage(agentID: agentID, content: content, to: peerID)
         }
     }

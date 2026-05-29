@@ -5,6 +5,8 @@ struct AppInfoView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var novaResetConfirm = false
     @State private var mlxService = MLXInferenceService.shared
+    @State private var remoteService = RemoteInferenceService.shared
+    @State private var registry = AgentProviderRegistry.shared
     @State private var newModelID = ""
     @State private var showAddModelAlert = false
     
@@ -193,88 +195,147 @@ struct AppInfoView: View {
                 FeatureRow(info: Strings.Privacy.panic)
             }
 
-            // Nova on-device AI
+            // AI assistant (Nova)
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader("on-device ai")
+                SectionHeader("ai assistant")
 
+                // Provider selector
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "cpu")
                         .font(.safeguardianSystem(size: 20))
                         .foregroundColor(textColor)
                         .frame(width: 30)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        let activeModelBinding = Binding(
-                            get: { mlxService.activeModelID },
-                            set: { mlxService.selectModel($0) }
-                        )
-                        
-                        HStack {
-                            Picker("active model", selection: activeModelBinding) {
-                                ForEach(mlxService.savedModelIDs, id: \.self) { id in
-                                    Text(id.components(separatedBy: "/").last ?? id)
-                                        .tag(id)
+
+                    Picker("provider", selection: Binding(
+                        get: { registry.activeProvider.id },
+                        set: { id in
+                            if id == "remote" {
+                                registry.setActiveProvider(RemoteInferenceService.shared)
+                            } else {
+                                registry.setActiveProvider(MLXInferenceService.shared)
+                            }
+                        }
+                    )) {
+                        Text("on-device").tag("mlx")
+                        Text("remote").tag("remote")
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: .infinity)
+                }
+
+                if registry.activeProvider.id == "remote" {
+                    // Remote provider configuration
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "network")
+                            .font(.safeguardianSystem(size: 20))
+                            .foregroundColor(textColor)
+                            .frame(width: 30)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("http://localhost:11434", text: $remoteService.baseURL)
+                                .font(.safeguardianSystem(size: 13, design: .monospaced))
+                                .foregroundColor(textColor)
+                                #if os(iOS)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.URL)
+                                .disableAutocorrection(true)
+                                #endif
+
+                            TextField("model identifier", text: $remoteService.modelID)
+                                .font(.safeguardianSystem(size: 13, design: .monospaced))
+                                .foregroundColor(textColor)
+                                #if os(iOS)
+                                .textInputAutocapitalization(.never)
+                                .disableAutocorrection(true)
+                                #endif
+
+                            SecureField("api key (optional)", text: $remoteService.apiKey)
+                                .font(.safeguardianSystem(size: 13, design: .monospaced))
+                                .foregroundColor(textColor)
+
+                            Text("any openai-compatible endpoint — ollama, lm studio, vllm, openai, etc.")
+                                .font(.safeguardianSystem(size: 11, design: .monospaced))
+                                .foregroundColor(secondaryTextColor)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                } else {
+                    // On-device MLX model management
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "memorychip")
+                            .font(.safeguardianSystem(size: 20))
+                            .foregroundColor(textColor)
+                            .frame(width: 30)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            let activeModelBinding = Binding(
+                                get: { mlxService.activeModelID },
+                                set: { mlxService.selectModel($0) }
+                            )
+
+                            HStack {
+                                Picker("active model", selection: activeModelBinding) {
+                                    ForEach(mlxService.savedModelIDs, id: \.self) { id in
+                                        Text(id.components(separatedBy: "/").last ?? id)
+                                            .tag(id)
+                                    }
                                 }
-                            }
-                            .pickerStyle(.menu)
-                            .labelsHidden()
-                            .accentColor(textColor)
-                            .font(.safeguardianSystem(size: 14, weight: .semibold, design: .monospaced))
-                            
-                            Spacer()
-                            
-                            Button(action: { showAddModelAlert = true }) {
-                                Image(systemName: "plus.circle")
-                                    .foregroundColor(textColor)
-                            }
-                            .buttonStyle(.plain)
-                            
-                            if mlxService.activeModelID != MLXInferenceService.defaultModelID {
-                                Button(action: { mlxService.removeModel(mlxService.activeModelID) }) {
-                                    Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .accentColor(textColor)
+                                .font(.safeguardianSystem(size: 14, weight: .semibold, design: .monospaced))
+
+                                Spacer()
+
+                                Button(action: { showAddModelAlert = true }) {
+                                    Image(systemName: "plus.circle")
+                                        .foregroundColor(textColor)
                                 }
                                 .buttonStyle(.plain)
+
+                                if mlxService.activeModelID != MLXInferenceService.defaultModelID {
+                                    Button(action: { mlxService.removeModel(mlxService.activeModelID) }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            Text("type @nova <message> in the chat composer. responses are private and never sent to the mesh.")
+                                .font(.safeguardianSystem(size: 12, design: .monospaced))
+                                .foregroundColor(secondaryTextColor)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            if mlxService.isLoading {
+                                ProgressView(value: mlxService.downloadProgress)
+                                    .accentColor(textColor)
+                                    .padding(.top, 4)
+                                Text("downloading model: \(Int(mlxService.downloadProgress * 100))%")
+                                    .font(.safeguardianSystem(size: 10, design: .monospaced))
+                                    .foregroundColor(secondaryTextColor)
                             }
                         }
-                        .frame(maxWidth: .infinity)
+                        Spacer()
+                    }
 
-                        Text("type @nova <message> in the chat composer to query the on-device model. responses are private and never sent to the mesh.")
-                            .font(.safeguardianSystem(size: 12, design: .monospaced))
-                            .foregroundColor(secondaryTextColor)
-                            .fixedSize(horizontal: false, vertical: true)
-                        
-                        if mlxService.isLoading {
-                            ProgressView(value: mlxService.downloadProgress)
-                                .accentColor(textColor)
-                                .padding(.top, 4)
-                            Text("downloading model: \(Int(mlxService.downloadProgress * 100))%")
-                                .font(.safeguardianSystem(size: 10, design: .monospaced))
-                                .foregroundColor(secondaryTextColor)
+                    Button(action: { novaResetConfirm = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("reset nova session")
                         }
+                        .font(.safeguardianSystem(size: 13, design: .monospaced))
+                        .foregroundColor(textColor)
+                        .padding(.leading, 42)
                     }
-                    Spacer()
-                }
-
-                Button(action: {
-                    novaResetConfirm = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.counterclockwise")
-                        Text("reset nova session")
+                    .buttonStyle(.plain)
+                    .confirmationDialog("reset nova session?", isPresented: $novaResetConfirm, titleVisibility: .visible) {
+                        Button("reset", role: .destructive) { mlxService.dropSession() }
+                        Button("cancel", role: .cancel) {}
+                    } message: {
+                        Text("clears the downloaded model and conversation history. nova will re-download on next use.")
                     }
-                    .font(.safeguardianSystem(size: 13, design: .monospaced))
-                    .foregroundColor(textColor)
-                    .padding(.leading, 42)
-                }
-                .buttonStyle(.plain)
-                .confirmationDialog("reset nova session?", isPresented: $novaResetConfirm, titleVisibility: .visible) {
-                    Button("reset", role: .destructive) {
-                        mlxService.dropSession()
-                    }
-                    Button("cancel", role: .cancel) {}
-                } message: {
-                    Text("clears the downloaded model and conversation history. nova will re-download on next use.")
                 }
             }
         }
@@ -289,11 +350,9 @@ struct AppInfoView: View {
                 mlxService.addModel(newModelID)
                 newModelID = ""
             }
-            Button("cancel", role: .cancel) {
-                newModelID = ""
-            }
+            Button("cancel", role: .cancel) { newModelID = "" }
         } message: {
-            Text("enter a raw huggingface repo ID (e.g. mlx-community/Qwen3-0.6B-4bit). make sure it is an mlx-compatible 4-bit model.")
+            Text("enter a huggingface repo ID (e.g. mlx-community/Qwen3-0.6B-4bit). any mlx-format model is supported.")
         }
     }
 }

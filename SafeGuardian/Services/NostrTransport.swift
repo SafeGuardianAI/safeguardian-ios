@@ -137,6 +137,8 @@ final class NostrTransport: Transport, @unchecked Sendable {
     
     func peerNickname(peerID: PeerID) -> String? { nil }
     func getPeerNicknames() -> [PeerID : String] { [:] }
+    var localAgentIDs: [String] = []
+    func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
 
     func getFingerprint(for peerID: PeerID) -> String? { nil }
     func getNoiseSessionState(for peerID: PeerID) -> LazyHandshakeState { .none }

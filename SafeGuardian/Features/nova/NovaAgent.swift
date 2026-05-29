@@ -20,7 +20,7 @@ final class NovaAgent: AgentProcessor {
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
         if !provider.isModelLoaded {
-            context.addAgentLocalMessage("nova · \(provider.displayName) · \(provider.isLoading ? "downloading..." : "initializing...")", to: peerID)
+            context.addAgentLocalMessage(provider.isLoading ? "downloading model..." : "initializing...", to: peerID)
         }
 
         let response = context.addResponse(

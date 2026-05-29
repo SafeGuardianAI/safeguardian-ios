@@ -22,7 +22,7 @@ final class MLXInferenceService: AgentLanguageProvider {
     // Order determines the order they appear in the picker on first install.
     private static let builtinModelIDs: [String] = [
         "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
-        "mlx-community/gemma-3-4b-it-4bit",
+        "mlx-community/Qwen2.5-3B-Instruct-4bit",
     ]
 
     private let loader: MLXModelLoader
@@ -82,7 +82,8 @@ final class MLXInferenceService: AgentLanguageProvider {
 
     func removeModel(_ id: String) {
         guard id != Self.defaultModelID else { return }
-        savedModelIDs.removeAll { $0 == id }
         if activeModelID == id { selectModel(Self.defaultModelID) }
+        savedModelIDs.removeAll { $0 == id }
+        try? ModelDownloadManager.shared.evict(modelID: id)
     }
 }

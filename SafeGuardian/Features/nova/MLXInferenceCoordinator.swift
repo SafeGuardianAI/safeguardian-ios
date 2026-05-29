@@ -38,6 +38,20 @@ import MLXLMCommon
             let task = Task {
                 do {
                     continuation.yield(.status("[initializing...]"))
+                    let dm = await MainActor.run { ModelDownloadManager.shared }
+                    let isCached = await MainActor.run { dm.cachedSize(modelID: modelID) != nil }
+                    if !isCached {
+                        let hasSpace = await MainActor.run { dm.hasStorageForDownload(modelID: modelID) }
+                        if !hasSpace {
+                            let needed = await MainActor.run { dm.patternEstimate(modelID: modelID) }
+                            let avail = DeviceMetrics.availableStorageBytes()
+                            let neededGB = String(format: "%.1f", Double(needed) / 1_073_741_824)
+                            let availGB = String(format: "%.1f", Double(avail) / 1_073_741_824)
+                            continuation.yield(.failure("not enough storage: need ~\(neededGB) GB, \(availGB) GB free"))
+                            continuation.finish()
+                            return
+                        }
+                    }
                     let model = try await loader.container(modelID: modelID) { progress in
                         continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))
                     }

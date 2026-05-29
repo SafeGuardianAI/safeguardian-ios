@@ -2,9 +2,9 @@ import Foundation
 import MLX
 import MLXLMCommon
 
-@MainActor final class NovaInferenceCoordinator {
+@MainActor final class MLXInferenceCoordinator {
     private let loader: MLXModelLoader
-    private let sessionPool = NovaSessionPool()
+    private let sessionPool = MLXSessionPool()
     private var activeTask: Task<Void, Never>?
     private var pendingRelease = false
     private var idleWork: DispatchWorkItem?
@@ -22,15 +22,15 @@ import MLXLMCommon
 
     func generate(
         modelID: String,
-        input: NovaPromptInput
-    ) -> AsyncStream<NovaGenerationEvent> {
+        input: AgentPromptInput
+    ) -> AsyncStream<AgentGenerationEvent> {
         if pendingRelease {
             return AsyncStream { c in c.yield(.status("[model releasing]")); c.finish() }
         }
         activeTask?.cancel()
         rescheduleIdleTimer()
         let decorated = input.decorated(modelID: modelID)
-        let key = NovaSessionPool.Key(
+        let key = MLXSessionPool.Key(
             modelID: modelID,
             promptHash: NovaConfig.stableSystemPrompt.hashValue
         )

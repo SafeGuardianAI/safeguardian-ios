@@ -11,7 +11,7 @@ struct ModelCapabilities {
     let noThinkSuffix: String?
 }
 
-enum NovaGenerationEvent: Sendable {
+enum AgentGenerationEvent: Sendable {
     case status(String)
     case token(String)
     case complete

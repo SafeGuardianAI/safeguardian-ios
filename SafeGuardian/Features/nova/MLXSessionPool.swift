@@ -1,7 +1,7 @@
 import Foundation
 import MLXLMCommon
 
-@MainActor final class NovaSessionPool {
+@MainActor final class MLXSessionPool {
     struct Key: Hashable {
         let modelID: String
         let promptHash: Int

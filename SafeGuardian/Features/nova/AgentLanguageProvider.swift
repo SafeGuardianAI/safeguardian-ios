@@ -1,6 +1,6 @@
 import Foundation
 
-struct NovaPromptInput: Sendable {
+struct AgentPromptInput: Sendable {
     var text: String
     var tick: NovaStateTick?
 
@@ -19,17 +19,17 @@ struct NovaPromptInput: Sendable {
     }
 }
 
-struct NovaProviderCapabilities: Sendable {
+struct AgentProviderCapabilities: Sendable {
     let requiresNetwork: Bool
 }
 
 @MainActor
-protocol NovaLanguageProvider: AnyObject {
+protocol AgentLanguageProvider: AnyObject {
     var id: String { get }
     var displayName: String { get }
-    var capabilities: NovaProviderCapabilities { get }
+    var capabilities: AgentProviderCapabilities { get }
     var isLoading: Bool { get }
     var isModelLoaded: Bool { get }
-    func generate(input: NovaPromptInput) -> AsyncStream<NovaGenerationEvent>
+    func generate(input: AgentPromptInput) -> AsyncStream<AgentGenerationEvent>
     func cancel()
 }

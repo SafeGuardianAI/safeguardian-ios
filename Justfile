@@ -19,7 +19,24 @@ check:
     @echo "Checking prerequisites..."
     @command -v xcodebuild >/dev/null 2>&1 || (echo "xcodebuild not found — install Xcode" && exit 1)
     @xcode-select -p | grep -q "Xcode.app" || (echo "Full Xcode required — sudo xcode-select -s /Applications/Xcode.app/Contents/Developer" && exit 1)
+    @bash scripts/check_agent_names.sh
     @echo "Prerequisites met"
+
+# Verify no debug-only symbols (ConversationLogger) leaked into a Release binary.
+verify-release-clean:
+    @echo "Building Release to verify no debug symbols leak..."
+    @xcodebuild -project SafeGuardian.xcodeproj \
+        -scheme "{{SCHEME_MACOS}}" \
+        -configuration Release \
+        {{BUILD_FLAGS}} \
+        build 2>&1 | tail -1
+    @APP=$(ls -td ~/Library/Developer/Xcode/DerivedData/SafeGuardian-*/Build/Products/Release/SafeGuardian.app 2>/dev/null | head -1) && \
+     BIN="$$APP/Contents/MacOS/SafeGuardian" && \
+     if strings "$$BIN" | grep -q "ConversationLogger"; then \
+         echo "FAILURE: ConversationLogger found in Release binary"; exit 1; \
+     else \
+         echo "OK: no debug logging symbols in Release binary"; \
+     fi
 
 build:
     @echo "Building SafeGuardian (macOS)..."

@@ -16,7 +16,7 @@ final class NovaAgent: AgentProcessor {
     }
 
     func handle(prompt: String, context: AgentContext) {
-        let provider = NovaProviderRegistry.shared.activeProvider
+        let provider = AgentProviderRegistry.shared.activeProvider
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
         if !provider.isModelLoaded {
@@ -29,9 +29,12 @@ final class NovaAgent: AgentProcessor {
         context.notifyChange()
 
         let state = NovaStreamState()
+        #if DEBUG
+        let startedAt = Date()
+        #endif
 
         Task { @MainActor in
-            for await event in provider.generate(input: NovaPromptInput(text: cleanPrompt, tick: context.deviceTick)) {
+            for await event in provider.generate(input: AgentPromptInput(text: cleanPrompt, tick: context.deviceTick)) {
                 switch event {
                 case .status(let s):
                     response.content = s
@@ -55,6 +58,15 @@ final class NovaAgent: AgentProcessor {
                     state.pending = ""
                     response.content = state.visible.isEmpty ? "[no response]" : state.visible
                     context.notifyChange()
+                    #if DEBUG
+                    ConversationLogger.shared.record(
+                        novaThread: context.privateChats[Self.novaPeerID] ?? [],
+                        systemPrompt: NovaConfig.stableSystemPrompt,
+                        providerID: provider.id,
+                        tick: context.deviceTick,
+                        startedAt: startedAt
+                    )
+                    #endif
                 case .failure(let err):
                     response.content = "[error: \(err)]"
                     context.notifyChange()

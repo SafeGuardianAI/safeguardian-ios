@@ -2,19 +2,19 @@ import Foundation
 import MLXLMCommon
 
 @Observable @MainActor
-final class MLXInferenceService: NovaLanguageProvider {
+final class MLXInferenceService: AgentLanguageProvider {
     static let shared = MLXInferenceService()
 
     let id = "mlx"
     let displayName = "MLX (on-device)"
-    let capabilities = NovaProviderCapabilities(requiresNetwork: false)
+    let capabilities = AgentProviderCapabilities(requiresNetwork: false)
 
     static let defaultModelID = NovaConfig.defaultModelID
     private static let activeModelKey = "nova.activeModelID"
     private static let savedModelsKey  = "nova.savedModelIDs"
 
     private let loader: MLXModelLoader
-    let coordinator: NovaInferenceCoordinator
+    let coordinator: MLXInferenceCoordinator
 
     var isLoading: Bool { loader.isLoading }
     var downloadProgress: Double { loader.downloadProgress }
@@ -33,14 +33,14 @@ final class MLXInferenceService: NovaLanguageProvider {
         let active = UserDefaults.standard.string(forKey: Self.activeModelKey) ?? Self.defaultModelID
         let l = MLXModelLoader()
         loader = l
-        coordinator = NovaInferenceCoordinator(loader: l)
+        coordinator = MLXInferenceCoordinator(loader: l)
         savedModelIDs = initialSaved
         activeModelID = initialSaved.contains(active) ? active : Self.defaultModelID
     }
 
     // MARK: - Inference
 
-    func generate(input: NovaPromptInput) -> AsyncStream<NovaGenerationEvent> {
+    func generate(input: AgentPromptInput) -> AsyncStream<AgentGenerationEvent> {
         coordinator.generate(modelID: activeModelID, input: input)
     }
 

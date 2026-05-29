@@ -22,15 +22,14 @@ import MLXLMCommon
 
     func generate(
         modelID: String,
-        prompt: String,
-        tick: NovaStateTick?
+        input: NovaPromptInput
     ) -> AsyncStream<NovaGenerationEvent> {
         if pendingRelease {
             return AsyncStream { c in c.yield(.status("[model releasing]")); c.finish() }
         }
         activeTask?.cancel()
         rescheduleIdleTimer()
-        let decorated = decoratePrompt(prompt, tick: tick, modelID: modelID)
+        let decorated = input.decorated(modelID: modelID)
         let key = NovaSessionPool.Key(
             modelID: modelID,
             promptHash: NovaConfig.stableSystemPrompt.hashValue
@@ -107,20 +106,6 @@ import MLXLMCommon
             deadline: .now() + NovaConfig.idleTimeoutSeconds,
             execute: idleWork!
         )
-    }
-
-    private func decoratePrompt(_ prompt: String, tick: NovaStateTick?, modelID: String) -> String {
-        let caps = NovaConfig.capabilities(for: modelID)
-        var result = prompt
-        if let tick {
-            let battery = Int(tick.batteryPct * 100)
-            let loc = String(format: "%.4f,%.4f", tick.lat, tick.lon)
-            result = "[state: battery \(battery)%, loc \(loc), \(tick.peerCount) peers] \(result)"
-        }
-        if let suffix = caps.noThinkSuffix {
-            result += suffix
-        }
-        return result
     }
 
     private func log(_ message: String) {

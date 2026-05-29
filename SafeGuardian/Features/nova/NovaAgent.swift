@@ -16,12 +16,11 @@ final class NovaAgent: AgentProcessor {
     }
 
     func handle(prompt: String, context: AgentContext) {
-        let service = MLXInferenceService.shared
+        let provider = NovaProviderRegistry.shared.activeProvider
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
 
-        if !service.isModelLoaded {
-            let shortID = service.activeModelID.components(separatedBy: "/").last ?? service.activeModelID
-            context.addAgentLocalMessage("nova · \(shortID) · \(service.isLoading ? "downloading..." : "initializing...")", to: peerID)
+        if !provider.isModelLoaded {
+            context.addAgentLocalMessage("nova · \(provider.displayName) · \(provider.isLoading ? "downloading..." : "initializing...")", to: peerID)
         }
 
         let response = context.addResponse(
@@ -32,7 +31,7 @@ final class NovaAgent: AgentProcessor {
         let state = NovaStreamState()
 
         Task { @MainActor in
-            for await event in service.generate(prompt: cleanPrompt, tick: context.deviceTick) {
+            for await event in provider.generate(input: NovaPromptInput(text: cleanPrompt, tick: context.deviceTick)) {
                 switch event {
                 case .status(let s):
                     response.content = s

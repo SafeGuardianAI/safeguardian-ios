@@ -2,8 +2,12 @@ import Foundation
 import MLXLMCommon
 
 @Observable @MainActor
-final class MLXInferenceService {
+final class MLXInferenceService: NovaLanguageProvider {
     static let shared = MLXInferenceService()
+
+    let id = "mlx"
+    let displayName = "MLX (on-device)"
+    let capabilities = NovaProviderCapabilities(requiresNetwork: false)
 
     static let defaultModelID = NovaConfig.defaultModelID
     private static let activeModelKey = "nova.activeModelID"
@@ -36,8 +40,8 @@ final class MLXInferenceService {
 
     // MARK: - Inference
 
-    func generate(prompt: String, tick: NovaStateTick?) -> AsyncStream<NovaGenerationEvent> {
-        coordinator.generate(modelID: activeModelID, prompt: prompt, tick: tick)
+    func generate(input: NovaPromptInput) -> AsyncStream<NovaGenerationEvent> {
+        coordinator.generate(modelID: activeModelID, input: input)
     }
 
     func cancel() { coordinator.cancel() }

@@ -70,7 +70,9 @@ enum NovaConfig {
             return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
                                      supportsToolCalling: toolCapable)
         }
+        // Qwen2.5 and earlier do not reliably emit structured tool-call JSON;
+        // only Qwen3/QwQ (handled above) and Gemma 4B+ are confirmed tool-capable.
         return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
-                                 supportsToolCalling: isLargeEnough && id.contains("qwen"))
+                                 supportsToolCalling: false)
     }
 }

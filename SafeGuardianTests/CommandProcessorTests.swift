@@ -437,4 +437,8 @@ private final class MockCommandContextProvider: CommandContextProvider {
     func promptGPSShare() {
         // No-op for now or add a capture if needed
     }
+
+    func broadcastAgentMessage(agentID: String, content: String) {
+        // No-op for now or add a capture if needed
+    }
 }

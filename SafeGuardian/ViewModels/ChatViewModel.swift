@@ -1406,13 +1406,6 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         objectWillChange.send()
     }
 
-    @MainActor
-    func broadcastAgentMessage(agentID: String, content: String) {
-        for peerID in unifiedPeerService.connectedPeerIDs {
-            sendMeshMessage(agentID: agentID, content: content, to: peerID)
-        }
-    }
-
     /// Begin a GPS share confirmation flow. Sets pending state and injects the prompt as a local message.
     @MainActor
     func promptGPSShare() {

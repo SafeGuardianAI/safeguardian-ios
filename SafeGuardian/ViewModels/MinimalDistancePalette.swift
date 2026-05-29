@@ -1,6 +1,6 @@
 //
 // MinimalDistancePalette.swift
-// bitchat
+// SafeGuardian
 //
 // Lightweight palette generator that keeps peer colors evenly spaced.
 //

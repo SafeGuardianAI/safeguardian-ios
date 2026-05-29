@@ -1,6 +1,6 @@
 //
 // ChatViewModel+Nostr.swift
-// bitchat
+// SafeGuardian
 //
 // Geohash and Nostr logic for ChatViewModel
 //

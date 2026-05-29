@@ -1,6 +1,6 @@
 //
 // MessageDeduplicationService.swift
-// bitchat
+// SafeGuardian
 //
 // Handles message deduplication using LRU caches.
 // This is free and unencumbered software released into the public domain.

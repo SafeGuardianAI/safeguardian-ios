@@ -1,6 +1,6 @@
 //
 // ChatViewModel+PrivateChat.swift
-// bitchat
+// SafeGuardian
 //
 // Private chat and media transfer logic for ChatViewModel
 //

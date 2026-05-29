@@ -1,6 +1,6 @@
 //
 // PublicTimelineStore.swift
-// bitchat
+// SafeGuardian
 //
 // Maintains mesh and geohash public timelines with simple caps and helpers.
 //

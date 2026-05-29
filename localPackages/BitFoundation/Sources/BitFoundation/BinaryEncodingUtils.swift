@@ -1,6 +1,6 @@
 //
 // BinaryEncodingUtils.swift
-// bitchat
+// SafeGuardian
 //
 // Binary encoding utilities for efficient protocol messages
 //

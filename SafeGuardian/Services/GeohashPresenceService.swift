@@ -1,6 +1,6 @@
 //
 // GeohashPresenceService.swift
-// bitchat
+// SafeGuardian
 //
 // Manages the broadcasting of ephemeral presence heartbeats (Kind 20001)
 // to geohash location channels.

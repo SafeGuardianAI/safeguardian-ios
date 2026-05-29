@@ -1,6 +1,6 @@
 //
 // CommandProcessor.swift
-// bitchat
+// SafeGuardian
 //
 // This is free and unencumbered software released into the public domain.
 //

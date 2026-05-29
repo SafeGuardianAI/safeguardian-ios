@@ -1,6 +1,6 @@
 //
 // AutocompleteService.swift
-// bitchat
+// SafeGuardian
 //
 // Handles autocomplete suggestions for mentions and commands
 // This is free and unencumbered software released into the public domain.

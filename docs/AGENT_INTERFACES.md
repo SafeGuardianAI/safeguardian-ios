@@ -56,6 +56,45 @@ Input to a single inference call.
         text:         string
         tick:         NovaStateTick|null
         toolRegistry: AgentToolRegistry|null  -- null when model does not support tools
+        isMeshQuery:  bool                    -- true when prompt originated from a remote peer via AgentMeshRouting
+
+## AgentGateContext
+
+Lightweight value type assembled at call time, passed to every pre-inference gate.
+Contains only what gates need — no access to the full AgentContext.
+
+    struct AgentGateContext:
+        prompt:      string
+        tick:        NovaStateTick|null
+        isMeshQuery: bool    -- false for local @agent queries; mesh gates must not fire for local queries
+        modelID:     string
+
+## AgentGate
+
+A pure synchronous predicate evaluated before provider.generate() is called.
+Must complete in microseconds — no async, no model calls, no network access.
+If any gate returns false, handle() returns immediately without touching the
+inference stack.
+
+    interface AgentGate:
+        name:   string    -- used in diagnostics and gate skip logging
+        passes(context: AgentGateContext) -> bool
+
+## AgentGateRegistry
+
+Evaluates all registered gates against a context. Returns true only if all pass.
+standard() returns the default set; callers may also construct a custom registry.
+
+    struct AgentGateRegistry:
+        gates: list<AgentGate>
+        shouldHandle(context: AgentGateContext) -> bool  -- allSatisfy { $0.passes(context) }
+
+        static standard() -> AgentGateRegistry
+
+Standard gates:
+
+- BatteryGate: passes when tick.batteryPct >= threshold, or when isMeshQuery == false
+- CapabilityGate: passes when device capability flags cover the request type (future)
 
 ## AgentLanguageProvider
 
@@ -103,15 +142,51 @@ bridge between the inference thread and the UI/application thread.
 
 ## AgentMeshRouting
 
-Wire format for agent-to-agent private messages over the BLE mesh.
-Content prefix that allows the receiving device to route the message to a
-local agent instead of displaying it in the human UI.
+Wire formats for agent-directed messages over the BLE mesh. Three distinct
+interaction patterns share this routing layer and each carries its own prefix.
+The receiving device inspects the prefix to determine whether to route to an
+agent, surface a consent prompt, or continue an existing agent session.
+
+### Pattern 1 — Structured Peer Request (no inference, explicit consent)
+
+A typed RPC for data or actions that require human approval on the receiver.
+No model runs on the receiving side. The receiver shows a system-level permission
+prompt; if approved, it returns a structured response. The initiating agent
+receives the result as a tool call return value.
+
+    send:    "[REQUEST:{type}:{requestID}] {params JSON}"
+    reply:   "[REQUEST_RESPONSE:{requestID}] {result JSON | "denied"}"
+
+    example: "[REQUEST:location:abc123] {}"
+    example: "[REQUEST_RESPONSE:abc123] {"lat":37.33,"lon":-122.03}"
+
+### Pattern 2 — Agent One-Shot Query (inference on receiver, stateless)
+
+A question routed to a named agent on the receiving device. The receiving agent
+runs inference once and replies. No shared session state. Pre-inference gates
+on the receiver determine whether inference runs at all (battery, capability).
 
     format:  "[AGENT:{agentID}] {content}"
     example: "[AGENT:nova] what is structural status at sector 4?"
 
     parse(raw: string) -> (agentID: string, content: string)|null
     format(agentID: string, content: string) -> string
+
+    reply uses the same [AGENT:{agentID}] prefix routed back to the initiator.
+
+### Pattern 3 — Agent Session (inference on both sides, shared context)
+
+A multi-turn agent-to-agent exchange. Both sides maintain per-session
+conversation history keyed by sessionID. Sessions have a maximum turn count
+and idle timeout. Session initiation requires one-time human approval on the
+receiving side; subsequent turns do not.
+
+    format:  "[AGENT_SESSION:{sessionID}:{agentID}] {content}"
+    example: "[AGENT_SESSION:s7f2a:nova] I have northern sector structural data."
+
+    Session history is stored separately from the human Nova thread and is
+    not displayed in the chat UI unless the human explicitly opens the session
+    transcript view.
 
 ## AgentContext
 
@@ -129,8 +204,10 @@ session object. Only expose what agents actually need.
         addLocalMessage(content: string) -> void
         addAgentLocalMessage(content: string, to: PeerID) -> void
         addResponse(sender: string, content: string, privatePeerID: PeerID|null) -> Message
+        removeResponse(response: Message, from: PeerID) -> void  -- suppresses placeholder when agent decides to skip
         notifyChange() -> void
         sendMeshMessage(agentID: string, content: string, to: PeerID) -> void
+        sendMeshReply(agentID: string, content: string, to: PeerID) -> void  -- routes reply back to originating peer
 
 ## AgentProcessor
 

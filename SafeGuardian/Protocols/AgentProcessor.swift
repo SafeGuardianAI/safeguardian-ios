@@ -1,6 +1,29 @@
 import Foundation
 import BitFoundation
 
+/// Formats and parses the content prefix used to route private messages between
+/// agents over the existing Noise-encrypted BLE mesh. Follows the same pattern
+/// as [FAVORITED] / [UNFAVORITED] which are already intercepted in handlePrivateMessage
+/// before they reach the human UI.
+///
+/// Wire format:  [AGENT:{agentID}] {content}
+/// Example:      [AGENT:nova] what is the structural status at sector 4?
+enum AgentMeshRouting {
+    static func format(agentID: String, content: String) -> String {
+        "[AGENT:\(agentID)] \(content)"
+    }
+
+    static func parse(_ raw: String) -> (agentID: String, content: String)? {
+        guard raw.hasPrefix("[AGENT:"),
+              let closeIdx = raw.firstIndex(of: "]") else { return nil }
+        let agentID = String(raw[raw.index(raw.startIndex, offsetBy: 7)..<closeIdx])
+        let afterBracket = raw.index(closeIdx, offsetBy: 1)
+        guard afterBracket < raw.endIndex, raw[afterBracket] == " " else { return nil }
+        let content = String(raw[raw.index(afterBracket, offsetBy: 1)...])
+        return agentID.isEmpty ? nil : (agentID, content)
+    }
+}
+
 /// A formal contract for on-device or cloud-connected agents (Nova, Trek, Apex).
 /// Conformers handle specific message triggers and provide routing logic.
 @MainActor
@@ -35,8 +58,14 @@ protocol AgentContext {
     var privateChats: [PeerID: [SafeGuardianMessage]] { get }
     var deviceTick: NovaStateTick? { get }
     var selectedGeohash: String? { get }
+    /// PeerIDs of devices currently connected on the BLE mesh.
+    var meshPeerIDs: Set<PeerID> { get }
     func addLocalMessage(_ content: String)
     func addAgentLocalMessage(_ content: String, to peerID: PeerID)
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage
     func notifyChange()
+    /// Send a mesh private message to a specific peer, routing it to the named
+    /// agent on the receiving device via AgentMeshRouting. Uses the existing
+    /// Noise-encrypted BLE private message path — no new transport needed.
+    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID)
 }

@@ -51,12 +51,24 @@ import MLXLMCommon
                         return
                     }
                     continuation.yield(.status("[thinking...]"))
-                    let stream = session.streamResponse(to: decorated)
+                    let stream = session.streamDetails(to: decorated, images: [], videos: [])
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         group.addTask {
-                            for try await token in stream {
+                            for try await generation in stream {
                                 guard !Task.isCancelled else { break }
-                                continuation.yield(.token(token))
+                                switch generation {
+                                case .chunk(let text):
+                                    continuation.yield(.token(text))
+                                case .info(let info):
+                                    continuation.yield(.stats(AgentGenerationStats(
+                                        promptTokens: info.promptTokenCount,
+                                        generationTokens: info.generationTokenCount,
+                                        promptMs: info.promptTime * 1000,
+                                        generateMs: info.generateTime * 1000
+                                    )))
+                                case .toolCall:
+                                    break
+                                }
                             }
                         }
                         group.addTask {

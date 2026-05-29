@@ -39,10 +39,13 @@ final class NovaAgent: AgentProcessor {
                 case .status(let s):
                     response.content = s
                     context.notifyChange()
+                case .stats(let s):
+                    state.stats = s
                 case .token(let token):
                     state.pending += token
-                    let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
+                    let (visible, thinking, remaining) = self.drain(from: state.pending, inThink: &state.inThink)
                     state.visible += visible
+                    state.thinking += thinking
                     state.pending = remaining
                     if state.visible.isEmpty {
                         if state.inThink { state.thinkTokens += 1 }
@@ -65,7 +68,9 @@ final class NovaAgent: AgentProcessor {
                         agentSenderID: displayName,
                         providerID: provider.id,
                         tick: context.deviceTick,
-                        startedAt: startedAt
+                        startedAt: startedAt,
+                        thinkingContent: state.thinking.isEmpty ? nil : state.thinking,
+                        stats: state.stats
                     )
                     #endif
                 case .failure(let err):
@@ -79,16 +84,19 @@ final class NovaAgent: AgentProcessor {
     private class NovaStreamState {
         var pending: String = ""
         var visible: String = ""
+        var thinking: String = ""
         var inThink: Bool = false
-        var thinkTokens: Int = 0  // tokens consumed inside think blocks
-        var lastUpdate: TimeInterval = 0
+        var thinkTokens: Int = 0
+        var stats: AgentGenerationStats? = nil
     }
 
-    // Drains all complete visible characters from `input`, leaving any incomplete tag suffix
-    // (e.g. a partial "<think" that might complete with the next token) in the returned remainder.
-    private func drainVisible(from input: String, inThink: inout Bool) -> (visible: String, remainder: String) {
+    // Drains the pending buffer, separating visible output from think-block content.
+    // Returns (visible, thinking, remainder) where remainder is an incomplete tag suffix
+    // that may complete with the next token.
+    private func drain(from input: String, inThink: inout Bool) -> (visible: String, thinking: String, remainder: String) {
         let tagMaxLen = 8 // len("</think>")
-        var result = ""
+        var visible = ""
+        var thinking = ""
         var i = input.startIndex
         while i < input.endIndex {
             if !inThink, input[i...].hasPrefix("<think>") {
@@ -102,15 +110,16 @@ final class NovaAgent: AgentProcessor {
                 let couldBeTag = remaining.count < tagMaxLen &&
                     ("<think>".hasPrefix(String(remaining)) || "</think>".hasPrefix(String(remaining)))
                 if couldBeTag { break }
-                result.append(input[i])
+                visible.append(input[i])
                 i = input.index(after: i)
             } else {
                 let remaining = input[i...]
                 if remaining.count < tagMaxLen, "</think>".hasPrefix(String(remaining)) { break }
+                thinking.append(input[i])
                 i = input.index(after: i)
             }
         }
         let remainder = i < input.endIndex ? String(input[i...]) : ""
-        return (result, remainder)
+        return (visible, thinking, remainder)
     }
 }

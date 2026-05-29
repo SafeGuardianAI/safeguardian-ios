@@ -73,7 +73,9 @@ final class ConversationLogger {
         agentSenderID: String,
         providerID: String,
         tick: NovaStateTick?,
-        startedAt: Date
+        startedAt: Date,
+        thinkingContent: String? = nil,
+        stats: AgentGenerationStats? = nil
     ) {
         let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
 
@@ -94,8 +96,16 @@ final class ConversationLogger {
             metadata["battery_pct"] = tick.batteryPct
             metadata["peer_count"] = tick.peerCount
         }
+        if let stats {
+            metadata["prompt_tokens"] = stats.promptTokens
+            metadata["generation_tokens"] = stats.generationTokens
+            metadata["prompt_ms"] = Int(stats.promptMs)
+            metadata["generate_ms"] = Int(stats.generateMs)
+            metadata["tokens_per_sec"] = (stats.tokensPerSecond * 10).rounded() / 10
+            metadata["prompt_tokens_per_sec"] = (stats.promptTokensPerSecond * 10).rounded() / 10
+        }
 
-        let entry: [String: Any]
+        var entry: [String: Any]
         switch format {
         case .openai:
             var messages: [[String: String]] = [["role": "system", "content": systemPrompt]]
@@ -108,6 +118,7 @@ final class ConversationLogger {
             entry = ["id": UUID().uuidString, "timestamp": Self.iso8601.string(from: Date()),
                      "system": systemPrompt, "conversations": conversations, "metadata": metadata]
         }
+        if let thinkingContent { entry["thinking"] = thinkingContent }
 
         guard let data = try? JSONSerialization.data(withJSONObject: entry),
               let json = String(data: data, encoding: .utf8) else { return }

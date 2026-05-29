@@ -11,9 +11,21 @@ struct ModelCapabilities {
     let noThinkSuffix: String?
 }
 
+/// Provider-agnostic generation performance stats. MLX maps GenerateCompletionInfo here;
+/// other providers compute equivalent fields from their own APIs.
+struct AgentGenerationStats: Sendable {
+    let promptTokens: Int
+    let generationTokens: Int
+    let promptMs: Double
+    let generateMs: Double
+    var tokensPerSecond: Double { generateMs > 0 ? Double(generationTokens) / (generateMs / 1000) : 0 }
+    var promptTokensPerSecond: Double { promptMs > 0 ? Double(promptTokens) / (promptMs / 1000) : 0 }
+}
+
 enum AgentGenerationEvent: Sendable {
     case status(String)
     case token(String)
+    case stats(AgentGenerationStats)
     case complete
     case failure(String)
 }

@@ -2,75 +2,119 @@
 import BitFoundation
 import Foundation
 
-/// Appends one JSONL entry per completed Nova exchange to a file in Application Support.
-/// Each entry contains the full multi-turn context from the Nova private thread so it can
-/// be used directly for SFT or annotated externally for DPO.
+/// Output format for logged conversations.
+enum LogFormat: String {
+    /// OpenAI chat messages format — compatible with axolotl, LLaMA-Factory, unsloth, etc.
+    case openai = "jsonl"
+    /// ShareGPT format — "from"/"value" pairs, compatible with FastChat and most fine-tuning repos.
+    case sharegpt
+}
+
+/// Appends one JSONL entry per completed agent exchange to:
+///   <AppSupport>/chat.safeguardian/dev/conversations.jsonl
 ///
-/// Format: OpenAI chat messages (system/user/assistant roles), one JSON object per line.
-/// Gate: DEBUG builds only. This file does not compile into Release.
+/// Each entry contains the full multi-turn thread so it is usable for SFT directly
+/// or annotated externally for DPO. Format is configurable via /log.
+///
+/// Gate: #if DEBUG — this type does not exist in Release builds.
 @MainActor
 final class ConversationLogger {
     static let shared = ConversationLogger()
 
-    private let fileURL: URL
+    private static let formatKey = "dev.conversationLogger.format"
     private static let iso8601 = ISO8601DateFormatter()
 
-    private init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("chat.safeguardian", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("nova-training.jsonl")
+    private let devDir: URL
+    private let fileURL: URL
+
+    var format: LogFormat {
+        get {
+            LogFormat(rawValue: UserDefaults.standard.string(forKey: Self.formatKey) ?? "") ?? .openai
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: Self.formatKey)
+        }
     }
 
+    var logDirPath: String { devDir.path }
     var logFilePath: String { fileURL.path }
 
+    var entryCount: Int {
+        guard let data = try? Data(contentsOf: fileURL) else { return 0 }
+        return data.filter { $0 == 10 }.count // count newlines
+    }
+
+    var fileSizeString: String {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+              let size = attrs[.size] as? Int else { return "0 B" }
+        switch size {
+        case ..<1_024:              return "\(size) B"
+        case ..<1_048_576:         return String(format: "%.1f KB", Double(size) / 1_024)
+        default:                   return String(format: "%.1f MB", Double(size) / 1_048_576)
+        }
+    }
+
+    private init() {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        devDir = appSupport
+            .appendingPathComponent("chat.safeguardian", isDirectory: true)
+            .appendingPathComponent("dev", isDirectory: true)
+        try? FileManager.default.createDirectory(at: devDir, withIntermediateDirectories: true)
+        fileURL = devDir.appendingPathComponent("conversations.jsonl")
+    }
+
+    func clear() {
+        try? "".write(to: fileURL, atomically: true, encoding: .utf8)
+    }
+
     func record(
-        novaThread: [SafeGuardianMessage],
+        agentThread: [SafeGuardianMessage],
         systemPrompt: String,
+        agentSenderID: String,
         providerID: String,
         tick: NovaStateTick?,
         startedAt: Date
     ) {
         let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
 
-        var messages: [[String: String]] = [["role": "system", "content": systemPrompt]]
-
-        for msg in novaThread {
-            // Skip injected status/local messages.
+        // Build the turn sequence from the thread, filtering status noise.
+        var turns: [(role: String, content: String)] = []
+        for msg in agentThread {
             guard msg.sender != "local", msg.sender != "system" else { continue }
-            // Skip agent status strings like "[thinking...]", "[error: ...]".
             let text = msg.content.trimmingCharacters(in: .whitespaces)
             guard !text.isEmpty, !text.hasPrefix("[") else { continue }
-            let role = (msg.sender == "Nova" || msg.sender == "nova-local") ? "assistant" : "user"
-            messages.append(["role": role, "content": text])
+            let role = (msg.sender == agentSenderID || msg.sender == "Nova") ? "assistant" : "user"
+            turns.append((role, text))
         }
+        guard turns.contains(where: { $0.role == "user" }),
+              turns.contains(where: { $0.role == "assistant" }) else { return }
 
-        // Require at least one user turn and one assistant turn.
-        let turns = messages.filter { $0["role"] != "system" }
-        guard turns.count >= 2 else { return }
-
-        var metadata: [String: Any] = ["duration_ms": durationMs]
+        var metadata: [String: Any] = ["duration_ms": durationMs, "provider": providerID]
         if let tick {
             metadata["battery_pct"] = tick.batteryPct
             metadata["peer_count"] = tick.peerCount
         }
 
-        let entry: [String: Any] = [
-            "id": UUID().uuidString,
-            "timestamp": Self.iso8601.string(from: Date()),
-            "provider": providerID,
-            "messages": messages,
-            "metadata": metadata
-        ]
+        let entry: [String: Any]
+        switch format {
+        case .openai:
+            var messages: [[String: String]] = [["role": "system", "content": systemPrompt]]
+            messages += turns.map { ["role": $0.role, "content": $0.content] }
+            entry = ["id": UUID().uuidString, "timestamp": Self.iso8601.string(from: Date()),
+                     "messages": messages, "metadata": metadata]
+        case .sharegpt:
+            let conversations = turns.map { ["from": $0.role == "assistant" ? "gpt" : "human",
+                                             "value": $0.content] }
+            entry = ["id": UUID().uuidString, "timestamp": Self.iso8601.string(from: Date()),
+                     "system": systemPrompt, "conversations": conversations, "metadata": metadata]
+        }
 
         guard let data = try? JSONSerialization.data(withJSONObject: entry),
               let json = String(data: data, encoding: .utf8) else { return }
         let lineData = Data((json + "\n").utf8)
 
         if let handle = FileHandle(forWritingAtPath: fileURL.path) {
-            handle.seekToEndOfFile()
-            handle.write(lineData)
-            try? handle.close()
+            handle.seekToEndOfFile(); handle.write(lineData); try? handle.close()
         } else {
             try? lineData.write(to: fileURL)
         }

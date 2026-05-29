@@ -12,6 +12,29 @@ The rule for where to put new code is: if it has network or crypto side effects,
 
 ---
 
+## Adding a debug-only command
+
+Debug commands follow the same `Command` protocol as production commands but are gated `#if DEBUG` throughout and registered in `CommandProcessor` under a `#if DEBUG` block. They do not appear in `CommandInfo` autocomplete because autocomplete is end-user facing. The file lives in `Services/Commands/` alongside production commands.
+
+```swift
+#if DEBUG
+@MainActor
+struct MyDevCommand: Command {
+    let names = ["/mydev"]
+    let usage = "/mydev [subcommand]"
+
+    func execute(args: String, context: CommandContext) -> CommandResult {
+        context.provider?.addLocalMessage("dev output")
+        return .handled
+    }
+}
+#endif
+```
+
+Register in `CommandProcessor` by appending inside the `#if DEBUG` block at the bottom of the `commands` closure. No other file changes are needed. See `LogCommand.swift` as the canonical example.
+
+---
+
 ## Adding a chat command
 
 A command is a slash-prefixed string the user types in the chat input (e.g. `/gps`, `/block alice`). Commands are processed by `CommandProcessor` and their output appears as messages in the timeline. Adding one requires touching four files in a fixed order.

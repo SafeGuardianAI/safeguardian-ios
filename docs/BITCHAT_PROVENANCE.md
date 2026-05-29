@@ -8,15 +8,23 @@ These files did not exist in bitchat. They are wholly SafeGuardian work.
 
 ### Nova agent and inference
 - `SafeGuardian/Features/nova/NovaAgent.swift`
-- `SafeGuardian/Features/nova/NovaConfig.swift`
-- `SafeGuardian/Features/nova/NovaInferenceCoordinator.swift`
-- `SafeGuardian/Features/nova/NovaSessionPool.swift`
+- `SafeGuardian/Features/nova/NovaConfig.swift` — also defines `AgentGenerationEvent`
+- `SafeGuardian/Features/nova/MLXInferenceCoordinator.swift` — renamed from `NovaInferenceCoordinator`
+- `SafeGuardian/Features/nova/MLXSessionPool.swift` — renamed from `NovaSessionPool`
 - `SafeGuardian/Features/nova/MLXInferenceService.swift`
 - `SafeGuardian/Features/nova/MLXModelLoader.swift`
 - `SafeGuardian/Features/nova/NovaBroadcaster.swift`
 - `SafeGuardian/Features/nova/NovaStateTick.swift`
 - `SafeGuardian/Protocols/AgentProcessor.swift`
 - `SafeGuardian/ViewModels/Extensions/ChatViewModel+AgentContext.swift`
+
+### Agent provider abstraction
+- `SafeGuardian/Features/nova/AgentLanguageProvider.swift` — `AgentLanguageProvider` protocol, `AgentPromptInput`, `AgentProviderCapabilities`
+- `SafeGuardian/Features/nova/AgentProviderRegistry.swift` — active provider singleton
+
+### Dev tooling (DEBUG only — not compiled into Release)
+- `SafeGuardian/Features/nova/ConversationLogger.swift` — JSONL training data capture; writes to `dev/conversations.jsonl`
+- `SafeGuardian/Services/Commands/LogCommand.swift` — `/log` command
 
 ### IPC / headless TUI host
 - `SafeGuardian/main.swift`

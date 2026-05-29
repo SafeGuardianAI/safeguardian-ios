@@ -52,7 +52,8 @@ final class CommandProcessor {
     weak var meshService: (any Transport)?
     private let identityManager: SecureIdentityStateManagerProtocol
 
-    private let commands: [any Command] = [
+    private let commands: [any Command] = {
+        var cmds: [any Command] = [
         GPSCommand(),
         MessageCommand(),
         WhoCommand(),
@@ -63,7 +64,12 @@ final class CommandProcessor {
         UnblockCommand(),
         FavCommand(add: true),
         FavCommand(add: false),
-    ]
+        ]
+        #if DEBUG
+        cmds.append(LogCommand())
+        #endif
+        return cmds
+    }()
 
     private lazy var lookup: [String: any Command] = {
         var table: [String: any Command] = [:]

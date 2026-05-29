@@ -60,8 +60,9 @@ final class NovaAgent: AgentProcessor {
                     context.notifyChange()
                     #if DEBUG
                     ConversationLogger.shared.record(
-                        novaThread: context.privateChats[Self.novaPeerID] ?? [],
+                        agentThread: context.privateChats[Self.novaPeerID] ?? [],
                         systemPrompt: NovaConfig.stableSystemPrompt,
+                        agentSenderID: displayName,
                         providerID: provider.id,
                         tick: context.deviceTick,
                         startedAt: startedAt

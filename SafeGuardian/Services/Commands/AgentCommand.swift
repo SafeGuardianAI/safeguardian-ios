@@ -12,10 +12,11 @@ struct AgentCommand: Command {
         }
         let agentID = String(parts[0]).lowercased()
         let content = String(parts[1])
-        guard let peers = context.transport?.getPeerNicknames(), !peers.isEmpty else {
-            return .error(message: "no peers connected")
+        let targets = context.transport?.getPeersWithAgent(agentID) ?? []
+        guard !targets.isEmpty else {
+            return .error(message: "no peers with \(agentID) detected nearby")
         }
         context.provider?.broadcastAgentMessage(agentID: agentID, content: content)
-        return .success(message: "sent to \(agentID) on \(peers.count) peer\(peers.count == 1 ? "" : "s")")
+        return .success(message: "sent to \(agentID) on \(targets.count) peer\(targets.count == 1 ? "" : "s")")
     }
 }

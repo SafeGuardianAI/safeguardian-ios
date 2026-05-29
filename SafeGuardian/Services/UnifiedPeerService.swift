@@ -199,13 +199,15 @@ final class UnifiedPeerService: ObservableObject, TransportPeerEventsDelegate {
             isReachable: isReachable
         )
         
+        peer.agentIDs = peerInfo.agentIDs
+
         // Check for favorite status
         if let noiseKey = peerInfo.noisePublicKey,
            let favoriteStatus = favorites[noiseKey] {
             peer.favoriteStatus = favoriteStatus
             peer.nostrPublicKey = favoriteStatus.peerNostrPublicKey
         }
-        
+
         return peer
     }
     

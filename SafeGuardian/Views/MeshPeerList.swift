@@ -99,6 +99,11 @@ struct MeshPeerList: View {
 
                         if !isMe {
                             if peer.isConnected {
+                                if !peer.agentIDs.isEmpty {
+                                    Image(systemName: "cpu")
+                                        .font(.safeguardianSystem(size: 10))
+                                        .foregroundColor(baseColor)
+                                }
                                 if let icon = item.enc.icon {
                                     Image(systemName: icon)
                                         .font(.safeguardianSystem(size: 10))

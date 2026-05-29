@@ -14,6 +14,9 @@ struct SafeGuardianPeer: Equatable {
     // Favorite-related properties
     var favoriteStatus: FavoritesPersistenceService.FavoriteRelationship?
     
+    // Agent capabilities advertised in this peer's last announce
+    var agentIDs: [String] = []
+
     // Nostr identity (if known)
     var nostrPublicKey: String?
     

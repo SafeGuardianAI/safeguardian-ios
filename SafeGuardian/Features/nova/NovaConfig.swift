@@ -11,6 +11,13 @@ struct ModelCapabilities {
     let noThinkSuffix: String?
 }
 
+enum NovaGenerationEvent: Sendable {
+    case status(String)
+    case token(String)
+    case complete
+    case failure(String)
+}
+
 enum NovaConfig {
     static let defaultModelID = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
     static let temperature: Float = 0.7

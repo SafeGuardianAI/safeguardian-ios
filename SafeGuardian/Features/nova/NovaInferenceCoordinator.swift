@@ -23,12 +23,11 @@ import MLXLMCommon
     func generate(
         modelID: String,
         prompt: String,
-        tick: NovaStateTick?,
-        onStatus: @escaping @Sendable (String) -> Void,
-        onToken: @escaping @Sendable (String) -> Void,
-        onComplete: @escaping @Sendable () -> Void
-    ) {
-        guard !pendingRelease else { onStatus("[model releasing]"); onComplete(); return }
+        tick: NovaStateTick?
+    ) -> AsyncStream<NovaGenerationEvent> {
+        if pendingRelease {
+            return AsyncStream { c in c.yield(.status("[model releasing]")); c.finish() }
+        }
         activeTask?.cancel()
         rescheduleIdleTimer()
         let decorated = decoratePrompt(prompt, tick: tick, modelID: modelID)
@@ -36,42 +35,48 @@ import MLXLMCommon
             modelID: modelID,
             promptHash: NovaConfig.stableSystemPrompt.hashValue
         )
-        activeTask = Task {
-            do {
-                onStatus("[initializing...]")
-                let model = try await loader.container(modelID: modelID) { progress in
-                    onStatus("[downloading: \(Int(progress * 100))%]")
-                }
-                guard !Task.isCancelled else { onComplete(); return }
-
-                let session = sessionPool.session(
-                    for: key, container: model, systemPrompt: NovaConfig.stableSystemPrompt
-                )
-                guard !decorated.isEmpty, !Task.isCancelled else {
-                    onStatus("[error: empty prompt]"); onComplete(); return
-                }
-                onStatus("[thinking...]")
-                let stream = session.streamResponse(to: decorated)
-                try await withThrowingTaskGroup(of: Void.self) { group in
-                    group.addTask {
-                        for try await token in stream {
-                            guard !Task.isCancelled else { break }
-                            onToken(token)
+        return AsyncStream { continuation in
+            let task = Task {
+                do {
+                    continuation.yield(.status("[initializing...]"))
+                    let model = try await loader.container(modelID: modelID) { progress in
+                        continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))
+                    }
+                    guard !Task.isCancelled else { continuation.finish(); return }
+                    let session = sessionPool.session(
+                        for: key, container: model, systemPrompt: NovaConfig.stableSystemPrompt
+                    )
+                    guard !decorated.isEmpty, !Task.isCancelled else {
+                        continuation.yield(.status("[error: empty prompt]"))
+                        continuation.finish()
+                        return
+                    }
+                    continuation.yield(.status("[thinking...]"))
+                    let stream = session.streamResponse(to: decorated)
+                    try await withThrowingTaskGroup(of: Void.self) { group in
+                        group.addTask {
+                            for try await token in stream {
+                                guard !Task.isCancelled else { break }
+                                continuation.yield(.token(token))
+                            }
                         }
+                        group.addTask {
+                            try await Task.sleep(nanoseconds: NovaConfig.generationTimeoutSeconds * 1_000_000_000)
+                            throw NSError(domain: "Nova", code: 408,
+                                          userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
+                        }
+                        try await group.next()
+                        group.cancelAll()
                     }
-                    group.addTask {
-                        try await Task.sleep(nanoseconds: NovaConfig.generationTimeoutSeconds * 1_000_000_000)
-                        throw NSError(domain: "Nova", code: 408,
-                                      userInfo: [NSLocalizedDescriptionKey: "inference timed out"])
-                    }
-                    try await group.next()
-                    group.cancelAll()
+                    continuation.yield(.complete)
+                } catch {
+                    log("Error: \(error.localizedDescription)")
+                    continuation.yield(.failure(error.localizedDescription))
                 }
-            } catch {
-                log("Error: \(error.localizedDescription)")
-                onStatus("[error: \(error.localizedDescription)]")
+                continuation.finish()
             }
-            onComplete()
+            activeTask = task
+            continuation.onTermination = { @Sendable _ in task.cancel() }
         }
     }
 

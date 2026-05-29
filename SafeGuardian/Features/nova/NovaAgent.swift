@@ -31,49 +31,37 @@ final class NovaAgent: AgentProcessor {
 
         let state = NovaStreamState()
 
-        service.generate(
-            prompt: cleanPrompt,
-            tick: context.deviceTick,
-            onStatus: { status in
-                Task { @MainActor in
-                    response.content = status
+        Task { @MainActor in
+            for await event in service.generate(prompt: cleanPrompt, tick: context.deviceTick) {
+                switch event {
+                case .status(let s):
+                    response.content = s
                     context.notifyChange()
-                }
-            },
-            onToken: { token in
-                Task { @MainActor in
-                    autoreleasepool {
-                        state.pending += token
-                        let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
-                        state.visible += visible
-                        state.pending = remaining
-                        if state.visible.isEmpty {
-                            if state.inThink { state.thinkTokens += 1 }
-                            response.content = state.thinkTokens > 0
-                                ? "[thinking... \(state.thinkTokens)t]"
-                                : "[thinking...]"
-                        } else {
-                            response.content = state.visible
-                        }
-
-                        // Throttle updates to ~10 FPS (100ms) to prevent main thread saturation and memory leaks
-                        let now = Date().timeIntervalSince1970
-                        if now - state.lastUpdate >= 0.1 {
-                            state.lastUpdate = now
-                            context.notifyChange()
-                        }
+                case .token(let token):
+                    state.pending += token
+                    let (visible, remaining) = self.drainVisible(from: state.pending, inThink: &state.inThink)
+                    state.visible += visible
+                    state.pending = remaining
+                    if state.visible.isEmpty {
+                        if state.inThink { state.thinkTokens += 1 }
+                        response.content = state.thinkTokens > 0
+                            ? "[thinking... \(state.thinkTokens)t]"
+                            : "[thinking...]"
+                    } else {
+                        response.content = state.visible
                     }
-                }
-            },
-            onComplete: {
-                Task { @MainActor in
+                    context.notifyChange()
+                case .complete:
                     if !state.inThink { state.visible += state.pending }
                     state.pending = ""
                     response.content = state.visible.isEmpty ? "[no response]" : state.visible
                     context.notifyChange()
+                case .failure(let err):
+                    response.content = "[error: \(err)]"
+                    context.notifyChange()
                 }
             }
-        )
+        }
     }
 
     private class NovaStreamState {

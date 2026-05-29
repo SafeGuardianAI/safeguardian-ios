@@ -36,17 +36,8 @@ final class MLXInferenceService {
 
     // MARK: - Inference
 
-    func generate(
-        prompt: String,
-        tick: NovaStateTick?,
-        onStatus: @escaping @Sendable (String) -> Void,
-        onToken: @escaping @Sendable (String) -> Void,
-        onComplete: @escaping @Sendable () -> Void
-    ) {
-        coordinator.generate(
-            modelID: activeModelID, prompt: prompt, tick: tick,
-            onStatus: onStatus, onToken: onToken, onComplete: onComplete
-        )
+    func generate(prompt: String, tick: NovaStateTick?) -> AsyncStream<NovaGenerationEvent> {
+        coordinator.generate(modelID: activeModelID, prompt: prompt, tick: tick)
     }
 
     func cancel() { coordinator.cancel() }

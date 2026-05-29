@@ -54,6 +54,7 @@ final class CommandProcessor {
 
     private let commands: [any Command] = {
         var cmds: [any Command] = [
+        BatteryCommand(),
         GPSCommand(),
         MessageCommand(),
         WhoCommand(),

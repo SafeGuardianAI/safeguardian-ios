@@ -11,6 +11,7 @@ import Foundation
 // MARK: - CommandInfo Enum
 
 enum CommandInfo: String, Identifiable {
+    case battery
     case block
     case clear
     case gps
@@ -32,13 +33,14 @@ enum CommandInfo: String, Identifiable {
             return "<" + String(localized: "content.input.nickname_placeholder") + ">"
         case .gps:
             return "[p]"
-        case .clear, .who:
+        case .battery, .clear, .who:
             return nil
         }
     }
 
     var description: String {
         switch self {
+        case .battery:      String(localized: "content.commands.battery")
         case .block:        String(localized: "content.commands.block")
         case .clear:        String(localized: "content.commands.clear")
         case .gps:          String(localized: "content.commands.gps")
@@ -53,7 +55,7 @@ enum CommandInfo: String, Identifiable {
     }
 
     static func all(isGeoPublic: Bool, isGeoDM: Bool) -> [CommandInfo] {
-        let baseCommands: [CommandInfo] = [.block, .unblock, .clear, .gps, .hug, .message, .slap, .who]
+        let baseCommands: [CommandInfo] = [.battery, .block, .unblock, .clear, .gps, .hug, .message, .slap, .who]
         if isGeoPublic || isGeoDM {
             return baseCommands + [.favorite, .unfavorite]
         }

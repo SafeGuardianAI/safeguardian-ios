@@ -1,5 +1,8 @@
 import Darwin
 import Foundation
+#if os(iOS)
+import UIKit
+#endif
 
 /// Pure platform measurement functions. No context or tool infrastructure needed.
 /// Used by individual tool files and by ModelDownloadManager.
@@ -28,5 +31,17 @@ enum DeviceMetrics {
 
     static func totalMemoryBytes() -> Int {
         Int(ProcessInfo.processInfo.physicalMemory)
+    }
+
+    /// Returns battery charge as an integer percentage (0–100).
+    /// Enables monitoring on first call on iOS; returns 100 on macOS.
+    static func batteryPercent() -> Int {
+        #if os(iOS)
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        let level = UIDevice.current.batteryLevel
+        return level < 0 ? 100 : Int(level * 100)
+        #else
+        return 100
+        #endif
     }
 }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SafeGuardian True Mesh Command Architecture</title>
+    <title>SafeGuardian Hybrid Transport Command Architecture</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <style>
         body {
@@ -33,6 +33,8 @@
             width: 100%;
             margin-top: 20px;
             font-size: 0.9em;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         .legend-item { display: flex; align-items: center; }
         .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
@@ -40,10 +42,10 @@
 </head>
 <body>
 
-    <h1>True Mesh Command Architecture</h1>
+    <h1>Hybrid Transport Command Architecture</h1>
     <p>
-        Full P2P Mesh Connectivity. Every node (Nova & Trek) acts as a relay, 
-        collectively forming the <strong>WorldGraph (Integraph)</strong> through ad-hoc networking.
+        Multi-tier communication flow. <strong>Nova</strong> users on BLE mesh hop through 
+        <strong>Trek Rescuers</strong> to reach high-bandwidth <strong>Satellite/LTE</strong> backhauls.
     </p>
 
     <div class="container">
@@ -54,85 +56,78 @@
                 classDef trek fill:#047857,stroke:#34d399,stroke-width:2px,color:#fff;
                 classDef nova fill:#1d4ed8,stroke:#60a5fa,stroke-width:1px,color:#fff;
                 classDef user fill:#374151,stroke:#9ca3af,stroke-width:1px,color:#d1d5db;
-                classDef graphNode fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#fff,stroke-dasharray: 5 5;
-                classDef meshLink stroke:#10b981,stroke-width:1px,stroke-dasharray: 2 2;
+                classDef drone fill:#4b5563,stroke:#9ca3af,stroke-width:2px,color:#fff;
+                classDef sat fill:#111827,stroke:#8b949e,stroke-width:2px,color:#fff,stroke-dasharray: 5 5;
 
-                subgraph "Strategic Tier"
+                subgraph "Global Strategic Command (Remote)"
                     AP1["Apex Strategic Overseer"]
                 end
 
-                subgraph "Integraph (Mesh State)"
-                    direction LR
-                    topo["Mesh Topology"]
-                    vitals["Collective Vitals"]
+                subgraph "High-Bandwidth Backhaul (TCP Tier)"
+                    DR1["UAV / Drone Relay"]
+                    DR1 <--> |"Starlink / LTE"| AP1
                 end
 
-                subgraph "Tactical & Local Mesh"
+                subgraph "Tactical Response Layer"
                     direction TB
-                    
-                    %% Trek Backbone
-                    TR1["Trek Node A"] <--> |"Tactical Mesh Relay"| TR2["Trek Node B"]
-                    
-                    subgraph "Regional Mesh Alpha"
-                        direction LR
-                        NV1["Nova 1"] <--> NV2["Nova 2"]
-                        NV2 <--> NV3["Nova 3"]
-                        NV1 <--> NV3
-                        
-                        NV1 --- U1["User A"]
-                        NV2 --- U2["User B"]
-                        NV3 --- U3["User C"]
-                    end
-
-                    subgraph "Regional Mesh Beta"
-                        direction LR
-                        NV4["Nova 4"] <--> NV5["Nova 5"]
-                        
-                        NV4 --- U4["User D"]
-                        NV5 --- U5["User E"]
-                    end
+                    TR1["Trek Rescuer (Radio Bridge)"]
+                    TR1 <--> |"WiFi / P2P Link"| DR1
                 end
 
-                %% Mesh Bridges (Cross-Region Relay)
-                NV3 <--> |"Ad-hoc Mesh Bridge"| NV4
-                TR1 <--> |"Regional Command Relay"| NV1
-                TR2 <--> |"Regional Command Relay"| NV5
+                subgraph "Local Mesh (BLE Tier)"
+                    direction LR
+                    NV1["Nova 1 (Civilian)"] <--> NV2["Nova 2 (Relay)"]
+                    NV2 <--> NV3["Nova 3 (Relay)"]
+                    
+                    NV1 --- U1["User A"]
+                    NV2 --- U2["User B"]
+                    NV3 --- U3["User C"]
+                end
 
-                %% Data Ingestion (The emergent Integraph)
-                NV1 & NV2 & NV3 & NV4 & NV5 -.-> |"Gossip State"| vitals
-                TR1 & TR2 -.-> |"Graph Updates"| topo
+                %% The Critical Bridge
+                NV3 <--> |"BLE Mesh Edge"| TR1
 
-                %% Strategic Loop
-                AP1 -- "Strategic Directives" --> TR1 & TR2
-                topo & vitals --> AP1
+                %% Data Flow
+                U1 -- "SOS / Vitals" --> NV1
+                NV1 -- "BLE Hop" --> NV2
+                NV2 -- "BLE Hop" --> NV3
+                NV3 -- "BLE to Rescuer" --> TR1
+                TR1 -- "Backhaul Up-Link" --> DR1
+                DR1 -- "Satellite Jump" --> AP1
 
                 %% Formatting
                 class AP1 apex;
-                class TR1,TR2 trek;
-                class NV1,NV2,NV3,NV4,NV5 nova;
-                class U1,U2,U3,U4,U5 user;
-                class topo,vitals graphNode;
+                class TR1 trek;
+                class NV1,NV2,NV3 nova;
+                class U1,U2,U3 user;
+                class DR1 drone;
+                class AP1 sat;
 
-                %% Style Mesh Links
-                linkStyle 1,2,3,4,8,9,10 stroke:#10b981,stroke-width:2px;
+                %% Style Links by Tier
+                linkStyle 0 stroke:#8b949e,stroke-width:3px,stroke-dasharray: 5 5; %% SAT
+                linkStyle 1 stroke:#34d399,stroke-width:2px; %% WiFi
+                linkStyle 6 stroke:#60a5fa,stroke-width:2px; %% BLE to Rescuer
+                linkStyle 7 stroke:#34d399,stroke-width:2px; %% Backhaul
+                linkStyle 8 stroke:#8b949e,stroke-width:3px,stroke-dasharray: 5 5; %% Final Jump
         </div>
 
-        <h2>True Peer-to-Peer Mesh Model</h2>
+        <h2>Multi-Tier Connectivity Model</h2>
         <div style="text-align: left; padding: 10px;">
             <ul>
-                <li><strong>Nova Peer-to-Peer (P2P)</strong>: Nova cells (1-5) are directly interconnected. They act as mesh relays, passing messages for each other. If User A wants to message User C, Nova 1 might relay through Nova 2.</li>
-                <li><strong>Cross-Region Bridging</strong>: Even without a direct Trek connection, Nova agents can form "Ad-hoc Bridges" (e.g., Nova 3 to Nova 4) to link geographic regions Beta and Alpha.</li>
-                <li><strong>Trek Tactical Backbone</strong>: Trek nodes (A and B) maintain their own high-priority mesh relay. They act as the "backbone" for the WorldGraph, ensuring that strategic data from Apex reaches the furthest edges of the network.</li>
-                <li><strong>Emergent Integraph</strong>: The WorldGraph is not a central database; it is the *emergent result* of all this P2P Gossip. Every time a Nova relays a packet for another, it contributes to the collective understanding of the Mesh Topology and Vitals.</li>
+                <li><strong>The BLE Tier (Civilian Mesh)</strong>: Local users (User A-C) use standard BLE. Their messages hop across Nova cells until they reach an "exit node" or a rescuer.</li>
+                <li><strong>The Radio Bridge (Trek Rescuer)</strong>: The Trek Rescuer acts as a critical bridge. Their device has <strong>BLE</strong> (to listen to the local mesh) and <strong>WiFi/TCP</strong> (to talk to their tactical equipment, like a drone).</li>
+                <li><strong>The UAV/Drone Relay</strong>: A drone flying overhead provides a high-altitude relay. It carries advanced hardware like <strong>Starlink Satellite</strong> or <strong>LTE</strong> base stations, providing a "Global Jump" out of the disaster zone.</li>
+                <li><strong>Global Reach</strong>: Because of this hybrid hopping, an SOS sent via BLE by User A (who has no internet) can travel through the mesh, up to a drone, and across a satellite link to reach an Apex commander thousands of miles away.</li>
             </ul>
         </div>
     </div>
 
     <div class="legend">
-        <div class="legend-item"><span class="dot" style="background-color: #c084fc;"></span> Apex (Strategic)</div>
-        <div class="legend-item"><span class="dot" style="background-color: #34d399;"></span> Trek (Regional)</div>
-        <div class="legend-item"><span class="dot" style="background-color: #60a5fa;"></span> Nova (Local)</div>
-        <div class="legend-item"><span class="dot" style="background-color: #10b981;"></span> Mesh P2P Relay Link</div>
+        <div class="legend-item"><span class="dot" style="background-color: #60a5fa;"></span> Nova (BLE Mesh)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #34d399;"></span> Trek (Tactical Bridge)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #4b5563;"></span> UAV / Drone (Relay)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #c084fc;"></span> Apex (Global Command)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #8b949e;"></span> Satellite / LTE (Backhaul)</div>
     </div>
 
     <script>

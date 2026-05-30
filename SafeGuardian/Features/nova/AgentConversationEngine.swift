@@ -1,58 +1,64 @@
+// AgentConversationEngine.swift
+// SafeGuardian
+//
+// This is free and unencumbered software released into the public domain.
+
 import BitFoundation
 import Foundation
 import MLXLMCommon
 
+/// Owns the generic mechanics of every agent conversation: gate evaluation,
+/// history assembly, AgentPromptInput construction, stream event processing,
+/// mesh reply routing, and conversation logging. Agents supply an
+/// AgentConversationConfig that expresses only what is specific to them.
 @MainActor
-final class NovaAgent: AgentProcessor {
-    let agentID = "nova"
-    let displayName = "Nova"
-    let triggerPrefix = "@nova"
-    let peerID = PeerID(str: "nova-local")
-    static let novaPeerID = PeerID(str: "nova-local")
+final class AgentConversationEngine {
+    static let shared = AgentConversationEngine()
+    private init() {}
 
-    func shouldHandle(_ message: String) -> Bool {
-        let lower = message.trimmed.lowercased()
-        return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
-    }
-
-    func handle(prompt: String, context: AgentContext, replyTo: PeerID? = nil) {
+    func handle(
+        prompt: String,
+        config: AgentConversationConfig,
+        context: any AgentContext,
+        replyTo: PeerID? = nil
+    ) {
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
+        let provider = AgentProviderRegistry.shared.activeProvider
         let gateCtx = AgentGateContext(
             prompt: cleanPrompt,
             tick: context.deviceTick,
             isMeshQuery: replyTo != nil,
-            modelID: AgentProviderRegistry.shared.activeProvider.activeModelID
+            modelID: provider.activeModelID
         )
         guard AgentGateRegistry.standard().shouldHandle(gateCtx) else { return }
 
-        let provider = AgentProviderRegistry.shared.activeProvider
-
         if !provider.isModelLoaded {
-            context.addAgentLocalMessage(provider.isLoading ? "downloading model..." : "initializing...", to: peerID)
+            context.addAgentLocalMessage(
+                provider.isLoading ? "downloading model..." : "initializing...",
+                to: config.peerID
+            )
         }
 
         let response = context.addResponse(
-            sender: displayName, content: "[thinking...]", privatePeerID: Self.novaPeerID
+            sender: config.displayName, content: "[thinking...]", privatePeerID: config.peerID
         )
         context.notifyChange()
 
-        let toolRegistry: AgentToolRegistry? = provider.capabilities.modelCapabilities?.supportsToolCalling == true
-            ? AgentToolRegistry.standard(agentID: agentID, context: context)
-            : nil
+        let toolRegistry: AgentToolRegistry? =
+            provider.capabilities.modelCapabilities?.supportsToolCalling == true
+                ? config.toolRegistry?(context)
+                : nil
 
-        let state = NovaStreamState()
+        let state = StreamState()
         #if DEBUG
         let startedAt = Date()
         #endif
 
         Task { @MainActor in
-            let systemPrompt = NovaConfig.buildSystemPrompt(
-                personalization: NovaPersonalizationStore.shared.blurb.isEmpty
-                    ? nil : NovaPersonalizationStore.shared.blurb
-            )
+            let systemPrompt = config.systemPrompt()
             let history = Self.buildHistory(
-                from: context.privateChats[Self.novaPeerID] ?? [],
-                agentDisplayName: displayName
+                from: context.privateChats[config.peerID] ?? [],
+                agentDisplayName: config.displayName
             )
             let input = AgentPromptInput(
                 text: cleanPrompt,
@@ -62,41 +68,55 @@ final class NovaAgent: AgentProcessor {
                 toolRegistry: toolRegistry,
                 isMeshQuery: replyTo != nil
             )
+            let hasThinking = provider.capabilities.modelCapabilities?.hasThinkingMode == true
+
             for await event in provider.generate(input: input) {
                 switch event {
                 case .status(let s):
                     response.content = s
                     context.notifyChange()
+
                 case .stats(let s):
                     state.stats = s
+
                 case .token(let token):
-                    state.pending += token
-                    let (visible, thinking, remaining) = self.drain(from: state.pending, inThink: &state.inThink)
-                    state.visible += visible
-                    state.thinking += thinking
-                    state.pending = remaining
-                    if state.visible.isEmpty {
-                        if state.inThink { state.thinkTokens += 1 }
-                        response.content = state.thinkTokens > 0
-                            ? "[thinking... \(state.thinkTokens)t]"
-                            : "[thinking...]"
+                    if hasThinking {
+                        state.pending += token
+                        let (visible, thinking, remaining) = Self.drain(
+                            from: state.pending, inThink: &state.inThink
+                        )
+                        state.visible += visible
+                        state.thinking += thinking
+                        state.pending = remaining
+                        if state.visible.isEmpty {
+                            if state.inThink { state.thinkTokens += 1 }
+                            response.content = state.thinkTokens > 0
+                                ? "[thinking... \(state.thinkTokens)t]"
+                                : "[thinking...]"
+                        } else {
+                            response.content = state.visible
+                        }
                     } else {
+                        state.visible += token
                         response.content = state.visible
                     }
                     context.notifyChange()
+
                 case .complete:
-                    if !state.inThink { state.visible += state.pending }
+                    if hasThinking, !state.inThink { state.visible += state.pending }
                     state.pending = ""
                     response.content = state.visible.isEmpty ? "[no response]" : state.visible
                     context.notifyChange()
                     if let peer = replyTo, !state.visible.isEmpty {
-                        context.sendMeshReply(agentID: agentID, content: state.visible, to: peer)
+                        context.sendMeshReply(
+                            agentID: config.agentID, content: state.visible, to: peer
+                        )
                     }
                     #if DEBUG
                     ConversationLogger.shared.record(
-                        agentThread: context.privateChats[Self.novaPeerID] ?? [],
+                        agentThread: context.privateChats[config.peerID] ?? [],
                         systemPrompt: input.systemPrompt,
-                        agentSenderID: displayName,
+                        agentSenderID: config.displayName,
                         providerID: provider.id,
                         modelID: provider.activeModelID,
                         tick: context.deviceTick,
@@ -105,6 +125,7 @@ final class NovaAgent: AgentProcessor {
                         stats: state.stats
                     )
                     #endif
+
                 case .failure(let err):
                     response.content = "[error: \(err)]"
                     context.notifyChange()
@@ -113,11 +134,8 @@ final class NovaAgent: AgentProcessor {
         }
     }
 
-    // Builds the windowed conversation history from the Nova private thread.
-    // Excludes the two most recent messages (the current user turn and the
-    // in-progress "[thinking...]" placeholder added before this call), status
-    // messages with sender "local" or "system", and content-level placeholders
-    // that begin and end with brackets (e.g. "[error: ...]").
+    // MARK: - History
+
     static func buildHistory(
         from thread: [SafeGuardianMessage],
         agentDisplayName: String
@@ -133,20 +151,13 @@ final class NovaAgent: AgentProcessor {
         return Array(turns.suffix(NovaConfig.historyWindowSize))
     }
 
-    private class NovaStreamState {
-        var pending: String = ""
-        var visible: String = ""
-        var thinking: String = ""
-        var inThink: Bool = false
-        var thinkTokens: Int = 0
-        var stats: AgentGenerationStats? = nil
-    }
+    // MARK: - Think-tag drain
 
-    // Drains the pending buffer, separating visible output from think-block content.
-    // Returns (visible, thinking, remainder) where remainder is an incomplete tag suffix
-    // that may complete with the next token.
-    private func drain(from input: String, inThink: inout Bool) -> (visible: String, thinking: String, remainder: String) {
-        let tagMaxLen = 8 // len("</think>")
+    private static func drain(
+        from input: String,
+        inThink: inout Bool
+    ) -> (visible: String, thinking: String, remainder: String) {
+        let tagMaxLen = 8
         var visible = ""
         var thinking = ""
         var i = input.startIndex
@@ -173,5 +184,16 @@ final class NovaAgent: AgentProcessor {
         }
         let remainder = i < input.endIndex ? String(input[i...]) : ""
         return (visible, thinking, remainder)
+    }
+
+    // MARK: - Stream state
+
+    private final class StreamState {
+        var pending: String = ""
+        var visible: String = ""
+        var thinking: String = ""
+        var inThink: Bool = false
+        var thinkTokens: Int = 0
+        var stats: AgentGenerationStats? = nil
     }
 }

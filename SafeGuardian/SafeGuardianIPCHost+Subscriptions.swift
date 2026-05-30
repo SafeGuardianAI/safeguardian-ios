@@ -65,7 +65,7 @@ extension SafeGuardianIPCHost {
             .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] chats in
                 guard let self, self.activeClients[fd] != nil else { return }
-                let novaMessages = chats[NovaAgent.novaPeerID] ?? []
+                let novaMessages = chats[Agent.nova.peerID] ?? []
                 for msg in novaMessages {
                     guard msg.timestamp >= connectionTime else { continue }
                     let text = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)

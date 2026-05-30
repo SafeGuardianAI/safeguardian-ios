@@ -72,30 +72,30 @@ enum AgentMeshRouting {
 }
 
 /// A formal contract for on-device or cloud-connected agents (Nova, Trek, Apex).
-/// Conformers handle specific message triggers and provide routing logic.
+/// The single requirement is conversationConfig; all other properties and methods
+/// are derived from it via the protocol extension below.
 @MainActor
 protocol AgentProcessor: Sendable {
-    /// The unique identifier for the agent (e.g., "nova", "trek").
-    var agentID: String { get }
+    var conversationConfig: AgentConversationConfig { get }
+}
 
-    /// Human-readable name shown in the sidebar and DM header (e.g., "Nova").
-    var displayName: String { get }
+extension AgentProcessor {
+    var agentID: String       { conversationConfig.agentID }
+    var displayName: String   { conversationConfig.displayName }
+    var peerID: PeerID        { conversationConfig.peerID }
+    var triggerPrefix: String { conversationConfig.triggerPrefix }
 
-    /// The trigger prefix this agent responds to (e.g., "@nova").
-    var triggerPrefix: String { get }
+    func shouldHandle(_ message: String) -> Bool {
+        let lower = message.trimmed.lowercased()
+        return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
+    }
 
-    /// The PeerID used for this agent's private chat thread.
-    var peerID: PeerID { get }
-
-    /// Determines if this agent should handle the given message.
-    func shouldHandle(_ message: String) -> Bool
-    
-    /// Executes the agent's logic for the given prompt.
-    /// - Parameters:
-    ///   - prompt: The user's input (stripped of the trigger prefix).
-    ///   - context: Access to the ChatViewModel for message injection and state.
-    ///   - replyTo: When non-nil the agent sends its final response back to this peer via AGENT_REPLY.
-    func handle(prompt: String, context: AgentContext, replyTo: PeerID?)
+    func handle(prompt: String, context: any AgentContext, replyTo: PeerID? = nil) {
+        AgentConversationEngine.shared.handle(
+            prompt: prompt, config: conversationConfig,
+            context: context, replyTo: replyTo
+        )
+    }
 }
 
 /// A restricted interface for agents to interact with the main application.

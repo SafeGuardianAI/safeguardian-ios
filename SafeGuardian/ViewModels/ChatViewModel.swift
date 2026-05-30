@@ -2802,7 +2802,6 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     if let cached = cachedGeohashIdentity, cached.geohash == ch.geohash {
                         return cached.identity
                     }
-                    // Derive and cache
                     if let identity = try? idBridge.deriveIdentity(forGeohash: ch.geohash) {
                         cachedGeohashIdentity = (ch.geohash, identity)
                         return identity
@@ -2813,9 +2812,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     return spid == PeerID(nostr: myGeo.publicKeyHex)
                 }
             }
-            return spid == meshService.myPeerID
+            if spid == meshService.myPeerID { return true }
+            // Fall through to nickname check — senderPeerID can differ from myPeerID
+            // for locally-composed messages before they are echoed back from the mesh.
         }
-        // Fallback by nickname
         if message.sender == nickname { return true }
         if message.sender.hasPrefix(nickname + "#") { return true }
         return false

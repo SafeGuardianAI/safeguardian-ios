@@ -12,7 +12,7 @@ import Foundation
 @MainActor
 struct BenchCommand: Command {
     let names = ["/bench"]
-    let usage = "/bench <peer|listen> [kb=10] [trials=100] [dist=<metres>]"
+    let usage = "/bench <peer|listen|stop> [kb=10] [trials=100] [dist=<metres>]"
 
     func execute(args: String, context: CommandContext) -> CommandResult {
         guard let transport = context.transport else {
@@ -21,6 +21,14 @@ struct BenchCommand: Command {
         BenchmarkCoordinator.shared.configure(transport: transport)
 
         let tokens = args.split(separator: " ").map(String.init)
+
+        if tokens.first == "stop" {
+            if BenchmarkCoordinator.shared.stopSession() {
+                return .success(message: "bench: stopping after current trial…")
+            } else {
+                return .error(message: "bench: no session running")
+            }
+        }
 
         if tokens.first == "listen" {
             if BenchmarkCoordinator.shared.isListening {
@@ -80,6 +88,8 @@ struct BenchCommand: Command {
                 )
                 addMessage("bench complete: mean \(String(format: "%.1f", summary.meanThroughputKBps)) KB/s  p50 \(String(format: "%.1f", summary.p50ThroughputKBps))  p95 \(String(format: "%.1f", summary.p95ThroughputKBps))  min \(String(format: "%.1f", summary.minThroughputKBps))  max \(String(format: "%.1f", summary.maxThroughputKBps))")
                 addMessage("bench export: \(summary.exportPath)")
+            } catch BenchError.stopped {
+                addMessage("bench stopped")
             } catch {
                 addMessage("bench error: \(error)")
             }

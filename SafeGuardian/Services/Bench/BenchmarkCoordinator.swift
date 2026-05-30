@@ -19,6 +19,25 @@ final class BenchmarkCoordinator {
     private var exporter: BenchmarkExporter?
     private var activeSessions: [String: ActiveSession] = [:]
     private var listenMode = false
+    private var stopRequested = false
+
+    var isRunning: Bool { !activeSessions.isEmpty }
+
+    /// Cancels the in-progress session after the current trial resolves.
+    /// Returns false if no session is running.
+    @discardableResult
+    func stopSession() -> Bool {
+        guard !activeSessions.isEmpty else { return false }
+        stopRequested = true
+        for (sid, var session) in activeSessions {
+            if let cont = session.pendingContinuation {
+                session.pendingContinuation = nil
+                activeSessions[sid] = session
+                cont.resume(throwing: BenchError.stopped)
+            }
+        }
+        return true
+    }
 
     private struct ActiveSession {
         let id: String
@@ -89,6 +108,7 @@ final class BenchmarkCoordinator {
         await progress("bench \(sessionId.prefix(8)) → \(peerNickname)\(distLabel), \(payloadBytes / 1024) KB × \(trials) trials")
 
         activeSessions[sessionId] = ActiveSession(id: sessionId, peerID: peer, payloadBytes: payloadBytes, expectedTrials: trials)
+        stopRequested = false
 
         let fragmentSize = TransportConfig.bleDefaultFragmentSize
         let fragmentCount = max(1, (payloadBytes + fragmentSize - 1) / fragmentSize)
@@ -97,6 +117,7 @@ final class BenchmarkCoordinator {
         let trialTimeoutNs = UInt64(config.trialTimeoutSeconds * 1_000_000_000)
 
         for i in 0..<trials {
+            if stopRequested { break }
             await progress("trial \(i + 1)/\(trials)…")
             let sendNs = Int64(DispatchTime.now().uptimeNanoseconds)
             activeSessions[sessionId]?.pendingTrialIndex = i
@@ -119,8 +140,11 @@ final class BenchmarkCoordinator {
                     sendBenchMessage("PING sid=\(sessionId) t=\(sendNs) idx=\(i)", to: peer)
                 }
                 timeoutTask.cancel()
+            } catch BenchError.stopped {
+                timeoutTask.cancel()
+                break
             } catch {
-                // Timeout or cancellation — record as a dropped trial.
+                // Timeout — record as a dropped trial.
                 let nowNs = Int64(DispatchTime.now().uptimeNanoseconds)
                 let snap = RadioSnapshot.capture(transport: transport, forPeer: peer)
                 trial = BenchTrial(
@@ -286,4 +310,5 @@ final class BenchmarkCoordinator {
 enum BenchError: Error {
     case notConfigured
     case timeout
+    case stopped
 }

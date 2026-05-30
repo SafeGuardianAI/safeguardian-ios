@@ -220,7 +220,11 @@ struct ContentView: View {
         )) {
             ImagePickerView(sourceType: imagePickerSourceType) { image in
                 showImagePicker = false
-                viewModel.processThenSendImage(image)
+                if viewModel.isInAgentDM {
+                    viewModel.pendingAgentImage = image
+                } else {
+                    viewModel.processThenSendImage(image)
+                }
             }
             .environmentObject(viewModel)
             .ignoresSafeArea()
@@ -321,6 +325,29 @@ struct ContentView: View {
                 recordingIndicator
             }
 
+            #if os(iOS)
+            if let img = viewModel.pendingAgentImage {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    Button {
+                        viewModel.pendingAgentImage = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(secondaryTextColor)
+                            .font(.system(size: 18))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+            #endif
+
             HStack(alignment: .center, spacing: 4) {
                 TextField(
                     "",
@@ -376,12 +403,14 @@ struct ContentView: View {
     // MARK: - Actions
     
     private func sendMessage() {
-        guard let trimmed = messageText.trimmedOrNilIfEmpty else { return }
-
-        // Clear input immediately for instant feedback
+        #if os(iOS)
+        let hasPendingImage = viewModel.pendingAgentImage != nil && viewModel.isInAgentDM
+        guard messageText.trimmedOrNilIfEmpty != nil || hasPendingImage else { return }
+        #else
+        guard messageText.trimmedOrNilIfEmpty != nil else { return }
+        #endif
+        let trimmed = messageText.trimmingCharacters(in: .whitespaces)
         messageText = ""
-
-        // Defer actual send to next runloop to avoid blocking
         DispatchQueue.main.async {
             self.viewModel.sendMessage(trimmed)
         }
@@ -429,7 +458,11 @@ struct ContentView: View {
         )) {
             ImagePickerView(sourceType: imagePickerSourceType) { image in
                 showImagePicker = false
-                viewModel.processThenSendImage(image)
+                if viewModel.isInAgentDM {
+                    viewModel.pendingAgentImage = image
+                } else {
+                    viewModel.processThenSendImage(image)
+                }
             }
             .environmentObject(viewModel)
             .ignoresSafeArea()
@@ -445,7 +478,7 @@ struct ContentView: View {
         }
         #endif
     }
-    
+
     // MARK: - People Sheet Views
     
     private var peopleListSheetView: some View {
@@ -1195,18 +1228,23 @@ private extension ContentView {
     @ViewBuilder
     var sendOrMicButton: some View {
         let hasText = !messageText.trimmed.isEmpty
+        #if os(iOS)
+        let canSend = hasText || (viewModel.pendingAgentImage != nil && viewModel.isInAgentDM)
+        #else
+        let canSend = hasText
+        #endif
         if shouldShowVoiceControl {
             ZStack {
                 micButtonView
-                    .opacity(hasText ? 0 : 1)
-                    .allowsHitTesting(!hasText)
-                sendButtonView(enabled: hasText)
-                    .opacity(hasText ? 1 : 0)
-                    .allowsHitTesting(hasText)
+                    .opacity(canSend ? 0 : 1)
+                    .allowsHitTesting(!canSend)
+                sendButtonView(enabled: canSend)
+                    .opacity(canSend ? 1 : 0)
+                    .allowsHitTesting(canSend)
             }
             .frame(width: 36, height: 36)
         } else {
-            sendButtonView(enabled: hasText)
+            sendButtonView(enabled: canSend)
                 .frame(width: 36, height: 36)
         }
     }

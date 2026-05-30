@@ -12,6 +12,9 @@ struct ModelCapabilities {
     /// Model reliably emits structured tool call JSON. False for models below ~3B
     /// parameters where tool calling format compliance is unreliable.
     let supportsToolCalling: Bool
+    /// Model accepts image inputs (VLM). Detected from model ID patterns such as
+    /// "-vl", "vision", or "llava".
+    let supportsVision: Bool
 }
 
 /// Provider-agnostic generation performance stats. MLX maps GenerateCompletionInfo here;
@@ -92,24 +95,26 @@ enum NovaConfig {
         let isLargeEnough = id.contains("2b") || id.contains("3b") || id.contains("4b") ||
             id.contains("7b") || id.contains("8b") || id.contains("14b") ||
             id.contains("32b") || id.contains("72b")
+        // Vision: model IDs that include a VLM marker accept image inputs.
+        let isVision = id.contains("-vl") || id.contains("vision") || id.contains("llava")
         if id.contains("qwen3") || id.contains("qwq") {
             return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: " /no_think",
-                                     supportsToolCalling: isLargeEnough)
+                                     supportsToolCalling: isLargeEnough, supportsVision: isVision)
         }
         if id.contains("deepseek-r1") {
             return ModelCapabilities(hasThinkingMode: true, noThinkSuffix: nil,
-                                     supportsToolCalling: isLargeEnough)
+                                     supportsToolCalling: isLargeEnough, supportsVision: isVision)
         }
         if id.contains("gemma") {
             // Gemma models support function calling from the 4B class upward.
             let toolCapable = id.contains("4b") || id.contains("7b") || id.contains("8b") ||
                 id.contains("9b") || id.contains("27b")
             return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
-                                     supportsToolCalling: toolCapable)
+                                     supportsToolCalling: toolCapable, supportsVision: isVision)
         }
         // Qwen2.5 and earlier do not reliably emit structured tool-call JSON;
         // only Qwen3/QwQ (handled above) and Gemma 4B+ are confirmed tool-capable.
         return ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil,
-                                 supportsToolCalling: false)
+                                 supportsToolCalling: false, supportsVision: isVision)
     }
 }

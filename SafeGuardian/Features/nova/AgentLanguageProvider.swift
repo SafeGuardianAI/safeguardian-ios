@@ -14,6 +14,9 @@ struct AgentPromptInput: Sendable {
     /// True when this prompt originates from a remote peer via AgentMeshRouting.
     /// Used by AgentGateRegistry to apply mesh-only gate conditions.
     var isMeshQuery: Bool = false
+    /// JPEG-encoded images attached to this user turn. Empty for text-only queries.
+    /// Only passed for the current turn; prior history is always text-only.
+    var imageData: [Data] = []
 
     func decorated(modelID: String) -> String {
         let caps = NovaConfig.capabilities(for: modelID)

@@ -99,6 +99,15 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     typealias GeoOutgoingContext = (channel: GeohashChannel, event: NostrEvent, identity: NostrIdentity, teleported: Bool)
 
+    var isInAgentDM: Bool {
+        guard let peer = selectedPrivateChatPeer else { return false }
+        return agents.contains(where: { $0.peerID == peer })
+    }
+
+    #if os(iOS)
+    @Published var pendingAgentImage: UIImage? = nil
+    #endif
+
     @MainActor
     var canSendMediaInCurrentContext: Bool {
         if let peer = selectedPrivateChatPeer {
@@ -1011,8 +1020,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     ///         Routes to private chat if one is selected, otherwise broadcasts
     @MainActor
     func sendMessage(_ content: String) {
-        // Ignore messages that are empty or whitespace-only to prevent blank lines
+        // Allow image-only sends when a pending agent image is attached in an agent DM.
+        #if os(iOS)
+        let hasImageForAgent = pendingAgentImage != nil && isInAgentDM
+        guard let trimmed = content.trimmedOrNilIfEmpty ?? (hasImageForAgent ? "" : nil) else { return }
+        #else
         guard let trimmed = content.trimmedOrNilIfEmpty else { return }
+        #endif
 
         // Resolve pending inline confirmations before normal routing
         if pendingGPSShareConfirmation {
@@ -1042,14 +1056,23 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 stripped = trimmed
             }
 
-            if stripped.isEmpty {
+            #if os(iOS)
+            let capturedImage = pendingAgentImage
+            pendingAgentImage = nil
+            let imageData = capturedImage?.jpegData(compressionQuality: 0.8)
+            #else
+            let imageData: Data? = nil
+            #endif
+
+            if stripped.isEmpty && imageData == nil {
                 addLocalMessage("usage: \(agent.triggerPrefix) <message>")
             } else {
-                let userTurn = SafeGuardianMessage(sender: nickname, content: stripped, timestamp: Date(), isRelay: false)
+                let displayContent = stripped.isEmpty ? "[image]" : stripped
+                let userTurn = SafeGuardianMessage(sender: nickname, content: displayContent, timestamp: Date(), isRelay: false)
                 if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
                 privateChats[agent.peerID]?.append(userTurn)
                 startPrivateChat(with: agent.peerID)
-                agent.handle(prompt: stripped, context: self, replyTo: nil)
+                agent.handle(prompt: stripped, image: imageData, context: self, replyTo: nil)
             }
             return
         }

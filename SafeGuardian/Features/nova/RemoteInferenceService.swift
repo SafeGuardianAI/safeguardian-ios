@@ -69,7 +69,7 @@ final class RemoteInferenceService: AgentLanguageProvider {
 
     var capabilities: AgentProviderCapabilities {
         let caps: ModelCapabilities? = toolsEnabled
-            ? ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil, supportsToolCalling: true)
+            ? ModelCapabilities(hasThinkingMode: false, noThinkSuffix: nil, supportsToolCalling: true, supportsVision: false)
             : nil
         return AgentProviderCapabilities(requiresNetwork: true, modelCapabilities: caps)
     }

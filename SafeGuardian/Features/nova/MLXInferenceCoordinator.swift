@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import MLX
 import MLXLMCommon
@@ -74,7 +75,11 @@ import MLXLMCommon
                         return
                     }
                     continuation.yield(.status("[thinking...]"))
-                    let stream = session.streamDetails(to: decorated, images: [], videos: [])
+                    let userImages: [UserInput.Image] = input.imageData.compactMap { data in
+                        guard let ci = CIImage(data: data) else { return nil }
+                        return .ciImage(ci)
+                    }
+                    let stream = session.streamDetails(to: decorated, images: userImages, videos: [])
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         group.addTask {
                             for try await generation in stream {

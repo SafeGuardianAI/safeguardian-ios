@@ -102,9 +102,9 @@ extension AgentProcessor {
         return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
     }
 
-    func handle(prompt: String, context: any AgentContext, replyTo: PeerID? = nil, replyID: String? = nil) {
+    func handle(prompt: String, image: Data? = nil, context: any AgentContext, replyTo: PeerID? = nil, replyID: String? = nil) {
         AgentConversationEngine.shared.handle(
-            prompt: prompt, config: conversationConfig,
+            prompt: prompt, image: image, config: conversationConfig,
             context: context, replyTo: replyTo, replyID: replyID
         )
     }

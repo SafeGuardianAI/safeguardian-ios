@@ -18,6 +18,7 @@ final class AgentConversationEngine {
 
     func handle(
         prompt: String,
+        image: Data? = nil,
         config: AgentConversationConfig,
         context: any AgentContext,
         replyTo: PeerID? = nil,
@@ -84,7 +85,7 @@ final class AgentConversationEngine {
                 agentDisplayName: config.displayName,
                 maxTurns: maxTurns
             )
-            let input = AgentPromptInput(
+            var input = AgentPromptInput(
                 text: cleanPrompt,
                 tick: context.deviceTick,
                 systemPrompt: systemPrompt,
@@ -92,6 +93,7 @@ final class AgentConversationEngine {
                 toolRegistry: toolRegistry,
                 isMeshQuery: replyTo != nil
             )
+            input.imageData = image.map { [$0] } ?? []
             let hasThinking = provider.capabilities.modelCapabilities?.hasThinkingMode == true
 
             for await event in provider.generate(input: input) {

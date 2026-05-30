@@ -708,21 +708,19 @@ extension ChatViewModel {
             return 
         }
         
-        // Incoming reply from a remote agent — aggregate into the local Nova DM thread.
-        // The sender field carries the replying peer's nickname so multiple replies
-        // from different peers are distinguishable in one place.
+        // Incoming reply from a remote agent — route into the DM thread with that peer,
+        // not into the local Nova thread. The reply is from their agent acting on their
+        // behalf; it belongs in the context of the conversation with that person.
         if let reply = AgentMeshRouting.parseReply(message.content) {
             let senderNickname = meshService.peerNickname(peerID: peerID) ?? String(peerID.id.prefix(6))
-            let localAgentPeerID = agents.first(where: { $0.agentID == reply.agentID })?.peerID
-            let threadID = localAgentPeerID ?? peerID
             let msg = SafeGuardianMessage(
                 sender: "\(reply.agentID.capitalized) · \(senderNickname)",
                 content: reply.content,
                 timestamp: Date(),
                 isRelay: false
             )
-            if privateChats[threadID] == nil { privateChats[threadID] = [] }
-            privateChats[threadID]?.append(msg)
+            if privateChats[peerID] == nil { privateChats[peerID] = [] }
+            privateChats[peerID]?.append(msg)
             objectWillChange.send()
             return
         }

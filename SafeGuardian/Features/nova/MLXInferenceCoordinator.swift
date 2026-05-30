@@ -9,6 +9,7 @@ import MLXLMCommon
     private var activeTask: Task<Void, Never>?
     private var pendingRelease = false
     private var idleWork: DispatchWorkItem?
+    private var gpuCacheConfigured = false
 
     var isLoading: Bool { loader.isLoading }
     var downloadProgress: Double { loader.downloadProgress }
@@ -16,9 +17,6 @@ import MLXLMCommon
 
     init(loader: MLXModelLoader) {
         self.loader = loader
-        let totalGB = Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824)
-        let limitGB = max(1, min(totalGB / 10, 4))
-        MLX.GPU.set(cacheLimit: limitGB * 1_073_741_824)
     }
 
     func generate(
@@ -59,6 +57,12 @@ import MLXLMCommon
                             continuation.finish()
                             return
                         }
+                    }
+                    if await MainActor.run(body: { !self.gpuCacheConfigured }) {
+                        let totalGB = Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824)
+                        let limitGB = max(1, min(totalGB / 10, 4))
+                        MLX.GPU.set(cacheLimit: limitGB * 1_073_741_824)
+                        await MainActor.run { self.gpuCacheConfigured = true }
                     }
                     let model = try await loader.container(modelID: modelID) { progress in
                         continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))

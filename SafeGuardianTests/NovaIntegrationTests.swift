@@ -3,10 +3,26 @@ import Foundation
 import BitFoundation
 @testable import SafeGuardian
 
+// Minimal stub satisfying AgentLanguageProvider without touching Metal or MLX.
+// Used by any test that exercises the agent routing layer without needing real inference.
+@MainActor
+private final class StubLanguageProvider: AgentLanguageProvider {
+    let id = "stub"
+    let displayName = "Stub"
+    let activeModelID = "stub-model"
+    var capabilities = AgentProviderCapabilities(requiresNetwork: false, modelCapabilities: nil)
+    var isLoading = false
+    var isModelLoaded = true
+    func generate(input: AgentPromptInput) -> AsyncStream<AgentGenerationEvent> {
+        AsyncStream { c in c.yield(.complete); c.finish() }
+    }
+    func cancel() {}
+}
+
 @Suite(.serialized)
 @MainActor
-struct NovaIntegrationTests {
-    
+struct AgentRoutingTests {
+
     private func makeTestableViewModel() -> (viewModel: ChatViewModel, transport: MockTransport) {
         let keychain = MockKeychain()
         let keychainHelper = MockKeychainHelper()
@@ -21,40 +37,38 @@ struct NovaIntegrationTests {
             transport: transport
         )
 
+        AgentProviderRegistry.shared.setActiveProvider(StubLanguageProvider())
+
         return (viewModel, transport)
     }
 
     @Test
-    func routeToNova_interceptsPromptAndCreatesMessages() async {
+    func agentTrigger_interceptsPromptAndCreatesMessages() async {
         let (viewModel, _) = makeTestableViewModel()
         let prompt = "hello nova"
-        
+
         viewModel.sendMessage("@nova \(prompt)")
 
-        let novaPeerID = NovaAgent.novaPeerID
-        let messages = viewModel.privateChats[novaPeerID]
+        let peerID = Agent.nova.peerID
+        let messages = viewModel.privateChats[peerID]
 
-        // Thread: [local loading message, user turn, response placeholder]
+        // User turn + response placeholder; loading message absent because stub reports isModelLoaded = true.
         #expect((messages?.count ?? 0) >= 2)
-        let userTurn = messages?.first { $0.sender != "local" && $0.sender != "Nova" }
+        let userTurn = messages?.first { $0.sender != "local" && $0.sender != Agent.nova.displayName }
         #expect(userTurn?.content == prompt)
 
-        // Response placeholder injected by NovaAgent
+        // Placeholder is injected synchronously by AgentConversationEngine before any Task fires.
         let response = messages?.last
-        #expect(response?.sender == "Nova")
+        #expect(response?.sender == Agent.nova.displayName)
         #expect(response?.content.contains("thinking") == true)
     }
 
     @Test
-    func routeToNova_handlesLoadingState() async {
+    func agentTrigger_createsPrivateChatThread() async {
         let (viewModel, _) = makeTestableViewModel()
-        
-        // We can't easily force isLoading on the real shared MLXInferenceService
-        // but we can check if it routes at least.
-        
+
         viewModel.sendMessage("@nova test")
-        
-        let novaPeerID = NovaAgent.novaPeerID
-        #expect(viewModel.privateChats[novaPeerID] != nil)
+
+        #expect(viewModel.privateChats[Agent.nova.peerID] != nil)
     }
 }

@@ -6,8 +6,7 @@ struct AgentPromptInput: Sendable {
     /// Tool registry for this call. Nil when the model does not support tools.
     var toolRegistry: AgentToolRegistry?
     /// True when this prompt originates from a remote peer via AgentMeshRouting.
-    /// Adds a brief hint instructing the model to reply with SKIP when it has
-    /// nothing useful to contribute, avoiding spurious mesh replies.
+    /// Used by AgentGateRegistry to apply mesh-only gate conditions.
     var isMeshQuery: Bool = false
 
     func decorated(modelID: String) -> String {
@@ -17,9 +16,6 @@ struct AgentPromptInput: Sendable {
             let battery = Int(tick.batteryPct * 100)
             let loc = String(format: "%.4f,%.4f", tick.lat, tick.lon)
             result = "[state: battery \(battery)%, loc \(loc), \(tick.peerCount) peers] \(result)"
-        }
-        if isMeshQuery {
-            result += " [mesh: if you have nothing useful to contribute, reply with exactly: SKIP]"
         }
         if let suffix = caps.noThinkSuffix {
             result += suffix

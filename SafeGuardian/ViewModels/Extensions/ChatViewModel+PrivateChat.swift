@@ -735,6 +735,29 @@ extension ChatViewModel {
             return
         }
 
+        // Pattern 1 — incoming structured request from a remote peer's agent.
+        // Show a consent prompt in the main feed; user y/n is intercepted in sendMessage.
+        if let request = AgentMeshRouting.parseRequest(message.content) {
+            let senderName = meshService.peerNickname(peerID: peerID) ?? String(peerID.id.prefix(6))
+            pendingPeerRequestConfirmation = PendingPeerRequestConfirmation(
+                peerID: peerID,
+                type: request.type,
+                requestID: request.requestID,
+                senderName: senderName
+            )
+            addLocalMessage("\(senderName) is requesting your \(request.type). type y to share or n to decline")
+            return
+        }
+
+        // Pattern 1 — response to a structured request this device's agent initiated.
+        // Resume the waiting tool-call continuation.
+        if let response = AgentMeshRouting.parseRequestResponse(message.content) {
+            if let continuation = pendingPeerRequests.removeValue(forKey: response.requestID) {
+                continuation.resume(returning: response.result)
+            }
+            return
+        }
+
         // Check if this is a favorite/unfavorite notification
         if message.content.hasPrefix("[FAVORITED]") || message.content.hasPrefix("[UNFAVORITED]") {
             handleFavoriteNotificationFromMesh(message.content, from: peerID, senderNickname: message.sender)

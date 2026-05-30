@@ -9,6 +9,8 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _meshPeerIDs: @MainActor () -> Set<PeerID>
     private let _tick: @MainActor () -> NovaStateTick?
     private let _sendMesh: @MainActor (String, String, PeerID) -> Void
+    private let _sendRequest: @MainActor (String, String, PeerID) -> Void
+    private let _registerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
@@ -17,12 +19,31 @@ final class AgentContextProxy: @unchecked Sendable {
         _sendMesh = { toAgentID, content, peerID in
             context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID)
         }
+        _sendRequest = { type, requestID, peerID in
+            context.sendPeerRequest(type: type, requestID: requestID, to: peerID)
+        }
+        _registerContinuation = { requestID, continuation in
+            context.registerPeerRequestContinuation(requestID, continuation)
+        }
     }
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
     func tick() async -> NovaStateTick? { await MainActor.run { _tick() } }
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
         await MainActor.run { _sendMesh(toAgentID, content, peerID) }
+    }
+
+    /// Sends a structured peer request and suspends until the peer responds or declines.
+    /// Returns a human-readable result string the agent can use directly in its reply.
+    func requestFromPeer(type: String, peerID: PeerID) async -> String {
+        let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12).lowercased()
+        let id = String(requestID)
+        return await withCheckedContinuation { continuation in
+            Task { @MainActor in
+                self._registerContinuation(id, continuation)
+                self._sendRequest(type, id, peerID)
+            }
+        }
     }
 }
 

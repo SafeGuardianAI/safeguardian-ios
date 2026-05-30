@@ -16,13 +16,13 @@ extension AgentToolRegistry {
                 .getMemory(),
                 .getDeviceState(),
                 .getStatus(),
-                .getFullStatus(),
-                .skipReply()
+                .getFullStatus()
             ],
             meshTools: [
                 .listPeers(),
                 .sendAgentMessage(senderAgentID: agentID),
-                .broadcastToAgents(senderAgentID: agentID)
+                .broadcastToAgents(senderAgentID: agentID),
+                .requestPeerLocation()
             ]
         )
     }

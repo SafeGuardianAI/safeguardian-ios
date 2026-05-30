@@ -24,6 +24,16 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    func sendPeerRequest(type: String, requestID: String, to peerID: PeerID) {
+        sendPrivateMessage(AgentMeshRouting.formatRequest(type: type, requestID: requestID), to: peerID)
+    }
+
+    @MainActor
+    func registerPeerRequestContinuation(_ requestID: String, _ continuation: CheckedContinuation<String, Never>) {
+        pendingPeerRequests[requestID] = continuation
+    }
+
+    @MainActor
     func addAgentLocalMessage(_ content: String, to peerID: PeerID) {
         let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
         if privateChats[peerID] == nil { privateChats[peerID] = [] }

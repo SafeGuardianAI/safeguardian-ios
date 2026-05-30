@@ -163,6 +163,17 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     private var pendingGPSShareConfirmation = false
 
+    // Pattern 1 peer request state — set when an incoming [REQUEST:] arrives from a remote peer.
+    struct PendingPeerRequestConfirmation {
+        let peerID: PeerID
+        let type: String
+        let requestID: String
+        let senderName: String
+    }
+    var pendingPeerRequestConfirmation: PendingPeerRequestConfirmation?
+    // Continuations waiting for peer request responses, keyed by requestID.
+    var pendingPeerRequests: [String: CheckedContinuation<String, Never>] = [:]
+
     // MARK: - Service Delegates
 
     let commandProcessor: CommandProcessor
@@ -1005,7 +1016,12 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         if pendingGPSShareConfirmation {
             handleGPSShareConfirmation(trimmed)
             return
-        }   
+        }
+
+        if pendingPeerRequestConfirmation != nil {
+            handlePeerRequestConfirmation(trimmed)
+            return
+        }
             
         // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh.
         // Also intercept plain messages sent while already inside an agent DM so follow-up turns
@@ -1435,7 +1451,35 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             addLocalMessage("type y to confirm or n to cancel")
         }
     }
-    
+
+    @MainActor
+    private func handlePeerRequestConfirmation(_ input: String) {
+        guard let pending = pendingPeerRequestConfirmation else { return }
+        switch input.lowercased() {
+        case "y":
+            pendingPeerRequestConfirmation = nil
+            if pending.type == "location" {
+                if let loc = LocationStateManager.shared.currentLocation {
+                    let lat = loc.coordinate.latitude
+                    let lon = loc.coordinate.longitude
+                    let accuracy = Int(loc.horizontalAccuracy.rounded())
+                    let result = String(format: "%.4f,%.4f accuracy:%dm", lat, lon, accuracy)
+                    sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: result), to: pending.peerID)
+                    addLocalMessage("location shared with \(pending.senderName)")
+                } else {
+                    sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: "unavailable"), to: pending.peerID)
+                    addLocalMessage("location not available — sent unavailable to \(pending.senderName)")
+                }
+            }
+        case "n":
+            pendingPeerRequestConfirmation = nil
+            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: "denied"), to: pending.peerID)
+            addLocalMessage("declined")
+        default:
+            addLocalMessage("type y to approve or n to decline")
+        }
+    }
+
     // MARK: - Bluetooth State Management
     
     /// Updates the Bluetooth state and shows appropriate alerts

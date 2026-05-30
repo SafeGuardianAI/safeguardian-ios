@@ -17,6 +17,41 @@ enum AgentMeshRouting {
         "[AGENT_REPLY:\(agentID)] \(content)"
     }
 
+    // Pattern 1 — Structured peer request (no inference, explicit consent).
+    // Wire: [REQUEST:{type}:{requestID}] and [REQUEST_RESPONSE:{requestID}] {result}
+
+    static func formatRequest(type requestType: String, requestID: String) -> String {
+        "[REQUEST:\(requestType):\(requestID)]"
+    }
+
+    static func formatRequestResponse(requestID: String, result: String) -> String {
+        "[REQUEST_RESPONSE:\(requestID)] \(result)"
+    }
+
+    static func parseRequest(_ raw: String) -> (type: String, requestID: String)? {
+        guard raw.hasPrefix("[REQUEST:") else { return nil }
+        let inner = raw.dropFirst(9) // drop "[REQUEST:"
+        guard let closeIdx = inner.firstIndex(of: "]") else { return nil }
+        let parts = String(inner[..<closeIdx]).split(separator: ":", maxSplits: 1)
+        guard parts.count == 2 else { return nil }
+        let type = String(parts[0])
+        let requestID = String(parts[1])
+        guard !type.isEmpty, !requestID.isEmpty else { return nil }
+        return (type, requestID)
+    }
+
+    static func parseRequestResponse(_ raw: String) -> (requestID: String, result: String)? {
+        guard raw.hasPrefix("[REQUEST_RESPONSE:") else { return nil }
+        let inner = raw.dropFirst(18) // drop "[REQUEST_RESPONSE:"
+        guard let closeIdx = inner.firstIndex(of: "]") else { return nil }
+        let requestID = String(inner[..<closeIdx])
+        guard !requestID.isEmpty else { return nil }
+        let afterBracket = inner.index(closeIdx, offsetBy: 1)
+        guard afterBracket < inner.endIndex, inner[afterBracket] == " " else { return nil }
+        let result = String(inner[inner.index(afterBracket, offsetBy: 1)...])
+        return (requestID, result)
+    }
+
     static func parse(_ raw: String) -> (agentID: String, content: String)? {
         Self.extract(raw, prefix: "[AGENT:")
     }
@@ -88,4 +123,8 @@ protocol AgentContext {
     func sendMeshReply(agentID: String, content: String, to peerID: PeerID)
     /// Sends an AGENT message to the named agent on every connected peer.
     func broadcastAgentMessage(agentID: String, content: String)
+    /// Sends a [REQUEST:{type}:{requestID}] wire message to the peer, initiating a structured peer request.
+    func sendPeerRequest(type: String, requestID: String, to peerID: PeerID)
+    /// Stores a continuation to be resumed when the peer sends back [REQUEST_RESPONSE:{requestID}].
+    func registerPeerRequestContinuation(_ requestID: String, _ continuation: CheckedContinuation<String, Never>)
 }

@@ -127,20 +127,48 @@ A single tool the model can call.
         parameters:  list<ToolParameter>
         handler:     async (arguments: map<string, JSONValue>, context: AgentContextProxy) -> string
 
+## DispatchGuard
+
+Counts tool dispatches within one generation session. When the cap is reached,
+the dispatch closure returns a terminal error string so the model stops looping
+rather than running indefinitely. Sequential dispatch (MLXLMCommon awaits each
+result before calling the next) means the counter needs no lock.
+
+    class DispatchGuard:
+        next() -> bool   -- increments counter; returns false when cap is exceeded
+
+Cap is NovaConfig.maxToolIterations (8). Embedded in AgentToolRegistry.build.
+
+## StatusCallback
+
+Accumulates tool names called during a session and fires a MainActor status
+update for each so the UI can show "get_device_state..." rather than a static
+spinner. calledToolNames is read at completion and logged by ConversationLogger.
+
+    class StatusCallback:
+        calledToolNames: list<string>          -- populated in dispatch order
+        notify(toolName: string) -> async void -- updates UI, appends name
+
 ## AgentToolRegistry
 
-A resolved, ready-to-use tool set. Created once per generation call while the
-agent context is available; passed through the provider chain into the session.
+A resolved, ready-to-use tool set. Build one per inference call.
+The dispatch closure embeds DispatchGuard, StatusCallback, and approval gate.
 
     struct AgentToolRegistry:
-        specs:    list<ToolSpec>       -- JSON schema objects understood by the model
-        dispatch: async (ToolCall) -> string  -- routes to the correct handler
+        specs:    list<ToolSpec>
+        dispatch: async (ToolCall) -> string
+
+    static build(
+        agentID, context, deviceTools, meshTools,
+        onStatus: StatusCallback|null,
+        approvalCheck: (string -> bool)|null,
+        maxIterations: int = NovaConfig.maxToolIterations
+    ) -> AgentToolRegistry
 
 ## AgentContextProxy
 
-Provides safe async access to MainActor (or platform-equivalent UI-thread-isolated)
-agent context from within a background inference task. On each platform this is the
-bridge between the inference thread and the UI/application thread.
+Bridges @MainActor-isolated AgentContext into @Sendable tool dispatch closures.
+All MainActor state access routes through MainActor.run.
 
     interface AgentContextProxy:
         meshPeerIDs() -> async set<PeerID>
@@ -148,10 +176,12 @@ bridge between the inference thread and the UI/application thread.
         sendMesh(toAgentID: string, content: string, peerID: PeerID) -> async void
             -- fire-and-forget; reply goes to human DM thread
         requestFromAgent(agentID: string, content: string, peerID: PeerID) -> async string
-            -- correlated request; suspends until [AGENT_REPLY:..:{requestID}] arrives,
-            -- then returns reply content as the tool call result
+            -- correlated request; suspends until [AGENT_REPLY:..:{requestID}] arrives
         requestFromPeer(type: string, peerID: PeerID) -> async string
             -- Pattern 1 structured request; suspends until [REQUEST_RESPONSE:...] arrives
+        requestApproval(for toolName: string) -> async bool
+            -- suspends via CheckedContinuation until host context resumes it;
+            -- safe from any isolation context; approval UI wired on AgentContext
 
 ## AgentMeshRouting
 
@@ -243,6 +273,9 @@ session object. Only expose what agents actually need.
         sendPeerRequest(type: string, requestID: string, to: PeerID) -> void
         registerPeerRequestContinuation(requestID: string, continuation) -> void
         registerAgentReplyContinuation(requestID: string, continuation) -> void
+        registerToolApprovalContinuation(token: string, continuation) -> void
+            -- store continuation keyed by token; resume with bool to approve/deny;
+            -- current impl auto-approves; swap body to show UI when ready
 
 ## AgentConversationConfig
 
@@ -254,18 +287,33 @@ All identity properties and behavior are derived from this by the protocol exten
         displayName:  string
         peerID:       PeerID
         triggerPrefix: string
-        systemPrompt: () -> string          -- evaluated at call time; may read current state
-        toolRegistry: ((AgentContext) -> AgentToolRegistry|null)|null
+        systemPrompt: () -> string
+            -- evaluated at call time; may safely read MainActor-isolated state
+        toolRegistry: ((AgentContext, StatusCallback, (string->bool)|null) -> AgentToolRegistry|null)|null
+            -- receives engine-created StatusCallback and approvalRequired predicate
+        approvalRequired: (string -> bool)|null
+            -- return true for tool names that require human approval before executing;
+            -- nil means all tools auto-approved; suspension uses CheckedContinuation
+        shouldSendResponse: (string -> bool)|null
+            -- evaluated against final visible output; return false to suppress response
+            -- and remove placeholder cleanly; nil means always send
 
 ## AgentConversationEngine
 
 Singleton that owns all generic agent execution mechanics: gate evaluation,
-history assembly, AgentPromptInput construction, stream processing (including
-think-tag draining gated on ModelCapabilities.hasThinkingMode), mesh reply
-routing, and ConversationLogger. Agents supply a config; the engine runs it.
+history assembly (budget-aware via PromptBudgetService), AgentPromptInput
+construction, stream processing (think-tag draining gated on hasThinkingMode),
+tool loop controls, mesh reply routing, and ConversationLogger.
 
-Mesh queries (replyTo != nil) run inference silently — no placeholder is inserted
-into the local agent thread. The reply is sent to the requester only.
+Tool loop controls built into every call:
+- DispatchGuard caps iterations at NovaConfig.maxToolIterations (8)
+- StatusCallback updates response.content with the active tool name for UI feedback
+- approvalRequired predicate from config gates individual tools via CheckedContinuation
+- shouldSendResponse predicate suppresses and removes the response placeholder cleanly
+
+Mesh queries run inference silently — no local placeholder on receiving device.
+The reply is sent to the requester only (with optional requestID for agent-to-agent
+correlated responses).
 
     handle(prompt, config, context, replyTo, replyID) -> void
 
@@ -332,15 +380,17 @@ Gate with compile-time debug flag on every platform.
         format:        LogFormat   -- "jsonl" (OpenAI) | "sharegpt"
 
         record(
-            agentThread:    list<Message>,
-            systemPrompt:   string,
-            agentSenderID:  string,
-            providerID:     string,
-            tick:           NovaStateTick|null,
-            startedAt:      datetime,
+            agentThread:     list<Message>,
+            systemPrompt:    string,
+            agentSenderID:   string,
+            providerID:      string,
+            tick:            NovaStateTick|null,
+            startedAt:       datetime,
             thinkingContent: string|null,
-            stats:          AgentGenerationStats|null
+            toolCallNames:   list<string>,   -- tools dispatched in order; empty if none
+            stats:           AgentGenerationStats|null
         ) -> void
+        -- toolCallNames appear in metadata.tool_calls in the output entry
 
         clear() -> void
 

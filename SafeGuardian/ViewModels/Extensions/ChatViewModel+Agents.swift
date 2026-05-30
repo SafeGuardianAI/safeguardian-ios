@@ -22,6 +22,14 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    func registerToolApprovalContinuation(_ token: String, _ continuation: CheckedContinuation<Bool, Never>) {
+        // Auto-approve for now. Replace this body with a UI confirmation flow
+        // (e.g. set pendingToolApprovals[token] = continuation and show an alert)
+        // when interactive tool approval is needed.
+        continuation.resume(returning: true)
+    }
+
+    @MainActor
     func broadcastAgentMessage(agentID: String, content: String) {
         for peerID in meshService.getPeersWithAgent(agentID) {
             sendMeshMessage(agentID: agentID, content: content, to: peerID)

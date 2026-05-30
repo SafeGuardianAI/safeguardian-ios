@@ -26,8 +26,13 @@ extension Agent {
                     ? nil : NovaPersonalizationStore.shared.blurb
             )
         },
-        toolRegistry: { context in
-            AgentToolRegistry.standard(agentID: "nova", context: context)
-        }
+        toolRegistry: { context, onStatus, approvalCheck in
+            AgentToolRegistry.standard(
+                agentID: "nova", context: context,
+                onStatus: onStatus, approvalCheck: approvalCheck
+            )
+        },
+        approvalRequired: nil,
+        shouldSendResponse: nil
     ))
 }

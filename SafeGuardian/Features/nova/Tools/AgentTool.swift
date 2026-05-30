@@ -1,6 +1,53 @@
+// AgentTool.swift
+// SafeGuardian
+//
+// This is free and unencumbered software released into the public domain.
+
 import BitFoundation
 import Foundation
 import MLXLMCommon
+
+// MARK: - DispatchGuard
+
+/// Counts tool dispatches within one generation session and signals when the
+/// iteration cap is reached. MLXLMCommon dispatches tool calls sequentially
+/// (each await completes before the next starts), so the counter increment is
+/// safe without a lock despite the @unchecked Sendable marker.
+final class DispatchGuard: @unchecked Sendable {
+    nonisolated(unsafe) private var count = 0
+    let max: Int
+    init(max: Int) { self.max = max }
+
+    /// Returns true if the call is within the allowed budget, false when the cap
+    /// is exceeded. The caller should return a terminal error to the model.
+    func next() -> Bool {
+        count += 1
+        return count <= max
+    }
+}
+
+// MARK: - StatusCallback
+
+/// Accumulates tool names called during a generation session and fires a
+/// MainActor status update for each one so the UI can show meaningful progress.
+/// Marked @unchecked Sendable because mutation always happens before the
+/// MainActor hop; the dispatch is sequential so there is no concurrent write.
+final class StatusCallback: @unchecked Sendable {
+    private(set) var calledToolNames: [String] = []
+    private let _update: @MainActor (String) -> Void
+
+    @MainActor
+    init(_ update: @escaping @MainActor (String) -> Void) {
+        _update = update
+    }
+
+    func notify(_ toolName: String) async {
+        calledToolNames.append(toolName)
+        await MainActor.run { _update(toolName) }
+    }
+}
+
+// MARK: - AgentContextProxy
 
 /// Bridges @MainActor-isolated AgentContext into @Sendable tool dispatch closures.
 /// Marked @unchecked Sendable because every access to MainActor-isolated state
@@ -12,6 +59,7 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
     private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
     private let _registerAgentContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
+    private let _registerApprovalContinuation: @MainActor (String, CheckedContinuation<Bool, Never>) -> Void
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
@@ -29,17 +77,19 @@ final class AgentContextProxy: @unchecked Sendable {
         _registerAgentContinuation = { requestID, continuation in
             context.registerAgentReplyContinuation(requestID, continuation)
         }
+        _registerApprovalContinuation = { token, continuation in
+            context.registerToolApprovalContinuation(token, continuation)
+        }
     }
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
     func tick() async -> NovaStateTick? { await MainActor.run { _tick() } }
+
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
         await MainActor.run { _sendMesh(toAgentID, content, peerID, nil) }
     }
 
     /// Sends a query to a remote agent and suspends until its reply arrives.
-    /// The requestID is embedded in the wire format so the receiving device echoes
-    /// it back in the reply, allowing this continuation to be resumed correctly.
     func requestFromAgent(agentID: String, content: String, peerID: PeerID) async -> String {
         let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         return await withCheckedContinuation { continuation in
@@ -51,7 +101,6 @@ final class AgentContextProxy: @unchecked Sendable {
     }
 
     /// Sends a structured peer request and suspends until the peer responds or declines.
-    /// Returns a human-readable result string the agent can use directly in its reply.
     func requestFromPeer(type: String, peerID: PeerID) async -> String {
         let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12).lowercased()
         let id = String(requestID)
@@ -62,11 +111,25 @@ final class AgentContextProxy: @unchecked Sendable {
             }
         }
     }
+
+    /// Suspends until the host context approves or denies execution of the named tool.
+    /// Safe from any isolation context — uses CheckedContinuation, does not block.
+    func requestApproval(for toolName: String) async -> Bool {
+        let token = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
+        let id = String(token)
+        return await withCheckedContinuation { continuation in
+            Task { @MainActor in
+                self._registerApprovalContinuation(id, continuation)
+            }
+        }
+    }
 }
 
-/// A Sendable collection of tool specs and a unified dispatch closure ready
-/// to pass directly to ChatSession. Build one per inference call using
-/// AgentToolRegistry.build(agentID:context:).
+// MARK: - AgentToolRegistry
+
+/// A Sendable collection of tool specs and a unified dispatch closure.
+/// Build one per inference call; the dispatch closure embeds the iteration
+/// guard, status callback, and approval gate.
 struct AgentToolRegistry: Sendable {
     let specs: [ToolSpec]
     let dispatch: @Sendable (ToolCall) async throws -> String
@@ -76,22 +139,47 @@ struct AgentToolRegistry: Sendable {
         agentID: String,
         context: some AgentContext,
         deviceTools: [AgentToolEntry],
-        meshTools: [AgentToolEntry]
+        meshTools: [AgentToolEntry],
+        onStatus: StatusCallback? = nil,
+        approvalCheck: (@Sendable (String) -> Bool)? = nil,
+        maxIterations: Int = NovaConfig.maxToolIterations
     ) -> AgentToolRegistry {
         let proxy = AgentContextProxy(senderAgentID: agentID, context: context)
+        let guard_ = DispatchGuard(max: maxIterations)
         let allTools = deviceTools + meshTools
         let lookup = Dictionary(uniqueKeysWithValues: allTools.map { ($0.name, $0) })
         let specs = allTools.map { $0.spec }
+
         let dispatch: @Sendable (ToolCall) async throws -> String = { toolCall in
             let name = toolCall.function.name
+
+            // Hard cap — returns a terminal message the model reads as a stop signal.
+            guard guard_.next() else {
+                return #"{"error":"iteration_limit","message":"Stop calling tools. Provide a final answer with what you know so far."}"#
+            }
+
+            // Approval gate — suspends until the host context resumes the continuation.
+            if approvalCheck?(name) == true {
+                let approved = await proxy.requestApproval(for: name)
+                guard approved else {
+                    return #"{"error":"denied","message":"User denied this tool call."}"#
+                }
+            }
+
+            // Status update — fires before execution so the UI reflects current tool.
+            await onStatus?.notify(name)
+
             guard let entry = lookup[name] else {
-                return #"{"error":"unknown tool \#(name)"}"#
+                return #"{"error":"unknown_tool","tool":"\#(name)"}"#
             }
             return try await entry.handler(toolCall.function.arguments, proxy)
         }
+
         return AgentToolRegistry(specs: specs, dispatch: dispatch)
     }
 }
+
+// MARK: - AgentToolEntry
 
 /// A single tool definition: its JSON schema spec and its async handler.
 struct AgentToolEntry: Sendable {
@@ -105,7 +193,9 @@ struct AgentToolEntry: Sendable {
         parameters: [ToolParameter],
         handler: @escaping @Sendable ([String: JSONValue], AgentContextProxy) async throws -> String
     ) -> AgentToolEntry {
-        let tool = Tool<[String: String], String>(name: name, description: description, parameters: parameters) { _ in "" }
+        let tool = Tool<[String: String], String>(
+            name: name, description: description, parameters: parameters
+        ) { _ in "" }
         return AgentToolEntry(name: name, spec: tool.schema, handler: handler)
     }
 }

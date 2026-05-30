@@ -57,9 +57,17 @@ final class AgentConversationEngine {
             context.notifyChange()
         }
 
+        // StatusCallback is nil for mesh queries (no local UI to update).
+        // For local queries it updates response.content with the active tool name
+        // so the user sees "get_device_state..." rather than a static spinner.
+        let statusCallback: StatusCallback? = isMeshQuery ? nil : StatusCallback { [weak response] toolName in
+            response?.content = "[\(toolName)...]"
+            context.notifyChange()
+        }
+
         let toolRegistry: AgentToolRegistry? =
             provider.capabilities.modelCapabilities?.supportsToolCalling == true
-                ? config.toolRegistry?(context)
+                ? config.toolRegistry?(context, statusCallback ?? StatusCallback { _ in }, config.approvalRequired)
                 : nil
 
         let state = StreamState()
@@ -128,11 +136,20 @@ final class AgentConversationEngine {
                 case .complete:
                     if hasThinking, !state.inThink { state.visible += state.pending }
                     state.pending = ""
+
+                    // shouldSendResponse nil = always send; false = suppress cleanly.
+                    let send = config.shouldSendResponse.map { $0(state.visible) } ?? true
+
                     if !isMeshQuery {
-                        response.content = state.visible.isEmpty ? "[no response]" : state.visible
-                        context.notifyChange()
+                        if send {
+                            response.content = state.visible.isEmpty ? "[no response]" : state.visible
+                            context.notifyChange()
+                        } else {
+                            // Remove the placeholder entirely so the UI shows no orphaned bubble.
+                            context.removeResponse(response, from: config.peerID)
+                        }
                     }
-                    if let peer = replyTo, !state.visible.isEmpty {
+                    if send, let peer = replyTo, !state.visible.isEmpty {
                         context.sendMeshReply(
                             agentID: config.agentID, content: state.visible,
                             to: peer, requestID: replyID

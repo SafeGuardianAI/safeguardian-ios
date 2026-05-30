@@ -7,7 +7,12 @@ extension AgentToolRegistry {
     /// 1. Create a new file in Tools/ with an AgentToolEntry extension
     /// 2. Add it to the appropriate list below — nothing else changes.
     @MainActor
-    static func standard(agentID: String, context: some AgentContext) -> AgentToolRegistry {
+    static func standard(
+        agentID: String,
+        context: some AgentContext,
+        onStatus: StatusCallback? = nil,
+        approvalCheck: (@Sendable (String) -> Bool)? = nil
+    ) -> AgentToolRegistry {
         build(
             agentID: agentID,
             context: context,
@@ -23,7 +28,9 @@ extension AgentToolRegistry {
                 .sendAgentMessage(senderAgentID: agentID),
                 .broadcastToAgents(senderAgentID: agentID),
                 .requestPeerLocation()
-            ]
+            ],
+            onStatus: onStatus,
+            approvalCheck: approvalCheck
         )
     }
 

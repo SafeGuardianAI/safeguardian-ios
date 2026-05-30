@@ -174,6 +174,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     // Continuations waiting for peer request responses, keyed by requestID.
     var pendingPeerRequests: [String: CheckedContinuation<String, Never>] = [:]
     var pendingAgentReplies: [String: CheckedContinuation<String, Never>] = [:]
+    var pendingToolApprovals: [String: CheckedContinuation<Bool, Never>] = [:]
 
     // MARK: - Service Delegates
 

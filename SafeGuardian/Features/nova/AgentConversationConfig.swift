@@ -21,6 +21,16 @@ struct AgentConversationConfig: Sendable {
     let systemPrompt: @MainActor () -> String
 
     /// Called only when the active provider's modelCapabilities.supportsToolCalling == true.
-    /// Return nil to disable tools for this agent regardless of provider capability.
-    let toolRegistry: (@MainActor (any AgentContext) -> AgentToolRegistry?)?
+    /// Receives the engine-created StatusCallback and the agent's approvalRequired predicate
+    /// so each provider can wire them into AgentToolRegistry.build.
+    let toolRegistry: (@MainActor (any AgentContext, StatusCallback, (@Sendable (String) -> Bool)?) -> AgentToolRegistry?)?
+
+    /// Return true for a tool name to require human approval before that tool executes.
+    /// nil means all tools are auto-approved. The suspension mechanism is safe (CheckedContinuation);
+    /// the approval UI is wired separately on AgentContext.
+    let approvalRequired: (@Sendable (String) -> Bool)?
+
+    /// Return false to suppress the final response — removes the placeholder and skips mesh reply.
+    /// Evaluated against the final visible output text. nil means always send.
+    let shouldSendResponse: (@Sendable (String) -> Bool)?
 }

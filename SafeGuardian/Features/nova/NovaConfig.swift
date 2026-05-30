@@ -38,6 +38,9 @@ enum NovaConfig {
     static let temperature: Float = 0.7
     static let generationTimeoutSeconds: UInt64 = 300
     static let historyWindowSize = 10
+    /// Maximum number of tool dispatch calls per generation session.
+    /// When reached the dispatch returns a terminal error so the model stops looping.
+    static let maxToolIterations = 8
     static let idleTimeoutSeconds: Double = 300
     /// Battery floor below which Nova skips mesh queries entirely to preserve power.
     /// Local (@nova) queries are always served regardless of battery level.

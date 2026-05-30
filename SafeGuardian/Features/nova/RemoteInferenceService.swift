@@ -79,13 +79,17 @@ final class RemoteInferenceService: AgentLanguageProvider {
                 if !key.isEmpty {
                     request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
                 }
+                var messages: [[String: Any]] = [
+                    ["role": "system", "content": input.systemPrompt]
+                ]
+                for turn in input.history {
+                    messages.append(["role": turn.role.rawValue, "content": turn.content])
+                }
+                messages.append(["role": "user", "content": prompt])
                 let body: [String: Any] = [
                     "model": model,
                     "stream": true,
-                    "messages": [
-                        ["role": "system", "content": input.systemPrompt],
-                        ["role": "user",   "content": prompt]
-                    ]
+                    "messages": messages
                 ]
                 request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 

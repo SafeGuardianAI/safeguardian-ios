@@ -52,10 +52,16 @@ Flags describing the provider itself (transport, network dependency).
 
 Input to a single inference call.
 
+    struct ConversationTurn:
+        role:    "user" | "assistant"
+        content: string
+
     struct AgentPromptInput:
         text:         string
         tick:         NovaStateTick|null
         systemPrompt: string                  -- composed at call time: base prompt + optional user personalization blurb
+        history:      list<ConversationTurn>  -- windowed prior turns, oldest first; excludes current user message
+                                              -- assembled by the agent layer, capped at NovaConfig.historyWindowSize
         toolRegistry: AgentToolRegistry|null  -- null when model does not support tools
         isMeshQuery:  bool                    -- true when prompt originated from a remote peer via AgentMeshRouting
 

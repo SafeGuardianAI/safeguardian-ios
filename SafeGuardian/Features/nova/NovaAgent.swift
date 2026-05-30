@@ -50,10 +50,15 @@ final class NovaAgent: AgentProcessor {
                 personalization: NovaPersonalizationStore.shared.blurb.isEmpty
                     ? nil : NovaPersonalizationStore.shared.blurb
             )
+            let history = Self.buildHistory(
+                from: context.privateChats[Self.novaPeerID] ?? [],
+                agentDisplayName: displayName
+            )
             let input = AgentPromptInput(
                 text: cleanPrompt,
                 tick: context.deviceTick,
                 systemPrompt: systemPrompt,
+                history: history,
                 toolRegistry: toolRegistry,
                 isMeshQuery: replyTo != nil
             )
@@ -106,6 +111,26 @@ final class NovaAgent: AgentProcessor {
                 }
             }
         }
+    }
+
+    // Builds the windowed conversation history from the Nova private thread.
+    // Excludes the two most recent messages (the current user turn and the
+    // in-progress "[thinking...]" placeholder added before this call), status
+    // messages with sender "local" or "system", and content-level placeholders
+    // that begin and end with brackets (e.g. "[error: ...]").
+    static func buildHistory(
+        from thread: [SafeGuardianMessage],
+        agentDisplayName: String
+    ) -> [ConversationTurn] {
+        let completed = thread.count >= 2 ? Array(thread.dropLast(2)) : []
+        let turns: [ConversationTurn] = completed.compactMap { msg in
+            guard msg.sender != "local", msg.sender != "system" else { return nil }
+            let c = msg.content
+            guard !(c.hasPrefix("[") && c.hasSuffix("]")) else { return nil }
+            let role: ConversationTurn.Role = msg.sender == agentDisplayName ? .assistant : .user
+            return ConversationTurn(role: role, content: c)
+        }
+        return Array(turns.suffix(NovaConfig.historyWindowSize))
     }
 
     private class NovaStreamState {

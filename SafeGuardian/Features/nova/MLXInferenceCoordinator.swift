@@ -30,10 +30,17 @@ import MLXLMCommon
         activeTask?.cancel()
         rescheduleIdleTimer()
         let decorated = input.decorated(modelID: modelID)
+        // historyOffset encodes how far the window has slid: when it changes,
+        // the pool creates a new ChatSession seeded from the windowed history.
+        let historyOffset = max(0, input.history.count - NovaConfig.historyWindowSize)
         let key = MLXSessionPool.Key(
             modelID: modelID,
-            promptHash: input.systemPrompt.hashValue
+            promptHash: input.systemPrompt.hashValue,
+            historyOffset: historyOffset
         )
+        let chatHistory: [Chat.Message] = input.history.map {
+            $0.role == .assistant ? .assistant($0.content) : .user($0.content)
+        }
         return AsyncStream { continuation in
             let task = Task {
                 do {
@@ -58,7 +65,7 @@ import MLXLMCommon
                     guard !Task.isCancelled else { continuation.finish(); return }
                     let session = sessionPool.session(
                         for: key, container: model, systemPrompt: input.systemPrompt,
-                        toolRegistry: input.toolRegistry
+                        history: chatHistory, toolRegistry: input.toolRegistry
                     )
                     guard !decorated.isEmpty, !Task.isCancelled else {
                         continuation.yield(.status("[error: empty prompt]"))

@@ -5,6 +5,10 @@ struct AgentPromptInput: Sendable {
     var tick: NovaStateTick?
     /// Full composed system prompt (base + personalization). Set by the caller.
     var systemPrompt: String = NovaConfig.stableSystemPrompt
+    /// Windowed prior conversation turns, oldest first. Assembled by the agent
+    /// layer from privateChats and capped at NovaConfig.historyWindowSize turns.
+    /// Excludes the current user message — that is carried by `text`.
+    var history: [ConversationTurn] = []
     /// Tool registry for this call. Nil when the model does not support tools.
     var toolRegistry: AgentToolRegistry?
     /// True when this prompt originates from a remote peer via AgentMeshRouting.

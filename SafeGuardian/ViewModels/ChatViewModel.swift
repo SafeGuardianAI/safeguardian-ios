@@ -2305,7 +2305,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Not cached, format the message
         var result = AttributedString()
 
-        let baseColor: Color = isSelf ? .orange : peerColor(for: message, isDark: isDark)
+        // Sender name keeps the palette / identity color so peers stay recognisable.
+        // Message body uses one uniform color per sender type: orange (self),
+        // purple (any agent), or the app's standard text green (all other humans).
+        // This avoids the per-peer rainbow effect while preserving name-level identity.
+        let isAgentSender = agents.contains(where: { $0.displayName.lowercased() == message.sender.lowercased() })
+        let baseColor: Color = isSelf ? .orange : (isAgentSender ? .purple : peerColor(for: message, isDark: isDark))
+        let bodyColor: Color = isSelf ? .orange : (isAgentSender ? .purple : (isDark ? .green : Color(red: 0, green: 0.5, blue: 0)))
 
         if message.sender != "system" {
             // Sender (at the beginning) with light-gray suffix styling if present
@@ -2348,7 +2354,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }()
             if (content.count > 4000 || content.hasVeryLongToken(threshold: 1024)) && !containsCashuEarly {
                 var plainStyle = AttributeContainer()
-                plainStyle.foregroundColor = baseColor
+                plainStyle.foregroundColor = bodyColor
                 plainStyle.font = isSelf
                     ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                     : .safeguardianSystem(size: 14, design: .monospaced)
@@ -2445,7 +2451,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         let beforeText = String(content[lastEnd..<nsRange.lowerBound])
                         if !beforeText.isEmpty {
                             var beforeStyle = AttributeContainer()
-                            beforeStyle.foregroundColor = baseColor
+                            beforeStyle.foregroundColor = bodyColor
                             beforeStyle.font = isSelf
                                 ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .safeguardianSystem(size: 14, design: .monospaced)
@@ -2479,7 +2485,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         }()
                         var mentionStyle = AttributeContainer()
                         mentionStyle.font = .safeguardianSystem(size: 14, weight: isSelf ? .bold : .semibold, design: .monospaced)
-                        let mentionColor: Color = isMentionToMe ? .orange : baseColor
+                        let mentionColor: Color = isMentionToMe ? .orange : bodyColor
                         mentionStyle.foregroundColor = mentionColor
                         // Emit '@' (non-localizable symbol - use interpolation to avoid extraction)
                         let at = "@"
@@ -2525,7 +2531,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                             tagStyle.font = isSelf
                                 ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .safeguardianSystem(size: 14, design: .monospaced)
-                            tagStyle.foregroundColor = baseColor
+                            tagStyle.foregroundColor = bodyColor
                             if isGeohash && !attachedToMention && standalone, let url = URL(string: "safeguardian://geohash/\(token)") {
                                 tagStyle.link = url
                                 tagStyle.underlineStyle = .single
@@ -2535,7 +2541,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                             // Skip inline token; a styled chip is rendered below the message
                             // We insert a single space to avoid words sticking together
                             var spacer = AttributeContainer()
-                            spacer.foregroundColor = baseColor
+                            spacer.foregroundColor = bodyColor
                             spacer.font = isSelf
                                 ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .safeguardianSystem(size: 14, design: .monospaced)
@@ -2543,7 +2549,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         } else if type == "lightning" || type == "bolt11" || type == "lnurl" {
                             // Skip inline invoice/link; a styled chip is rendered below the message
                             var spacer = AttributeContainer()
-                            spacer.foregroundColor = baseColor
+                            spacer.foregroundColor = bodyColor
                             spacer.font = isSelf
                                 ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                                 : .safeguardianSystem(size: 14, design: .monospaced)
@@ -2573,7 +2579,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if lastEnd < content.endIndex {
                 let remainingText = String(content[lastEnd...])
                 var remainingStyle = AttributeContainer()
-                remainingStyle.foregroundColor = baseColor
+                remainingStyle.foregroundColor = bodyColor
                 remainingStyle.font = isSelf
                     ? .safeguardianSystem(size: 14, weight: .bold, design: .monospaced)
                     : .safeguardianSystem(size: 14, design: .monospaced)
@@ -2629,7 +2635,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         }()
 
         let isDark = colorScheme == .dark
-        let baseColor: Color = isSelf ? .orange : peerColor(for: message, isDark: isDark)
+        let isAgentSender = agents.contains(where: { $0.displayName.lowercased() == message.sender.lowercased() })
+        let baseColor: Color = isSelf ? .orange : (isAgentSender ? .purple : peerColor(for: message, isDark: isDark))
 
         if message.sender == "system" {
             var style = AttributeContainer()

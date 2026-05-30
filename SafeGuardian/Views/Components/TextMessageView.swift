@@ -17,7 +17,10 @@ struct TextMessageView: View {
     @State private var expandedMessageIDs: Set<String> = []
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let isSelf = viewModel.isSelfMessage(message)
+        HStack(spacing: 0) {
+            if isSelf { Spacer(minLength: 56) }
+            VStack(alignment: .leading, spacing: 0) {
             // Precompute heavy token scans once per row
             let cashuLinks = message.content.extractCashuLinks()
             let lightningLinks = message.content.extractLightningLinks()
@@ -63,7 +66,9 @@ struct TextMessageView: View {
                 .padding(.top, 6)
                 .padding(.leading, 2)
             }
-        }
+            } // VStack
+            if !isSelf { Spacer(minLength: 56) }
+        } // HStack
     }
 }
 

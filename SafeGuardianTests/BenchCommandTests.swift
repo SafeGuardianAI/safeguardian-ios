@@ -71,7 +71,7 @@ struct BenchCommandTests {
 
     @MainActor
     @Test func benchmarkExporterWritesFile() throws {
-        let exporter = BenchmarkExporter()
+        let exporter = BenchmarkExporter(peerNickname: "testpeer", payloadBytes: 1024, trials: 1, distM: nil, config: BenchmarkConfig())
         let session = BenchSession(
             sessionId: "test-session",
             startedAt: Date(),
@@ -107,7 +107,8 @@ struct BenchCommandTests {
                 thermalState: "nominal",
                 sendTsNs: 0,
                 completeTsNs: 1_000_000,
-                remote: snap
+                remote: snap,
+                dropped: false
             )
         }
         let summary = BenchSummary.compute(sessionId: "s", trials: trials, exportPath: "/tmp/test.jsonl")

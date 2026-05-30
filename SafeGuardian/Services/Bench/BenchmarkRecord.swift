@@ -12,10 +12,12 @@ struct BenchSession: Codable {
     let remoteNickname: String
     let payloadBytes: Int
     let trialCount: Int
+    /// Measured distance between devices in metres, supplied manually via dist= argument.
+    let distM: Double?
 
     private enum CodingKeys: String, CodingKey {
         case type, sessionId, startedAt, appVersion, buildNumber
-        case local, remotePeerId, remoteNickname, payloadBytes, trialCount
+        case local, remotePeerId, remoteNickname, payloadBytes, trialCount, distM
     }
 }
 
@@ -26,8 +28,6 @@ struct BenchTrial: Codable {
     let trialIndex: Int
     let payloadBytes: Int
     let fragmentCount: Int
-    /// Elapsed time from first fragment sent to XACK received (file transfer),
-    /// or half-RTT for latency pings.
     let elapsedMs: Int
     let throughputKBps: Double
     let rssiDBm: Int?
@@ -35,13 +35,14 @@ struct BenchTrial: Codable {
     let thermalState: String
     let sendTsNs: Int64
     let completeTsNs: Int64
-    /// Remote metadata received in the PONG or XACK.
     let remote: RadioSnapshot?
+    /// True when no PONG was received within the trial timeout window.
+    let dropped: Bool
 
     private enum CodingKeys: String, CodingKey {
         case type, sessionId, trialIndex, payloadBytes, fragmentCount
         case elapsedMs, throughputKBps, rssiDBm, batteryPct, thermalState
-        case sendTsNs, completeTsNs, remote
+        case sendTsNs, completeTsNs, remote, dropped
     }
 }
 
@@ -50,6 +51,8 @@ struct BenchSummary: Codable {
     let type: String = "summary"
     let sessionId: String
     let completedTrials: Int
+    let droppedTrials: Int
+    let deliveryRatio: Double
     let meanThroughputKBps: Double
     let p50ThroughputKBps: Double
     let p95ThroughputKBps: Double
@@ -59,20 +62,25 @@ struct BenchSummary: Codable {
     let exportPath: String
 
     private enum CodingKeys: String, CodingKey {
-        case type, sessionId, completedTrials
+        case type, sessionId, completedTrials, droppedTrials, deliveryRatio
         case meanThroughputKBps, p50ThroughputKBps, p95ThroughputKBps
         case minThroughputKBps, maxThroughputKBps, meanElapsedMs, exportPath
     }
 
     static func compute(sessionId: String, trials: [BenchTrial], exportPath: String) -> BenchSummary {
-        let throughputs = trials.map(\.throughputKBps).sorted()
+        let received = trials.filter { !$0.dropped }
+        let dropped = trials.count - received.count
+        let deliveryRatio = trials.isEmpty ? 1.0 : Double(received.count) / Double(trials.count)
+        let throughputs = received.map(\.throughputKBps).sorted()
         let mean = throughputs.isEmpty ? 0 : throughputs.reduce(0, +) / Double(throughputs.count)
         let p50 = throughputs.isEmpty ? 0 : throughputs[throughputs.count / 2]
         let p95 = throughputs.isEmpty ? 0 : throughputs[min(Int(Double(throughputs.count) * 0.95), throughputs.count - 1)]
-        let meanElapsed = trials.isEmpty ? 0 : Double(trials.map(\.elapsedMs).reduce(0, +)) / Double(trials.count)
+        let meanElapsed = received.isEmpty ? 0 : Double(received.map(\.elapsedMs).reduce(0, +)) / Double(received.count)
         return BenchSummary(
             sessionId: sessionId,
-            completedTrials: trials.count,
+            completedTrials: received.count,
+            droppedTrials: dropped,
+            deliveryRatio: deliveryRatio,
             meanThroughputKBps: mean,
             p50ThroughputKBps: p50,
             p95ThroughputKBps: p95,

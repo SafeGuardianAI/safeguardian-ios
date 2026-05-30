@@ -12,7 +12,7 @@ import Foundation
 @MainActor
 struct BenchCommand: Command {
     let names = ["/bench"]
-    let usage = "/bench <peer|listen> [kb=10] [trials=100]"
+    let usage = "/bench <peer|listen> [kb=10] [trials=100] [dist=<metres>]"
 
     func execute(args: String, context: CommandContext) -> CommandResult {
         guard let transport = context.transport else {
@@ -33,15 +33,18 @@ struct BenchCommand: Command {
         }
 
         // Resolve peer: explicit nickname arg, or fall back to the currently open DM.
-        let isParam = { (s: String) in s.hasPrefix("kb=") || s.hasPrefix("trials=") }
+        let isParam = { (s: String) in s.hasPrefix("kb=") || s.hasPrefix("trials=") || s.hasPrefix("dist=") }
         let explicitPeer: String? = tokens.first.flatMap { isParam($0) ? nil : $0 }
         let paramTokens = explicitPeer == nil ? tokens : Array(tokens.dropFirst())
 
-        var payloadKB = 10
-        var trialCount = 100
+        let cfg = BenchmarkCoordinator.shared.config
+        var payloadKB = cfg.defaultPayloadKB
+        var trialCount = cfg.defaultTrialCount
+        var distM: Double? = nil
         for token in paramTokens {
             if token.hasPrefix("kb="), let v = Int(token.dropFirst(3)) { payloadKB = max(1, v) }
             if token.hasPrefix("trials="), let v = Int(token.dropFirst(7)) { trialCount = max(1, min(1000, v)) }
+            if token.hasPrefix("dist="), let v = Double(token.dropFirst(5)) { distM = v }
         }
         let payloadBytes = payloadKB * 1024
 
@@ -72,6 +75,7 @@ struct BenchCommand: Command {
                     peerNickname: peerNickname,
                     payloadBytes: payloadBytes,
                     trials: trialCount,
+                    distM: distM,
                     progress: { msg in addMessage(msg) }
                 )
                 addMessage("bench complete: mean \(String(format: "%.1f", summary.meanThroughputKBps)) KB/s  p50 \(String(format: "%.1f", summary.p50ThroughputKBps))  p95 \(String(format: "%.1f", summary.p95ThroughputKBps))  min \(String(format: "%.1f", summary.minThroughputKBps))  max \(String(format: "%.1f", summary.maxThroughputKBps))")

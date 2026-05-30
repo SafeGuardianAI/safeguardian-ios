@@ -6,12 +6,13 @@ final class BenchmarkExporter {
     private let fileURL: URL
     private let encoder: JSONEncoder
 
-    init() {
+    init(peerNickname: String, payloadBytes: Int, trials: Int, distM: Double?, config: BenchmarkConfig) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HHmmss"
         let stamp = formatter.string(from: Date())
+        let slug = config.makeFilenameSlug(peerNickname, payloadBytes, trials, distM)
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        fileURL = docs.appendingPathComponent("bench_\(stamp).jsonl")
+        fileURL = docs.appendingPathComponent("bench_\(stamp)_\(slug).jsonl")
         encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         encoder.dateEncodingStrategy = .iso8601

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SafeGuardian Agent Hierarchy & Mesh Integration</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        .container {
+            background-color: #161b22;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 1000px;
+        }
+        h1 { color: #58a6ff; margin-bottom: 10px; }
+        h2 { color: #79c0ff; margin-top: 25px; }
+        p { color: #8b949e; text-align: center; line-height: 1.6; }
+        .mermaid { background: transparent; }
+        .legend {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .legend-item { display: flex; align-items: center; }
+        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>SafeGuardian Agent Hierarchy</h1>
+    <p>
+        The relationship between <strong>Nova</strong>, <strong>Trek</strong>, and <strong>Apex</strong> agents as they 
+        interact across the <strong>WorldGraph</strong> (Integraph) via the BLE Mesh.
+    </p>
+
+    <div class="container">
+        <div class="mermaid">
+            graph TB
+                %% Styles
+                classDef nova fill:#1d4ed8,stroke:#60a5fa,stroke-width:2px,color:#fff;
+                classDef trek fill:#047857,stroke:#34d399,stroke-width:2px,color:#fff;
+                classDef apex fill:#7e22ce,stroke:#c084fc,stroke-width:2px,color:#fff;
+                classDef mesh fill:#111827,stroke:#374151,stroke-width:1px,color:#9ca3af;
+                classDef graphNode fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#fff,stroke-dasharray: 5 5;
+
+                subgraph "Local Device"
+                    direction TB
+                    NV1["Nova Primary Assistant"]
+                    TR1["Trek Tactical LZ Agent"]
+                    AP1["Apex Strategic Coordinator"]
+                end
+
+                class NV1 nova;
+                class TR1 trek;
+                class AP1 apex;
+
+                subgraph "WorldGraph Integraph"
+                    direction LR
+                    topo["Mesh Topology"]
+                    vitals["Shared Vitals StateTicks"]
+                    dist["Distributed Memory"]
+                end
+                class topo,vitals,dist graphNode;
+
+                subgraph "Mesh Network"
+                    direction LR
+                    P2["Peer B Nova Trek"]
+                    P3["Peer C Nova Apex"]
+                    P4["Peer D Trek"]
+                end
+                class P2,P3,P4 mesh;
+
+                %% Local Flows
+                NV1 <--> |"Local Context"| topo
+                TR1 <--> |"Tactical Feed"| vitals
+                AP1 <--> |"Decision Log"| dist
+
+                %% Inter-Agent Mesh Routing
+                NV1 -- "Pattern 2: One-Shot" --> P2
+                TR1 -- "Pattern 1: Data Req" --> P4
+                AP1 -- "Pattern 3: Multi-Turn Session" --> P3
+
+                %% Mesh Connectivity
+                topo <--> |"Gossip Sync"| P2
+                vitals <--> |"State Broadcast"| P3
+                dist <--> |"Neighbor Updates"| P4
+
+                %% Labels
+                linkStyle 3 stroke:#60a5fa,stroke-width:2px;
+                linkStyle 4 stroke:#34d399,stroke-width:2px;
+                linkStyle 5 stroke:#c084fc,stroke-width:2px;
+        </div>
+
+        <h2>The Relationship Model</h2>
+        <div style="text-align: left; padding: 10px;">
+            <ul>
+                <li><strong>Nova (Primary)</strong>: The entry point for users. Orchestrates general assistance and situational awareness. It queries Trek for tactical data and Apex for coordination logic.</li>
+                <li><strong>Trek (Tactical)</strong>: Specializes in movement, Landing Zones (LZ), and physical mission status. It provides "ground truth" to the Nova agents in the mesh.</li>
+                <li><strong>Apex (Strategic)</strong>: Manages high-level coordination between multiple devices. It initiates Pattern 3 sessions to negotiate shared plans across the mesh.</li>
+                <li><strong>The Integraph (WorldGraph)</strong>: The shared "subconscious" of the mesh. It aggregates StateTicks (vitals) and Gossip (topology) so agents can reason about remote peers without active connections.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><span class="dot" style="background-color: #60a5fa;"></span> Nova: Situational</div>
+        <div class="legend-item"><span class="dot" style="background-color: #34d399;"></span> Trek: Tactical</div>
+        <div class="legend-item"><span class="dot" style="background-color: #c084fc;"></span> Apex: Strategic</div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>

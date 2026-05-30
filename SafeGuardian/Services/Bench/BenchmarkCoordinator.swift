@@ -12,6 +12,9 @@ let benchMessagePrefix = "SGBench/1 "
 final class BenchmarkCoordinator {
     static let shared = BenchmarkCoordinator()
 
+    /// Override before calling `runSession` to configure a specific experiment or test.
+    var config = BenchmarkConfig()
+
     private var transport: (any Transport)?
     private var exporter: BenchmarkExporter?
     private var activeSessions: [String: ActiveSession] = [:]
@@ -59,12 +62,13 @@ final class BenchmarkCoordinator {
         peerNickname: String,
         payloadBytes: Int,
         trials: Int,
+        distM: Double? = nil,
         progress: @escaping @MainActor (String) -> Void
     ) async throws -> BenchSummary {
         guard let transport else { throw BenchError.notConfigured }
 
         let sessionId = UUID().uuidString
-        let exp = BenchmarkExporter()
+        let exp = BenchmarkExporter(peerNickname: peerNickname, payloadBytes: payloadBytes, trials: trials, distM: distM, config: config)
         exporter = exp
 
         let localSnap = RadioSnapshot.capture(transport: transport, forPeer: peer)
@@ -77,36 +81,66 @@ final class BenchmarkCoordinator {
             remotePeerId: peer.bare,
             remoteNickname: peerNickname,
             payloadBytes: payloadBytes,
-            trialCount: trials
+            trialCount: trials,
+            distM: distM
         )
         exp.append(session)
-        await progress("bench session \(sessionId.prefix(8)) → \(peerNickname), \(payloadBytes / 1024) KB × \(trials) trials")
+        let distLabel = distM.map { " @ \(Int($0))m" } ?? ""
+        await progress("bench \(sessionId.prefix(8)) → \(peerNickname)\(distLabel), \(payloadBytes / 1024) KB × \(trials) trials")
 
-        var activeSession = ActiveSession(id: sessionId, peerID: peer, payloadBytes: payloadBytes, expectedTrials: trials)
-        activeSessions[sessionId] = activeSession
+        activeSessions[sessionId] = ActiveSession(id: sessionId, peerID: peer, payloadBytes: payloadBytes, expectedTrials: trials)
 
         let fragmentSize = TransportConfig.bleDefaultFragmentSize
         let fragmentCount = max(1, (payloadBytes + fragmentSize - 1) / fragmentSize)
         let payload = Data(repeating: 0xBE, count: payloadBytes)
         let packet = SafeGuardianFilePacket(content: payload)
+        let trialTimeoutNs = UInt64(config.trialTimeoutSeconds * 1_000_000_000)
 
         for i in 0..<trials {
             await progress("trial \(i + 1)/\(trials)…")
-            let transferId = UUID().uuidString
             let sendNs = Int64(DispatchTime.now().uptimeNanoseconds)
-
             activeSessions[sessionId]?.pendingTrialIndex = i
             activeSessions[sessionId]?.pendingSendNs = sendNs
 
-            let trial: BenchTrial = try await withCheckedThrowingContinuation { continuation in
-                activeSessions[sessionId]?.pendingContinuation = continuation
-                transport.sendFilePrivate(packet, to: peer, transferId: transferId)
-                sendBenchMessage("PING sid=\(sessionId) t=\(sendNs) idx=\(i)", to: peer)
+            // Race the PONG continuation against a 5-second timeout.
+            // A timeout counts as a dropped trial.
+            let timeoutTask = Task { @MainActor [weak self] in
+                try await Task.sleep(nanoseconds: trialTimeoutNs)
+                guard let self, let cont = self.activeSessions[sessionId]?.pendingContinuation else { return }
+                self.activeSessions[sessionId]?.pendingContinuation = nil
+                cont.resume(throwing: BenchError.timeout)
+            }
+
+            var trial: BenchTrial
+            do {
+                trial = try await withCheckedThrowingContinuation { continuation in
+                    activeSessions[sessionId]?.pendingContinuation = continuation
+                    transport.sendFilePrivate(packet, to: peer, transferId: UUID().uuidString)
+                    sendBenchMessage("PING sid=\(sessionId) t=\(sendNs) idx=\(i)", to: peer)
+                }
+                timeoutTask.cancel()
+            } catch {
+                // Timeout or cancellation — record as a dropped trial.
+                let nowNs = Int64(DispatchTime.now().uptimeNanoseconds)
+                let snap = RadioSnapshot.capture(transport: transport, forPeer: peer)
+                trial = BenchTrial(
+                    sessionId: sessionId, trialIndex: i,
+                    payloadBytes: payloadBytes, fragmentCount: fragmentCount,
+                    elapsedMs: Int(trialTimeoutNs / 1_000_000),
+                    throughputKBps: 0,
+                    rssiDBm: snap.rssiDBm, batteryPct: snap.batteryPct, thermalState: snap.thermalState,
+                    sendTsNs: sendNs, completeTsNs: nowNs,
+                    remote: nil, dropped: true
+                )
             }
 
             activeSessions[sessionId]?.completedTrials.append(trial)
             exp.append(trial)
-            await progress("  → \(String(format: "%.1f", trial.throughputKBps)) KB/s, \(trial.elapsedMs) ms")
+            if trial.dropped {
+                await progress("  → dropped")
+            } else {
+                await progress("  → \(String(format: "%.1f", trial.throughputKBps)) KB/s, \(trial.elapsedMs) ms")
+            }
         }
 
         let completedTrials = activeSessions[sessionId]?.completedTrials ?? []
@@ -176,7 +210,8 @@ final class BenchmarkCoordinator {
             thermalState: snap.thermalState,
             sendTsNs: sendNs,
             completeTsNs: completeTsNs,
-            remote: remoteSnap
+            remote: remoteSnap,
+            dropped: false
         )
         let continuation = session.pendingContinuation
         session.pendingContinuation = nil
@@ -211,7 +246,8 @@ final class BenchmarkCoordinator {
             thermalState: snap.thermalState,
             sendTsNs: sendNs,
             completeTsNs: completeTsNs,
-            remote: remoteSnap
+            remote: remoteSnap,
+            dropped: false
         )
         let continuation = session.pendingContinuation
         session.pendingContinuation = nil

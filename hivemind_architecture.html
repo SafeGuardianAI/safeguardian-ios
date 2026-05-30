@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SafeGuardian Hivemind Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        .container {
+            background-color: #161b22;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        h1 { color: #58a6ff; margin-bottom: 10px; }
+        p { color: #8b949e; max-width: 800px; text-align: center; line-height: 1.6; }
+        .mermaid { background: transparent; }
+    </style>
+</head>
+<body>
+
+    <h1>SafeGuardian Hivemind Architecture</h1>
+    <p>
+        A visualization of the emergent intelligence layer. Individual nodes share vitals via StateTicks, 
+        map topology via WorldGraph, and collaborate on reasoning via AgentMeshRouting.
+    </p>
+
+    <div class="container">
+        <div class="mermaid">
+            graph TD
+                %% Node Styles
+                classDef peer fill:#1f2937,stroke:#3b82f6,stroke-width:2px,color:#fff;
+                classDef system fill:#111827,stroke:#6366f1,stroke-width:1px,color:#93c5fd;
+                classDef network fill:#064e3b,stroke:#10b981,stroke-width:1px,color:#6ee7b7;
+                classDef hivemind fill:#312e81,stroke:#818cf8,stroke-width:3px,color:#fff,stroke-dasharray: 5 5;
+
+                subgraph Peer_Node [Individual Peer Node - The 'Cell']
+                    direction TB
+                    NB[NovaBroadcaster]
+                    GS[GossipSyncManager]
+                    GP[GeohashPresenceService]
+                    AE[AgentConversationEngine]
+                    subgraph Local_State [Device Context]
+                        GPS[GPS/Geohash]
+                        BAT[Battery Level]
+                    end
+                end
+
+                class NB,GS,GP,AE system;
+                class Local_State peer;
+
+                %% Local Interactions
+                GPS --> NB
+                BAT --> NB
+                AE --> |Reads Context| NB
+
+                %% Network Layer
+                subgraph Mesh_Network [BLE Mesh - The 'Nervous System']
+                    direction LR
+                    P1((Peer 1)) <--> P2((Peer 2))
+                    P2 <--> P3((Peer n))
+                end
+                class Mesh_Network network;
+
+                %% Global Layer
+                subgraph Global_Relays [Regional Awareness]
+                    NR[Nostr Geohash Channels]
+                end
+                class NR network;
+
+                %% Hivemind Mechanisms
+                NB -- "Signed StateTick (The Pulse)" --> Mesh_Network
+                GS -- "Topology Flooding" --> Mesh_Network
+                GP -- "Presence Heartbeat" --> NR
+                AE -- "Pattern 2/3: Mesh Routing" --> Mesh_Network
+
+                subgraph Hivemind_Awareness [The Collective Hivemind]
+                    WG[(WorldGraph Memory)]
+                    CA[Collective Awareness]
+                end
+                class WG,CA,Hivemind_Awareness hivemind;
+
+                Mesh_Network --> WG
+                WG --> CA
+                CA --> |Injected Prompt Context| AE
+
+                %% Connections
+                NR -.-> |Remote Presence| CA
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>

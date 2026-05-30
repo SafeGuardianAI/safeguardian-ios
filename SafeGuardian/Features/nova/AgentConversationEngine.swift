@@ -32,17 +32,29 @@ final class AgentConversationEngine {
         )
         guard AgentGateRegistry.standard().shouldHandle(gateCtx) else { return }
 
-        if !provider.isModelLoaded {
+        let isMeshQuery = replyTo != nil
+
+        // For local queries only: show loading state and insert a response placeholder
+        // that streams tokens into the chat. Mesh queries run inference silently —
+        // the reply goes back to the requester; nothing appears in the local thread.
+        if !isMeshQuery && !provider.isModelLoaded {
             context.addAgentLocalMessage(
                 provider.isLoading ? "downloading model..." : "initializing...",
                 to: config.peerID
             )
         }
 
-        let response = context.addResponse(
-            sender: config.displayName, content: "[thinking...]", privatePeerID: config.peerID
-        )
-        context.notifyChange()
+        let response: SafeGuardianMessage
+        if isMeshQuery {
+            response = SafeGuardianMessage(
+                sender: config.displayName, content: "", timestamp: Date(), isRelay: false
+            )
+        } else {
+            response = context.addResponse(
+                sender: config.displayName, content: "[thinking...]", privatePeerID: config.peerID
+            )
+            context.notifyChange()
+        }
 
         let toolRegistry: AgentToolRegistry? =
             provider.capabilities.modelCapabilities?.supportsToolCalling == true
@@ -76,8 +88,10 @@ final class AgentConversationEngine {
             for await event in provider.generate(input: input) {
                 switch event {
                 case .status(let s):
-                    response.content = s
-                    context.notifyChange()
+                    if !isMeshQuery {
+                        response.content = s
+                        context.notifyChange()
+                    }
 
                 case .stats(let s):
                     state.stats = s
@@ -91,25 +105,32 @@ final class AgentConversationEngine {
                         state.visible += visible
                         state.thinking += thinking
                         state.pending = remaining
-                        if state.visible.isEmpty {
-                            if state.inThink { state.thinkTokens += 1 }
-                            response.content = state.thinkTokens > 0
-                                ? "[thinking... \(state.thinkTokens)t]"
-                                : "[thinking...]"
-                        } else {
-                            response.content = state.visible
+                        if !isMeshQuery {
+                            if state.visible.isEmpty {
+                                if state.inThink { state.thinkTokens += 1 }
+                                response.content = state.thinkTokens > 0
+                                    ? "[thinking... \(state.thinkTokens)t]"
+                                    : "[thinking...]"
+                            } else {
+                                response.content = state.visible
+                            }
+                            context.notifyChange()
                         }
                     } else {
                         state.visible += token
-                        response.content = state.visible
+                        if !isMeshQuery {
+                            response.content = state.visible
+                            context.notifyChange()
+                        }
                     }
-                    context.notifyChange()
 
                 case .complete:
                     if hasThinking, !state.inThink { state.visible += state.pending }
                     state.pending = ""
-                    response.content = state.visible.isEmpty ? "[no response]" : state.visible
-                    context.notifyChange()
+                    if !isMeshQuery {
+                        response.content = state.visible.isEmpty ? "[no response]" : state.visible
+                        context.notifyChange()
+                    }
                     if let peer = replyTo, !state.visible.isEmpty {
                         context.sendMeshReply(
                             agentID: config.agentID, content: state.visible, to: peer
@@ -137,8 +158,10 @@ final class AgentConversationEngine {
                     #endif
 
                 case .failure(let err):
-                    response.content = "[error: \(err)]"
-                    context.notifyChange()
+                    if !isMeshQuery {
+                        response.content = "[error: \(err)]"
+                        context.notifyChange()
+                    }
                 }
             }
         }

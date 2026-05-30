@@ -36256,6 +36256,17 @@
         }
       }
     },
+    "content.commands.bench": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "run BLE throughput and latency benchmark"
+          }
+        }
+      }
+    },
     "content.commands.battery": {
       "extractionState": "manual",
       "localizations": {

@@ -13,6 +13,7 @@ import Foundation
 enum CommandInfo: String, Identifiable {
     case agent
     case battery
+    case bench
     case block
     case clear
     case gps
@@ -36,7 +37,7 @@ enum CommandInfo: String, Identifiable {
             return "<" + String(localized: "content.input.nickname_placeholder") + ">"
         case .gps:
             return "[p]"
-        case .battery, .clear, .who:
+        case .battery, .bench, .clear, .who:
             return nil
         }
     }
@@ -45,6 +46,7 @@ enum CommandInfo: String, Identifiable {
         switch self {
         case .agent:        String(localized: "content.commands.agent")
         case .battery:      String(localized: "content.commands.battery")
+        case .bench:        String(localized: "content.commands.bench")
         case .block:        String(localized: "content.commands.block")
         case .clear:        String(localized: "content.commands.clear")
         case .gps:          String(localized: "content.commands.gps")

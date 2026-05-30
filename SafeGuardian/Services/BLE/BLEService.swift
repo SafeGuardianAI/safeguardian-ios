@@ -45,6 +45,7 @@ final class BLEService: NSObject {
         var isConnected: Bool = false
         var lastConnectionAttempt: Date? = nil
         var assembler = NotificationStreamAssembler()
+        var lastSeenRSSI: Int? = nil
     }
     private var peripherals: [String: PeripheralState] = [:]  // UUID -> PeripheralState
     private var peerToPeripheralUUID: [PeerID: String] = [:]  // PeerID -> Peripheral UUID
@@ -475,6 +476,20 @@ final class BLEService: NSObject {
     private let peerSnapshotSubject = PassthroughSubject<[TransportPeerSnapshot], Never>()
     var peerSnapshotPublisher: AnyPublisher<[TransportPeerSnapshot], Never> {
         peerSnapshotSubject.eraseToAnyPublisher()
+    }
+
+    func negotiatedMTU(for peerID: PeerID) -> Int {
+        let uuid = bleQueue.sync { peerToPeripheralUUID[peerID] }
+        guard let uuid, let state = bleQueue.sync(execute: { peripherals[uuid] }) else {
+            return TransportConfig.bleDefaultFragmentSize + 43
+        }
+        return state.peripheral.maximumWriteValueLength(for: .withoutResponse)
+    }
+
+    func lastKnownRSSI(for peerID: PeerID) -> Int? {
+        let uuid = bleQueue.sync { peerToPeripheralUUID[peerID] }
+        guard let uuid else { return nil }
+        return bleQueue.sync { peripherals[uuid]?.lastSeenRSSI }
     }
 
     func currentPeerSnapshots() -> [TransportPeerSnapshot] {
@@ -1786,7 +1801,9 @@ extension BLEService: CBCentralManagerDelegate {
         }
 
         // Check if we already have this peripheral
-        if let state = peripherals[peripheralID] {
+        if var state = peripherals[peripheralID] {
+            state.lastSeenRSSI = rssiValue
+            peripherals[peripheralID] = state
             if state.isConnected || state.isConnecting {
                 return // Already connected or connecting
             }
@@ -1824,7 +1841,8 @@ extension BLEService: CBCentralManagerDelegate {
             isConnecting: true,
             isConnected: false,
             lastConnectionAttempt: Date(),
-            assembler: NotificationStreamAssembler()
+            assembler: NotificationStreamAssembler(),
+            lastSeenRSSI: rssiValue
         )
         peripheral.delegate = self
         

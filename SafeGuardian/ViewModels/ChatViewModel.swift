@@ -3176,7 +3176,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             // Early validation
             guard !isMessageBlocked(message) else { return }
             guard !message.content.trimmed.isEmpty || message.isPrivate else { return }
-            
+
+            // Intercept bench protocol messages before normal routing
+            if message.content.hasPrefix(benchMessagePrefix) {
+                BenchmarkCoordinator.shared.receive(message)
+                return
+            }
+
             // Route to appropriate handler
             if message.isPrivate {
                 handlePrivateMessage(message)

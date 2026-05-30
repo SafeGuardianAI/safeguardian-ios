@@ -68,6 +68,7 @@ final class CommandProcessor {
         FavCommand(add: true),
         FavCommand(add: false),
         ]
+        cmds.append(BenchCommand())
         #if DEBUG
         cmds.append(LogCommand())
         #endif

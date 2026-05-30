@@ -66,9 +66,15 @@ protocol Transport: AnyObject {
     // Pending file management (BCH-01-002: files held in memory until user accepts)
     func acceptPendingFile(id: String) -> URL?
     func declinePendingFile(id: String)
+
+    // Bench instrumentation
+    func negotiatedMTU(for peerID: PeerID) -> Int
+    func lastKnownRSSI(for peerID: PeerID) -> Int?
 }
 
 extension Transport {
+    func negotiatedMTU(for peerID: PeerID) -> Int { TransportConfig.bleDefaultFragmentSize + 43 }
+    func lastKnownRSSI(for peerID: PeerID) -> Int? { nil }
     func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
     func sendVerifyChallenge(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}
     func sendVerifyResponse(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}

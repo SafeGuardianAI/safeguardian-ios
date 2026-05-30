@@ -2314,31 +2314,28 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         let bodyColor: Color = isSelf ? .orange : (isAgentSender ? .purple : (isDark ? .green : Color(red: 0, green: 0.5, blue: 0)))
 
         if message.sender != "system" {
-            // Sender (at the beginning) with light-gray suffix styling if present
-            let (baseName, suffix) = message.sender.splitSuffix()
-            var senderStyle = AttributeContainer()
-            // Use consistent color for all senders
-            senderStyle.foregroundColor = baseColor
-            // Bold the user's own nickname
-            let fontWeight: Font.Weight = isSelf ? .bold : .medium
-            senderStyle.font = .safeguardianSystem(size: 14, weight: fontWeight, design: .monospaced)
-            // Make sender clickable: encode senderPeerID into a custom URL
-            if let spid = message.senderPeerID, let url = URL(string: "safeguardian://user/\(spid.toPercentEncoded())") {
-                senderStyle.link = url
+            // In private DMs the header already identifies the other party and self is
+            // obvious from message position, so suppress the sender prefix there.
+            // Agent responses always show their name so the reader knows it is Nova, not a human.
+            let showSenderName = !message.isPrivate || isAgentSender
+            if showSenderName {
+                let (baseName, suffix) = message.sender.splitSuffix()
+                var senderStyle = AttributeContainer()
+                senderStyle.foregroundColor = baseColor
+                let fontWeight: Font.Weight = isSelf ? .bold : .medium
+                senderStyle.font = .safeguardianSystem(size: 14, weight: fontWeight, design: .monospaced)
+                if let spid = message.senderPeerID, let url = URL(string: "safeguardian://user/\(spid.toPercentEncoded())") {
+                    senderStyle.link = url
+                }
+                result.append(AttributedString("<@").mergingAttributes(senderStyle))
+                result.append(AttributedString(baseName).mergingAttributes(senderStyle))
+                if !suffix.isEmpty {
+                    var suffixStyle = senderStyle
+                    suffixStyle.foregroundColor = baseColor.opacity(0.6)
+                    result.append(AttributedString(suffix).mergingAttributes(suffixStyle))
+                }
+                result.append(AttributedString("> ").mergingAttributes(senderStyle))
             }
-
-            // Prefix "<@"
-            result.append(AttributedString("<@").mergingAttributes(senderStyle))
-            // Base name
-            result.append(AttributedString(baseName).mergingAttributes(senderStyle))
-            // Optional suffix in lighter variant of the base color (green or orange for self)
-            if !suffix.isEmpty {
-                var suffixStyle = senderStyle
-                suffixStyle.foregroundColor = baseColor.opacity(0.6)
-                result.append(AttributedString(suffix).mergingAttributes(suffixStyle))
-            }
-            // Suffix "> "
-            result.append(AttributedString("> ").mergingAttributes(senderStyle))
             
             // Process content with hashtags and mentions
             let content = message.content

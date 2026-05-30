@@ -55,6 +55,7 @@ Input to a single inference call.
     struct AgentPromptInput:
         text:         string
         tick:         NovaStateTick|null
+        systemPrompt: string                  -- composed at call time: base prompt + optional user personalization blurb
         toolRegistry: AgentToolRegistry|null  -- null when model does not support tools
         isMeshQuery:  bool                    -- true when prompt originated from a remote peer via AgentMeshRouting
 

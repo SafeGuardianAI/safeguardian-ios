@@ -33,11 +33,11 @@ enum CommandInfo: String, Identifiable {
         switch self {
         case .agent:
             return "<agent_id> <message>"
-        case .block, .hug, .message, .slap, .unblock, .favorite, .unfavorite:
+        case .bench, .block, .hug, .message, .slap, .unblock, .favorite, .unfavorite:
             return "<" + String(localized: "content.input.nickname_placeholder") + ">"
         case .gps:
             return "[p]"
-        case .battery, .bench, .clear, .who:
+        case .battery, .clear, .who:
             return nil
         }
     }

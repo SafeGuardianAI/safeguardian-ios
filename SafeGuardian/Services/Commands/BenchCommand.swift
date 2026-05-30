@@ -32,20 +32,33 @@ struct BenchCommand: Command {
             }
         }
 
-        guard let peerToken = tokens.first else {
-            return .error(message: usage)
-        }
+        // Resolve peer: explicit nickname arg, or fall back to the currently open DM.
+        let isParam = { (s: String) in s.hasPrefix("kb=") || s.hasPrefix("trials=") }
+        let explicitPeer: String? = tokens.first.flatMap { isParam($0) ? nil : $0 }
+        let paramTokens = explicitPeer == nil ? tokens : Array(tokens.dropFirst())
 
         var payloadKB = 10
         var trialCount = 100
-        for token in tokens.dropFirst() {
+        for token in paramTokens {
             if token.hasPrefix("kb="), let v = Int(token.dropFirst(3)) { payloadKB = max(1, v) }
             if token.hasPrefix("trials="), let v = Int(token.dropFirst(7)) { trialCount = max(1, min(1000, v)) }
         }
         let payloadBytes = payloadKB * 1024
 
-        guard let peerID = context.provider?.getPeerIDForNickname(peerToken) else {
-            return .error(message: "bench: peer '\(peerToken)' not found — check /who for connected peers")
+        let peerID: PeerID
+        let peerNickname: String
+        if let name = explicitPeer {
+            guard let id = context.provider?.getPeerIDForNickname(name) else {
+                return .error(message: "bench: '\(name)' not found — check /who")
+            }
+            peerID = id
+            peerNickname = name
+        } else if let current = context.provider?.selectedPrivateChatPeer,
+                  let name = context.transport?.peerNickname(peerID: current) {
+            peerID = current
+            peerNickname = name
+        } else {
+            return .error(message: "bench: open a DM first, or specify a peer name")
         }
 
         let addMessage = { [weak provider = context.provider] (msg: String) in
@@ -56,7 +69,7 @@ struct BenchCommand: Command {
             do {
                 let summary = try await BenchmarkCoordinator.shared.runSession(
                     peer: peerID,
-                    peerNickname: peerToken,
+                    peerNickname: peerNickname,
                     payloadBytes: payloadBytes,
                     trials: trialCount,
                     progress: { msg in addMessage(msg) }

@@ -83,7 +83,7 @@ final class RemoteInferenceService: AgentLanguageProvider {
                     "model": model,
                     "stream": true,
                     "messages": [
-                        ["role": "system", "content": NovaConfig.stableSystemPrompt],
+                        ["role": "system", "content": input.systemPrompt],
                         ["role": "user",   "content": prompt]
                     ]
                 ]

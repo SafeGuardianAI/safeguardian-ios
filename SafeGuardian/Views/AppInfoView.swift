@@ -9,6 +9,8 @@ struct AppInfoView: View {
     @State private var registry = AgentProviderRegistry.shared
     @State private var newModelID = ""
     @State private var showAddModelAlert = false
+    @State private var personalizationStore = NovaPersonalizationStore.shared
+    @State private var personalizationDraft = ""
     
     private var backgroundColor: Color {
         colorScheme == .dark ? Color.black : Color.white
@@ -318,6 +320,26 @@ struct AppInfoView: View {
                             }
                         }
                         Spacer()
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("personalization (\(personalizationStore.blurb.count)/\(NovaPersonalizationStore.maxLength))")
+                            .font(.safeguardianSystem(size: 11, design: .monospaced))
+                            .foregroundColor(textColor.opacity(0.6))
+                            .padding(.leading, 42)
+                        TextField("preferred response style, context, or role…", text: $personalizationDraft)
+                            .font(.safeguardianSystem(size: 13, design: .monospaced))
+                            .foregroundColor(textColor)
+                            .padding(.leading, 42)
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                            #endif
+                            .onAppear { personalizationDraft = personalizationStore.blurb }
+                            .onChange(of: personalizationDraft) { _, newVal in
+                                personalizationStore.set(newVal)
+                                personalizationDraft = personalizationStore.blurb
+                            }
                     }
 
                     Button(action: { novaResetConfirm = true }) {

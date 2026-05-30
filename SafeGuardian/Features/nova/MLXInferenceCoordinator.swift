@@ -32,7 +32,7 @@ import MLXLMCommon
         let decorated = input.decorated(modelID: modelID)
         let key = MLXSessionPool.Key(
             modelID: modelID,
-            promptHash: NovaConfig.stableSystemPrompt.hashValue
+            promptHash: input.systemPrompt.hashValue
         )
         return AsyncStream { continuation in
             let task = Task {
@@ -57,7 +57,7 @@ import MLXLMCommon
                     }
                     guard !Task.isCancelled else { continuation.finish(); return }
                     let session = sessionPool.session(
-                        for: key, container: model, systemPrompt: NovaConfig.stableSystemPrompt,
+                        for: key, container: model, systemPrompt: input.systemPrompt,
                         toolRegistry: input.toolRegistry
                     )
                     guard !decorated.isEmpty, !Task.isCancelled else {

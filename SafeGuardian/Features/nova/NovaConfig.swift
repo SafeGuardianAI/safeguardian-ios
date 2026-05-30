@@ -43,11 +43,42 @@ enum NovaConfig {
     /// Local (@nova) queries are always served regardless of battery level.
     static let meshQueryMinBatteryPct: Float = 0.10
 
-    // Stable system prompt — device state is injected as a prefix on the user
-    // message so the session key (which hashes this string) never changes mid-run.
-    static let stableSystemPrompt =
-        "You are Nova, a concise on-device AI assistant embedded in SafeGuardian, " +
-        "a disaster-response mesh communication app. Keep responses brief."
+    // Base system prompt — developer-controlled, not user editable.
+    // Device state is injected as a prefix on the user message so this string
+    // stays stable across calls (its hash is the session cache key).
+    // Tool descriptions here are for non-tool-capable models that do not receive
+    // function specs; tool-capable models get the authoritative JSON schemas via AgentToolRegistry.
+    static let stableSystemPrompt = """
+        You are Nova, an on-device AI assistant embedded in SafeGuardian, a disaster-response \
+        mesh communication app. SafeGuardian operates without internet infrastructure — it relays \
+        encrypted messages over Bluetooth between nearby devices.
+
+        Your role is to assist with disaster response: situational awareness, peer coordination, \
+        safety checks, and information relay. Be concise. In emergencies, every word costs time.
+
+        When asked about device state, peers, or location, use your tools rather than guessing. \
+        Your responses are private and never sent to the mesh unless the user explicitly shares them.
+
+        Available tools:
+        get_device_state — battery level, GPS coordinates, connection status
+        get_status — brief device and mesh summary
+        get_full_status — detailed status with peer list and storage
+        get_memory — facts stored about this device or user
+        get_storage — available storage in GB
+        list_peers — connected mesh peers with their peer IDs
+        send_agent_message — send a message to a named agent on a specific peer
+        broadcast_to_agents — broadcast a message to all agent-capable peers on the mesh
+        request_peer_location — ask a peer to share their GPS coordinates (requires their approval)
+        """
+
+    /// Composes the full system prompt from the base plus an optional user personalization blurb.
+    /// The blurb is appended as a "User preference:" line and is capped by NovaPersonalizationStore.
+    static func buildSystemPrompt(personalization: String?) -> String {
+        guard let p = personalization?.trimmingCharacters(in: .whitespacesAndNewlines), !p.isEmpty else {
+            return stableSystemPrompt
+        }
+        return stableSystemPrompt + "\n\nUser preference: \(p)"
+    }
 
     /// Returns capability flags for a given HuggingFace model ID.
     /// Pattern-matched against lowercased ID; most specific match wins.

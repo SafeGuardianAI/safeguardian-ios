@@ -46,9 +46,14 @@ final class NovaAgent: AgentProcessor {
         #endif
 
         Task { @MainActor in
+            let systemPrompt = NovaConfig.buildSystemPrompt(
+                personalization: NovaPersonalizationStore.shared.blurb.isEmpty
+                    ? nil : NovaPersonalizationStore.shared.blurb
+            )
             let input = AgentPromptInput(
                 text: cleanPrompt,
                 tick: context.deviceTick,
+                systemPrompt: systemPrompt,
                 toolRegistry: toolRegistry,
                 isMeshQuery: replyTo != nil
             )
@@ -85,7 +90,7 @@ final class NovaAgent: AgentProcessor {
                     #if DEBUG
                     ConversationLogger.shared.record(
                         agentThread: context.privateChats[Self.novaPeerID] ?? [],
-                        systemPrompt: NovaConfig.stableSystemPrompt,
+                        systemPrompt: input.systemPrompt,
                         agentSenderID: displayName,
                         providerID: provider.id,
                         modelID: provider.activeModelID,

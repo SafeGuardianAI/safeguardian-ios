@@ -3,6 +3,8 @@ import Foundation
 struct AgentPromptInput: Sendable {
     var text: String
     var tick: NovaStateTick?
+    /// Full composed system prompt (base + personalization). Set by the caller.
+    var systemPrompt: String = NovaConfig.stableSystemPrompt
     /// Tool registry for this call. Nil when the model does not support tools.
     var toolRegistry: AgentToolRegistry?
     /// True when this prompt originates from a remote peer via AgentMeshRouting.

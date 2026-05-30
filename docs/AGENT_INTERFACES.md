@@ -39,6 +39,7 @@ Flags describing what a specific model ID supports.
         hasThinkingMode:     bool         -- model produces <think>...</think> blocks
         noThinkSuffix:       string|null  -- append to user message to suppress thinking
         supportsToolCalling: bool         -- model reliably emits tool call JSON (>=3B params)
+        supportsVision:      bool         -- model accepts image inputs (VLM); detected from model ID
 
 ## AgentProviderCapabilities
 
@@ -64,6 +65,8 @@ Input to a single inference call.
                                               -- assembled by the agent layer, capped at NovaConfig.historyWindowSize
         toolRegistry: AgentToolRegistry|null  -- null when model does not support tools
         isMeshQuery:  bool                    -- true when prompt originated from a remote peer via AgentMeshRouting
+        imageData:    list<bytes>             -- JPEG-encoded images attached to current turn; empty for text-only queries
+                                              -- only the current turn carries images; prior history is always text-only
 
 ## AgentGateContext
 
@@ -315,7 +318,8 @@ Mesh queries run inference silently — no local placeholder on receiving device
 The reply is sent to the requester only (with optional requestID for agent-to-agent
 correlated responses).
 
-    handle(prompt, config, context, replyTo, replyID) -> void
+    handle(prompt, image, config, context, replyTo, replyID) -> void
+        -- image: JPEG bytes for the current turn; null for text-only and all mesh queries
 
 ## AgentProcessor
 
@@ -328,7 +332,7 @@ are provided by the protocol extension; conformers only implement conversationCo
     -- derived by extension:
         agentID, displayName, peerID, triggerPrefix
         shouldHandle(message: string) -> bool
-        handle(prompt, context, replyTo, replyID) -> void
+        handle(prompt, image, context, replyTo, replyID) -> void
 
 ## Agent
 

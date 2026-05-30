@@ -42,7 +42,6 @@ final class BenchmarkCoordinator {
 
         switch verb {
         case "PING":
-            guard listenMode || !activeSessions.isEmpty else { return }
             handlePing(body: body, from: message.senderPeerID)
         case "PONG":
             handlePong(body: body)

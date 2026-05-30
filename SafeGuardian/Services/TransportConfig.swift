@@ -87,8 +87,8 @@ enum TransportConfig {
     // Lowered to make connected→reachable icon changes react faster when walking out of range
     static let blePeerInactivityTimeoutSeconds: TimeInterval = 8.0
     // How long to retain a peer as "reachable" (not directly connected) since lastSeen
-    static let bleReachabilityRetentionVerifiedSeconds: TimeInterval = 21.0    // 21s for verified/favorites
-    static let bleReachabilityRetentionUnverifiedSeconds: TimeInterval = 21.0  // 21s for unknown/unverified
+    static let bleReachabilityRetentionVerifiedSeconds: TimeInterval = 1800.0   // 30 min for verified/favorites
+    static let bleReachabilityRetentionUnverifiedSeconds: TimeInterval = 600.0  // 10 min for unknown/unverified
     static let bleFragmentLifetimeSeconds: TimeInterval = 30.0
     static let bleIngressRecordLifetimeSeconds: TimeInterval = 3.0
     static let bleConnectTimeoutBackoffWindowSeconds: TimeInterval = 120.0

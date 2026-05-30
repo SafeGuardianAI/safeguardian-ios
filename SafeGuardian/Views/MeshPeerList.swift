@@ -50,30 +50,28 @@ struct MeshPeerList: View {
                     HStack(spacing: 4) {
                         let assigned = viewModel.colorForMeshPeer(id: peer.peerID, isDark: colorScheme == .dark)
                         let baseColor = isMe ? Color.orange : assigned
+                        let isRecentlySeen = !isMe && !peer.isConnected && !peer.isReachable && !peer.isMutualFavorite
+                        let nameColor = isRecentlySeen ? baseColor.opacity(0.35) : baseColor
                         if isMe {
                             Image(systemName: "person.fill")
                                 .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isConnected {
-                            // Mesh-connected peer: radio icon
                             Image(systemName: "antenna.radiowaves.left.and.right")
                                 .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isReachable {
-                            // Mesh-reachable (relayed): point.3 icon
                             Image(systemName: "point.3.filled.connected.trianglepath.dotted")
                                 .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(baseColor)
                         } else if peer.isMutualFavorite {
-                            // Mutual favorite reachable via Nostr: globe icon (purple)
                             Image(systemName: "globe")
                                 .font(.safeguardianSystem(size: 10))
                                 .foregroundColor(.purple)
                         } else {
-                            // Fallback icon for others (dimmed)
-                            Image(systemName: "person")
+                            Image(systemName: "clock")
                                 .font(.safeguardianSystem(size: 10))
-                                .foregroundColor(secondaryTextColor)
+                                .foregroundColor(baseColor.opacity(0.35))
                         }
 
                         let displayName = isMe ? viewModel.nickname : peer.nickname
@@ -81,13 +79,20 @@ struct MeshPeerList: View {
                         HStack(spacing: 0) {
                             Text(base)
                                 .font(.safeguardianSystem(size: 14, design: .monospaced))
-                                .foregroundColor(baseColor)
+                                .foregroundColor(nameColor)
                             if !suffix.isEmpty {
-                                let suffixColor = isMe ? Color.orange.opacity(0.6) : baseColor.opacity(0.6)
+                                let suffixColor = isMe ? Color.orange.opacity(0.6) : nameColor.opacity(0.6)
                                 Text(suffix)
                                     .font(.safeguardianSystem(size: 14, design: .monospaced))
                                     .foregroundColor(suffixColor)
                             }
+                        }
+                        if isRecentlySeen {
+                            let age = Int(Date().timeIntervalSince(peer.lastSeen))
+                            let ageText = age < 3600 ? "\(max(1, age / 60))m" : "\(age / 3600)h"
+                            Text(ageText)
+                                .font(.safeguardianSystem(size: 10, design: .monospaced))
+                                .foregroundColor(baseColor.opacity(0.25))
                         }
 
                         if !isMe, viewModel.isPeerBlocked(peer.peerID) {

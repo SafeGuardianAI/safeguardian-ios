@@ -172,6 +172,7 @@ final class AgentConversationEngine {
                         tick: context.deviceTick,
                         startedAt: startedAt,
                         thinkingContent: state.thinking.isEmpty ? nil : state.thinking,
+                        toolCallNames: statusCallback?.calledToolNames ?? [],
                         stats: state.stats
                     )
                     #endif

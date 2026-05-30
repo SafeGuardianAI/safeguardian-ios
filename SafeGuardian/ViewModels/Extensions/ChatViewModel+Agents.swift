@@ -23,10 +23,12 @@ extension ChatViewModel: AgentContext {
 
     @MainActor
     func registerToolApprovalContinuation(_ token: String, _ continuation: CheckedContinuation<Bool, Never>) {
-        // Auto-approve for now. Replace this body with a UI confirmation flow
-        // (e.g. set pendingToolApprovals[token] = continuation and show an alert)
-        // when interactive tool approval is needed.
-        continuation.resume(returning: true)
+        pendingToolApprovals[token] = continuation
+        // Auto-approve until UI approval is wired up. To add interactive approval:
+        // 1. Remove this line and store the continuation in pendingToolApprovals
+        // 2. Surface an alert/sheet keyed on token
+        // 3. On user action: pendingToolApprovals.removeValue(forKey: token)?.resume(returning: decision)
+        pendingToolApprovals.removeValue(forKey: token)?.resume(returning: true)
     }
 
     @MainActor

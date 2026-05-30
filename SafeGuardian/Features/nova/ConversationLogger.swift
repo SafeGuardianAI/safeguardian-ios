@@ -76,6 +76,7 @@ final class ConversationLogger {
         tick: NovaStateTick?,
         startedAt: Date,
         thinkingContent: String? = nil,
+        toolCallNames: [String] = [],
         stats: AgentGenerationStats? = nil
     ) {
         let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
@@ -121,6 +122,7 @@ final class ConversationLogger {
                      "system": systemPrompt, "conversations": conversations, "metadata": metadata]
         }
         if let thinkingContent { entry["thinking"] = thinkingContent }
+        if !toolCallNames.isEmpty { metadata["tool_calls"] = toolCallNames }
 
         guard let data = try? JSONSerialization.data(withJSONObject: entry),
               let json = String(data: data, encoding: .utf8) else { return }

@@ -259,6 +259,13 @@ struct AppInfoView: View {
                                 .font(.safeguardianSystem(size: 11, design: .monospaced))
                                 .foregroundColor(secondaryTextColor)
                                 .fixedSize(horizontal: false, vertical: true)
+
+                            Toggle(isOn: $remoteService.toolsEnabled) {
+                                Text("tool calling")
+                                    .font(.safeguardianSystem(size: 13, design: .monospaced))
+                                    .foregroundColor(textColor)
+                            }
+                            .tint(textColor)
                         }
                     }
                 } else {

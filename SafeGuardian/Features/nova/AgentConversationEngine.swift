@@ -20,7 +20,8 @@ final class AgentConversationEngine {
         prompt: String,
         config: AgentConversationConfig,
         context: any AgentContext,
-        replyTo: PeerID? = nil
+        replyTo: PeerID? = nil,
+        replyID: String? = nil
     ) {
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
         let provider = AgentProviderRegistry.shared.activeProvider
@@ -133,7 +134,8 @@ final class AgentConversationEngine {
                     }
                     if let peer = replyTo, !state.visible.isEmpty {
                         context.sendMeshReply(
-                            agentID: config.agentID, content: state.visible, to: peer
+                            agentID: config.agentID, content: state.visible,
+                            to: peer, requestID: replyID
                         )
                     }
                     if let stats = state.stats, stats.promptTokens > 0 {

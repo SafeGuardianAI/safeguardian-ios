@@ -18,8 +18,10 @@ extension AgentToolEntry {
                   case .string(let peerIDStr) = args["peer_id"] else {
                 return #"{"error":"missing required argument"}"#
             }
-            await proxy.sendMesh(toAgentID: agentID, content: content, peerID: PeerID(str: peerIDStr))
-            return #"{"sent":true,"to":"\#(peerIDStr)","agent":"\#(agentID)"}"#
+            let response = await proxy.requestFromAgent(
+                agentID: agentID, content: content, peerID: PeerID(str: peerIDStr)
+            )
+            return #"{"response":"\#(response)","from":"\#(peerIDStr)","agent":"\#(agentID)"}"#
         }
     }
 }

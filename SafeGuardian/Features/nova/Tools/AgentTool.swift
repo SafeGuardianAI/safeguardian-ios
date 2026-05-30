@@ -8,29 +8,46 @@ import MLXLMCommon
 final class AgentContextProxy: @unchecked Sendable {
     private let _meshPeerIDs: @MainActor () -> Set<PeerID>
     private let _tick: @MainActor () -> NovaStateTick?
-    private let _sendMesh: @MainActor (String, String, PeerID) -> Void
+    private let _sendMesh: @MainActor (String, String, PeerID, String?) -> Void
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
-    private let _registerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
+    private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
+    private let _registerAgentContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
         _meshPeerIDs = { context.meshPeerIDs }
         _tick = { context.deviceTick }
-        _sendMesh = { toAgentID, content, peerID in
-            context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID)
+        _sendMesh = { toAgentID, content, peerID, requestID in
+            context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID, requestID: requestID)
         }
         _sendRequest = { type, requestID, peerID in
             context.sendPeerRequest(type: type, requestID: requestID, to: peerID)
         }
-        _registerContinuation = { requestID, continuation in
+        _registerPeerContinuation = { requestID, continuation in
             context.registerPeerRequestContinuation(requestID, continuation)
+        }
+        _registerAgentContinuation = { requestID, continuation in
+            context.registerAgentReplyContinuation(requestID, continuation)
         }
     }
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
     func tick() async -> NovaStateTick? { await MainActor.run { _tick() } }
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
-        await MainActor.run { _sendMesh(toAgentID, content, peerID) }
+        await MainActor.run { _sendMesh(toAgentID, content, peerID, nil) }
+    }
+
+    /// Sends a query to a remote agent and suspends until its reply arrives.
+    /// The requestID is embedded in the wire format so the receiving device echoes
+    /// it back in the reply, allowing this continuation to be resumed correctly.
+    func requestFromAgent(agentID: String, content: String, peerID: PeerID) async -> String {
+        let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        return await withCheckedContinuation { continuation in
+            Task { @MainActor in
+                self._registerAgentContinuation(requestID, continuation)
+                self._sendMesh(agentID, content, peerID, requestID)
+            }
+        }
     }
 
     /// Sends a structured peer request and suspends until the peer responds or declines.
@@ -40,7 +57,7 @@ final class AgentContextProxy: @unchecked Sendable {
         let id = String(requestID)
         return await withCheckedContinuation { continuation in
             Task { @MainActor in
-                self._registerContinuation(id, continuation)
+                self._registerPeerContinuation(id, continuation)
                 self._sendRequest(type, id, peerID)
             }
         }

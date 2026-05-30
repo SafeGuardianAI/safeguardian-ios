@@ -708,10 +708,16 @@ extension ChatViewModel {
             return 
         }
         
-        // Incoming reply from a remote agent — route into the DM thread with that peer,
-        // not into the local Nova thread. The reply is from their agent acting on their
-        // behalf; it belongs in the context of the conversation with that person.
+        // Incoming reply from a remote agent.
+        // If a requestID is present and a continuation is waiting, resume the agent's
+        // tool call with the reply content — this is the agent-to-agent path.
+        // Otherwise route into the DM thread with that peer so the human sees it.
         if let reply = AgentMeshRouting.parseReply(message.content) {
+            if let id = reply.requestID,
+               let continuation = pendingAgentReplies.removeValue(forKey: id) {
+                continuation.resume(returning: reply.content)
+                return
+            }
             let senderNickname = meshService.peerNickname(peerID: peerID) ?? String(peerID.id.prefix(6))
             let msg = SafeGuardianMessage(
                 sender: "\(reply.agentID.capitalized) · \(senderNickname)",
@@ -726,9 +732,10 @@ extension ChatViewModel {
         }
 
         // Route agent-addressed messages to the local agent registry; never show in human UI.
+        // Pass along any requestID so the engine can mirror it in the reply.
         if let route = AgentMeshRouting.parse(message.content) {
             if let agent = agents.first(where: { $0.agentID == route.agentID }) {
-                agent.handle(prompt: route.content, context: self, replyTo: peerID)
+                agent.handle(prompt: route.content, context: self, replyTo: peerID, replyID: route.requestID)
             }
             return
         }

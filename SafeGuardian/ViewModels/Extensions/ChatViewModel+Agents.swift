@@ -7,13 +7,18 @@ extension ChatViewModel: AgentContext {
     var meshPeerIDs: Set<PeerID> { unifiedPeerService.connectedPeerIDs }
 
     @MainActor
-    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID) {
-        sendPrivateMessage(AgentMeshRouting.format(agentID: agentID, content: content), to: peerID)
+    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID, requestID: String? = nil) {
+        sendPrivateMessage(AgentMeshRouting.format(agentID: agentID, content: content, requestID: requestID), to: peerID)
     }
 
     @MainActor
-    func sendMeshReply(agentID: String, content: String, to peerID: PeerID) {
-        sendPrivateMessage(AgentMeshRouting.formatReply(agentID: agentID, content: content), to: peerID)
+    func sendMeshReply(agentID: String, content: String, to peerID: PeerID, requestID: String? = nil) {
+        sendPrivateMessage(AgentMeshRouting.formatReply(agentID: agentID, content: content, requestID: requestID), to: peerID)
+    }
+
+    @MainActor
+    func registerAgentReplyContinuation(_ requestID: String, _ continuation: CheckedContinuation<String, Never>) {
+        pendingAgentReplies[requestID] = continuation
     }
 
     @MainActor

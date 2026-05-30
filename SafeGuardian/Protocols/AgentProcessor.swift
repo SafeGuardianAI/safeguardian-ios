@@ -9,12 +9,16 @@ import BitFoundation
 /// Wire format:  [AGENT:{agentID}] {content}
 /// Example:      [AGENT:nova] what is the structural status at sector 4?
 enum AgentMeshRouting {
-    static func format(agentID: String, content: String) -> String {
-        "[AGENT:\(agentID)] \(content)"
+    // requestID is included when the sender expects a correlated reply (agent-to-agent).
+    // Omitting it produces the original fire-and-forget format (human-to-agent).
+    static func format(agentID: String, content: String, requestID: String? = nil) -> String {
+        if let id = requestID { return "[AGENT:\(agentID):\(id)] \(content)" }
+        return "[AGENT:\(agentID)] \(content)"
     }
 
-    static func formatReply(agentID: String, content: String) -> String {
-        "[AGENT_REPLY:\(agentID)] \(content)"
+    static func formatReply(agentID: String, content: String, requestID: String? = nil) -> String {
+        if let id = requestID { return "[AGENT_REPLY:\(agentID):\(id)] \(content)" }
+        return "[AGENT_REPLY:\(agentID)] \(content)"
     }
 
     // Pattern 1 — Structured peer request (no inference, explicit consent).
@@ -52,22 +56,30 @@ enum AgentMeshRouting {
         return (requestID, result)
     }
 
-    static func parse(_ raw: String) -> (agentID: String, content: String)? {
+    static func parse(_ raw: String) -> (agentID: String, content: String, requestID: String?)? {
         Self.extract(raw, prefix: "[AGENT:")
     }
 
-    static func parseReply(_ raw: String) -> (agentID: String, content: String)? {
+    static func parseReply(_ raw: String) -> (agentID: String, content: String, requestID: String?)? {
         Self.extract(raw, prefix: "[AGENT_REPLY:")
     }
 
-    private static func extract(_ raw: String, prefix: String) -> (agentID: String, content: String)? {
+    // Parses [PREFIX:{agentID}] or [PREFIX:{agentID}:{requestID}] followed by content.
+    private static func extract(
+        _ raw: String, prefix: String
+    ) -> (agentID: String, content: String, requestID: String?)? {
         guard raw.hasPrefix(prefix),
               let closeIdx = raw.firstIndex(of: "]") else { return nil }
-        let agentID = String(raw[raw.index(raw.startIndex, offsetBy: prefix.count)..<closeIdx])
+        let inner = String(raw[raw.index(raw.startIndex, offsetBy: prefix.count)..<closeIdx])
         let afterBracket = raw.index(closeIdx, offsetBy: 1)
         guard afterBracket < raw.endIndex, raw[afterBracket] == " " else { return nil }
         let content = String(raw[raw.index(afterBracket, offsetBy: 1)...])
-        return agentID.isEmpty ? nil : (agentID, content)
+        // inner is either "agentID" or "agentID:requestID"
+        let parts = inner.split(separator: ":", maxSplits: 1)
+        guard let first = parts.first, !first.isEmpty else { return nil }
+        let agentID = String(first)
+        let requestID = parts.count == 2 ? String(parts[1]) : nil
+        return (agentID, content, requestID)
     }
 }
 
@@ -90,10 +102,10 @@ extension AgentProcessor {
         return lower == triggerPrefix || lower.hasPrefix(triggerPrefix + " ")
     }
 
-    func handle(prompt: String, context: any AgentContext, replyTo: PeerID? = nil) {
+    func handle(prompt: String, context: any AgentContext, replyTo: PeerID? = nil, replyID: String? = nil) {
         AgentConversationEngine.shared.handle(
             prompt: prompt, config: conversationConfig,
-            context: context, replyTo: replyTo
+            context: context, replyTo: replyTo, replyID: replyID
         )
     }
 }
@@ -115,16 +127,19 @@ protocol AgentContext {
     /// placeholder messages when an agent decides to skip a mesh query.
     func removeResponse(_ response: SafeGuardianMessage, from threadID: PeerID)
     func notifyChange()
-    /// Send a mesh private message to a specific peer, routing it to the named
-    /// agent on the receiving device via AgentMeshRouting. Uses the existing
-    /// Noise-encrypted BLE private message path — no new transport needed.
-    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID)
-    /// Sends a reply using AGENT_REPLY prefix — does not trigger another agent invocation on the receiver.
-    func sendMeshReply(agentID: String, content: String, to peerID: PeerID)
+    /// Send a mesh private message to a specific peer, routing it to the named agent.
+    /// When requestID is non-nil the wire format includes the ID so the receiver's reply
+    /// can be correlated back to a waiting continuation (agent-to-agent pattern).
+    func sendMeshMessage(agentID: String, content: String, to peerID: PeerID, requestID: String?)
+    /// Sends a reply using AGENT_REPLY prefix. requestID mirrors the one from the inbound
+    /// request so the sender can resume a waiting continuation rather than showing UI.
+    func sendMeshReply(agentID: String, content: String, to peerID: PeerID, requestID: String?)
     /// Sends an AGENT message to the named agent on every connected peer.
     func broadcastAgentMessage(agentID: String, content: String)
     /// Sends a [REQUEST:{type}:{requestID}] wire message to the peer, initiating a structured peer request.
     func sendPeerRequest(type: String, requestID: String, to peerID: PeerID)
     /// Stores a continuation to be resumed when the peer sends back [REQUEST_RESPONSE:{requestID}].
     func registerPeerRequestContinuation(_ requestID: String, _ continuation: CheckedContinuation<String, Never>)
+    /// Stores a continuation to be resumed when a remote agent replies with the matching requestID.
+    func registerAgentReplyContinuation(_ requestID: String, _ continuation: CheckedContinuation<String, Never>)
 }

@@ -100,6 +100,24 @@ final class ModelDownloadManager {
         return DeviceMetrics.availableStorageBytes() >= needed
     }
 
+    // MARK: - Model config
+
+    /// Reads max_position_embeddings from the model's cached config.json.
+    /// Returns nil if the model is not cached or the field is absent.
+    func contextWindowSize(modelID: String) -> Int? {
+        let modelDir = hubCacheDir.appendingPathComponent(Self.modelIDToDirectoryName(modelID))
+        let snapshotsDir = modelDir.appendingPathComponent("snapshots")
+        guard let hashes = try? FileManager.default.contentsOfDirectory(
+            at: snapshotsDir, includingPropertiesForKeys: nil
+        ), let snapshot = hashes.first else { return nil }
+        let configURL = snapshot.appendingPathComponent("config.json")
+        guard let data = try? Data(contentsOf: configURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let value = json["max_position_embeddings"] as? Int
+        else { return nil }
+        return value
+    }
+
     // MARK: - Helpers
 
     private static func modelIDToDirectoryName(_ modelID: String) -> String {

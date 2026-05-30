@@ -62,6 +62,7 @@ import MLXLMCommon
                     let model = try await loader.container(modelID: modelID) { progress in
                         continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))
                     }
+                    await PromptBudgetService.shared.register(modelID: modelID)
                     guard !Task.isCancelled else { continuation.finish(); return }
                     let session = sessionPool.session(
                         for: key, container: model, systemPrompt: input.systemPrompt,

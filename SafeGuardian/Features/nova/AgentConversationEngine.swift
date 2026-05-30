@@ -56,9 +56,12 @@ final class AgentConversationEngine {
 
         Task { @MainActor in
             let systemPrompt = config.systemPrompt()
+            let modelID = provider.activeModelID
+            let maxTurns = await PromptBudgetService.shared.recommendedTurnCount(modelID: modelID)
             let history = Self.buildHistory(
                 from: context.privateChats[config.peerID] ?? [],
-                agentDisplayName: config.displayName
+                agentDisplayName: config.displayName,
+                maxTurns: maxTurns
             )
             let input = AgentPromptInput(
                 text: cleanPrompt,
@@ -112,6 +115,13 @@ final class AgentConversationEngine {
                             agentID: config.agentID, content: state.visible, to: peer
                         )
                     }
+                    if let stats = state.stats, stats.promptTokens > 0 {
+                        await PromptBudgetService.shared.record(
+                            modelID: modelID,
+                            promptTokens: stats.promptTokens,
+                            historyTurnCount: history.count
+                        )
+                    }
                     #if DEBUG
                     ConversationLogger.shared.record(
                         agentThread: context.privateChats[config.peerID] ?? [],
@@ -138,7 +148,8 @@ final class AgentConversationEngine {
 
     static func buildHistory(
         from thread: [SafeGuardianMessage],
-        agentDisplayName: String
+        agentDisplayName: String,
+        maxTurns: Int = NovaConfig.historyWindowSize
     ) -> [ConversationTurn] {
         let completed = thread.count >= 2 ? Array(thread.dropLast(2)) : []
         let turns: [ConversationTurn] = completed.compactMap { msg in
@@ -148,7 +159,7 @@ final class AgentConversationEngine {
             let role: ConversationTurn.Role = msg.sender == agentDisplayName ? .assistant : .user
             return ConversationTurn(role: role, content: c)
         }
-        return Array(turns.suffix(NovaConfig.historyWindowSize))
+        return Array(turns.suffix(maxTurns))
     }
 
     // MARK: - Think-tag drain

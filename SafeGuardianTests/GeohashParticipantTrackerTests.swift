@@ -1,6 +1,6 @@
 //
 // GeohashParticipantTrackerTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for GeohashParticipantTracker.
 // This is free and unencumbered software released into the public domain.

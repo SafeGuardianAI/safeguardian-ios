@@ -1,6 +1,6 @@
 //
 // BLEServiceCoreTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Focused BLEService tests for packet handling behavior.
 //

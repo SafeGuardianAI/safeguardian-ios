@@ -1,6 +1,6 @@
 //
 // ChatViewModelTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for ChatViewModel using MockTransport for isolation.
 // This is free and unencumbered software released into the public domain.

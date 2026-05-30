@@ -1,6 +1,6 @@
 //
 // HexStringTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for Data(hexString:) hex parsing
 //

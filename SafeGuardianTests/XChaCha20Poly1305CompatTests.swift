@@ -1,6 +1,6 @@
 //
 // XChaCha20Poly1305CompatTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for XChaCha20-Poly1305 encryption with proper error handling.
 // This is free and unencumbered software released into the public domain.

@@ -1,6 +1,6 @@
 //
 // PublicMessagePipelineTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for PublicMessagePipeline ordering and deduplication.
 //

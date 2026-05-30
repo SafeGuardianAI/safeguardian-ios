@@ -1,6 +1,6 @@
 //
 // ChatViewModelRefactoringTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Pinning tests to characterize ChatViewModel behavior before refactoring.
 // These tests act as a safety net to ensure we don't break existing functionality.

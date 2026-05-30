@@ -1,6 +1,6 @@
 //
 // NostrProtocolTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for NIP-17 gift-wrapped private messages
 //

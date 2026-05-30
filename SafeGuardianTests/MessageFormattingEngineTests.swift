@@ -1,6 +1,6 @@
 //
 // MessageFormattingEngineTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for MessageFormattingEngine regex patterns and utility functions.
 // This is free and unencumbered software released into the public domain.

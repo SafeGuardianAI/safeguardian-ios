@@ -1,6 +1,6 @@
 //
 // PrivateChatManagerTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for PrivateChatManager read receipt and selection behavior.
 //

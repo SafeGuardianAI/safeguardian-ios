@@ -1,6 +1,6 @@
 //
 // ChatViewModelDeliveryStatusTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for ChatViewModel delivery status state machine.
 //

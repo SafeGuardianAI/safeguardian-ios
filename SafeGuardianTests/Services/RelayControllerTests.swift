@@ -1,6 +1,6 @@
 //
 // RelayControllerTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for relay decision logic.
 //

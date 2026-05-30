@@ -1,6 +1,6 @@
 //
 // MessageDeduplicationServiceTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for MessageDeduplicationService, LRUDeduplicationCache, and ContentNormalizer.
 // This is free and unencumbered software released into the public domain.

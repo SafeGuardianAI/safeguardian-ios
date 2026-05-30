@@ -1,6 +1,6 @@
 //
 // UnifiedPeerServiceTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for UnifiedPeerService fingerprint and block resolution.
 //

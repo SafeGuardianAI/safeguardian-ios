@@ -1,6 +1,6 @@
 //
 // MessageRouterTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for MessageRouter transport selection and outbox behavior.
 //

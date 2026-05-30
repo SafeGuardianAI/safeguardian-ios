@@ -1,6 +1,6 @@
 //
 // ChatViewModelExtensionsTests.swift
-// bitchatTests
+// SafeGuardianTests
 //
 // Tests for ChatViewModel extensions (PrivateChat, Nostr, Tor).
 //

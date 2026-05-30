@@ -146,6 +146,12 @@ bridge between the inference thread and the UI/application thread.
         meshPeerIDs() -> async set<PeerID>
         deviceTick()  -> async NovaStateTick|null
         sendMesh(toAgentID: string, content: string, peerID: PeerID) -> async void
+            -- fire-and-forget; reply goes to human DM thread
+        requestFromAgent(agentID: string, content: string, peerID: PeerID) -> async string
+            -- correlated request; suspends until [AGENT_REPLY:..:{requestID}] arrives,
+            -- then returns reply content as the tool call result
+        requestFromPeer(type: string, peerID: PeerID) -> async string
+            -- Pattern 1 structured request; suspends until [REQUEST_RESPONSE:...] arrives
 
 ## AgentMeshRouting
 
@@ -173,13 +179,31 @@ A question routed to a named agent on the receiving device. The receiving agent
 runs inference once and replies. No shared session state. Pre-inference gates
 on the receiver determine whether inference runs at all (battery, capability).
 
+Two sub-forms exist depending on whether the sender expects a correlated reply:
+
+Fire-and-forget (human initiates, reply shown in human DM thread):
+
     format:  "[AGENT:{agentID}] {content}"
+    reply:   "[AGENT_REPLY:{agentID}] {content}"
     example: "[AGENT:nova] what is structural status at sector 4?"
 
-    parse(raw: string) -> (agentID: string, content: string)|null
-    format(agentID: string, content: string) -> string
+Correlated request (agent-to-agent, reply resumes a tool call continuation):
 
-    reply uses the same [AGENT:{agentID}] prefix routed back to the initiator.
+    format:  "[AGENT:{agentID}:{requestID}] {content}"
+    reply:   "[AGENT_REPLY:{agentID}:{requestID}] {content}"
+    example: "[AGENT:nova:a3f9b2c1] summarise your sensor log"
+
+    When requestID is present on the reply, the receiving device checks
+    pendingAgentReplies[requestID]. If a continuation is waiting, it is resumed
+    with the reply content as the tool call return value and the message is never
+    shown in the human UI. If no continuation exists (sender disconnected etc.),
+    the reply falls through to the DM thread.
+
+    parse(raw: string) -> (agentID: string, content: string, requestID: string|null)|null
+    format(agentID: string, content: string, requestID: string|null) -> string
+
+On the receiver, inference runs silently for mesh queries (no placeholder in the
+local agent thread). The reply is sent back only to the originating peer.
 
 ### Pattern 3 — Agent Session (inference on both sides, shared context)
 
@@ -211,23 +235,76 @@ session object. Only expose what agents actually need.
         addLocalMessage(content: string) -> void
         addAgentLocalMessage(content: string, to: PeerID) -> void
         addResponse(sender: string, content: string, privatePeerID: PeerID|null) -> Message
-        removeResponse(response: Message, from: PeerID) -> void  -- suppresses placeholder when agent decides to skip
+        removeResponse(response: Message, from: PeerID) -> void
         notifyChange() -> void
-        sendMeshMessage(agentID: string, content: string, to: PeerID) -> void
-        sendMeshReply(agentID: string, content: string, to: PeerID) -> void  -- routes reply back to originating peer
+        sendMeshMessage(agentID: string, content: string, to: PeerID, requestID: string|null) -> void
+        sendMeshReply(agentID: string, content: string, to: PeerID, requestID: string|null) -> void
+        broadcastAgentMessage(agentID: string, content: string) -> void
+        sendPeerRequest(type: string, requestID: string, to: PeerID) -> void
+        registerPeerRequestContinuation(requestID: string, continuation) -> void
+        registerAgentReplyContinuation(requestID: string, continuation) -> void
+
+## AgentConversationConfig
+
+Everything specific to one agent. The single value a conformer must supply.
+All identity properties and behavior are derived from this by the protocol extension.
+
+    struct AgentConversationConfig:
+        agentID:      string
+        displayName:  string
+        peerID:       PeerID
+        triggerPrefix: string
+        systemPrompt: () -> string          -- evaluated at call time; may read current state
+        toolRegistry: ((AgentContext) -> AgentToolRegistry|null)|null
+
+## AgentConversationEngine
+
+Singleton that owns all generic agent execution mechanics: gate evaluation,
+history assembly, AgentPromptInput construction, stream processing (including
+think-tag draining gated on ModelCapabilities.hasThinkingMode), mesh reply
+routing, and ConversationLogger. Agents supply a config; the engine runs it.
+
+Mesh queries (replyTo != nil) run inference silently — no placeholder is inserted
+into the local agent thread. The reply is sent to the requester only.
+
+    handle(prompt, config, context, replyTo, replyID) -> void
 
 ## AgentProcessor
 
-The agent itself. One per agent type (Nova, Trek) per device.
+Single-requirement protocol. All identity properties and handle/shouldHandle
+are provided by the protocol extension; conformers only implement conversationConfig.
 
-    interface AgentProcessor:
-        agentID:       string   -- "nova", "trek"
-        displayName:   string   -- "Nova", "Trek"
-        triggerPrefix: string   -- "@nova", "@trek"
-        peerID:        PeerID   -- local address for this agent's private thread
+    protocol AgentProcessor:
+        conversationConfig: AgentConversationConfig
 
+    -- derived by extension:
+        agentID, displayName, peerID, triggerPrefix
         shouldHandle(message: string) -> bool
-        handle(prompt: string, context: AgentContext) -> void
+        handle(prompt, context, replyTo, replyID) -> void
+
+## Agent
+
+Concrete AgentProcessor. New agents are static instances — no subclass needed.
+
+    struct Agent: AgentProcessor:
+        conversationConfig: AgentConversationConfig
+
+    Agent.nova  -- the Nova assistant
+
+## PromptBudgetService
+
+Actor that tracks per-model context window sizes and prompt token usage to produce
+adaptive history window recommendations. Replaces the fixed historyWindowSize ceiling
+with one that reacts to measured token consumption.
+
+    actor PromptBudgetService:
+        register(modelID: string) -> async void
+            -- called after model loads; reads max_position_embeddings from config.json
+        record(modelID: string, promptTokens: int, historyTurnCount: int) -> async void
+            -- called after each completed generation
+        recommendedTurnCount(modelID: string) -> async int
+            -- returns turn count that fits within 80% of context window minus 512-token reserve;
+            -- proportionally scales down if last prompt exceeded the budget
 
 ## ModelDownloadManager
 
@@ -237,6 +314,7 @@ Does not initiate downloads — downloads happen on first inference.
     interface ModelDownloadManager:
         cachedModelIDs()                       -> list<string>
         cachedSize(modelID: string)            -> int|null        -- bytes, null if not cached
+        contextWindowSize(modelID: string)     -> int|null        -- reads max_position_embeddings from cached config.json
         estimatedDownloadSize(modelID: string) -> int             -- bytes, pattern-matched
         hasStorageForDownload(modelID: string) -> bool            -- 1.2x safety margin
         evict(modelID: string)                 -> void|error

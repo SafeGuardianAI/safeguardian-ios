@@ -33,9 +33,10 @@ actor PromptBudgetService {
 
     /// Called when a model finishes loading. Reads the context window size from
     /// the cached config.json; falls back to the default if unavailable.
-    func register(modelID: String) {
-        let size = ModelDownloadManager.shared.contextWindowSize(modelID: modelID)
-            ?? Self.defaultContextWindow
+    func register(modelID: String) async {
+        let size = await MainActor.run {
+            ModelDownloadManager.shared.contextWindowSize(modelID: modelID)
+        } ?? Self.defaultContextWindow
         var s = states[modelID] ?? ModelState(contextWindowSize: size)
         s.contextWindowSize = size
         states[modelID] = s

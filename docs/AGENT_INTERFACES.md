@@ -29,7 +29,7 @@ Provider-reported performance metrics for one generation call.
         promptMs:          float    -- time to process prompt in milliseconds
         generateMs:        float    -- time to generate output in milliseconds
         tokensPerSecond:   float    -- generationTokens / (generateMs / 1000)
-        promptTPS:         float    -- promptTokens / (promptMs / 1000)
+        promptTokensPerSecond: float    -- promptTokens / (promptMs / 1000)
 
 ## ModelCapabilities
 

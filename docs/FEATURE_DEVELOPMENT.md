@@ -123,14 +123,14 @@ Agents are on-device or cloud-connected processors that intercept trigger-prefix
 
 The two protocols are in `SafeGuardian/Protocols/AgentProcessor.swift`.
 
-`AgentProcessor` has a single required property: `conversationConfig: AgentConversationConfig`. All identity fields — `agentID`, `displayName`, `peerID`, `triggerPrefix` — are derived from it as default protocol implementations. Conforming types must fill out an `AgentConversationConfig` and are otherwise free to define their behavior in `handle(prompt:context:)`.
+`AgentProcessor` has a single required property: `conversationConfig: AgentConversationConfig`. All identity fields — `agentID`, `displayName`, `peerID`, `triggerPrefix` — are derived from it as default protocol implementations. Conforming types only need to supply a `conversationConfig`; the `handle(prompt:image:context:threadPeerID:replyTo:replyID:)` method is a protocol default that routes directly through `AgentConversationEngine.shared.handle(...)`. Conformers do not override `handle`.
 
 - `conversationConfig.agentID` — unique lowercase key (e.g. `"nova"`).
 - `conversationConfig.displayName` — shown in the sidebar and DM header (e.g. `"Nova"`).
 - `conversationConfig.triggerPrefix` — the string the user types to address this agent (e.g. `"@nova"`).
 - `conversationConfig.peerID` — the synthetic peer ID for this agent's DM thread. Must not collide with real BLE peer IDs.
 - `shouldHandle(_ message: String) -> Bool` — returns true when the message is addressed to this agent.
-- `handle(prompt: String, context: AgentContext)` — called with the stripped prompt (trigger prefix removed). Use `context.addResponse(sender: displayName, content: ..., privatePeerID: peerID)` to insert response messages and `context.notifyChange()` to push streaming updates to the UI.
+- `handle(prompt:image:context:threadPeerID:replyTo:replyID:)` — default implementation; routes through `AgentConversationEngine.shared`, which calls gates, invokes the model provider, strips thinking blocks, and delivers the response via `context.addResponse` and `context.notifyChange`.
 
 `AgentContext` is the restricted view of `ChatViewModel` exposed to agents. It provides `nickname`, `privateChats`, `deviceTick`, `selectedGeohash`, `addLocalMessage`, `addAgentLocalMessage`, `addResponse`, and `notifyChange`. Agents must not hold a direct reference to `ChatViewModel`.
 

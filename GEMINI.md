@@ -12,7 +12,7 @@
 
 The bitchat-originated files are the upstream merge surface. Minimizing diffs in them keeps cherry-picks and rebases tractable. The rules:
 
-- **Never add new methods or properties directly to core bitchat files** (`ChatViewModel.swift`, `PrivateChatManager.swift`, `GeohashParticipantTracker.swift`, `BLEService.swift`, `NoiseProtocol.swift`, `BinaryProtocol.swift`, etc.). All SafeGuardian-specific logic must live in extension files (`ChatViewModel+Nova.swift`, `ChatViewModel+AgentContext.swift`, etc.) or new SafeGuardian-owned files.
+- **Never add new methods or properties directly to core bitchat files** (`ChatViewModel.swift`, `PrivateChatManager.swift`, `GeohashParticipantTracker.swift`, `BLEService.swift`, `NoiseProtocol.swift`, `BinaryProtocol.swift`, etc.). All SafeGuardian-specific logic must live in extension files (`ChatViewModel+Agents.swift`, `ChatViewModel+Tor.swift`, `ChatViewModel+PrivateChat.swift`, etc.) or new SafeGuardian-owned files.
 - **Never add `@MainActor` or change concurrency isolation on upstream classes.** Upstream may add code with different isolation assumptions and the merge will conflict or silently break. `PrivateChatManager` is NOT `@MainActor` — do not annotate it as such.
 - **Never widen access modifiers on upstream symbols without a live caller.** Changing `private` to `internal` on a property that nothing external reads is a pointless upstream diff. Only loosen access when a concrete SafeGuardian call site actually requires it, and note the reason in a comment.
 - The only acceptable changes to a core bitchat file are: (a) a single wired-up call site for a new SafeGuardian feature, and (b) the minimum stored-property and init wiring that Swift extensions cannot express.

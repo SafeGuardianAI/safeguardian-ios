@@ -21,7 +21,12 @@ extension AgentToolEntry {
             let response = await proxy.requestFromAgent(
                 agentID: agentID, content: content, peerID: PeerID(str: peerIDStr)
             )
-            return #"{"response":"\#(response)","from":"\#(peerIDStr)","agent":"\#(agentID)"}"#
+            let escaped = response
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\r", with: "\\r")
+            return #"{"response":"\#(escaped)","from":"\#(peerIDStr)","agent":"\#(agentID)"}"#
         }
     }
 }

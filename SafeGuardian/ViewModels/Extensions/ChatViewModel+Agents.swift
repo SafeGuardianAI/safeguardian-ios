@@ -61,6 +61,16 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    func cancelAgentRequest(_ requestID: String) {
+        pendingAgentReplies.removeValue(forKey: requestID)?.resume(returning: "timeout")
+    }
+
+    @MainActor
+    func cancelPeerRequest(_ requestID: String) {
+        pendingPeerRequests.removeValue(forKey: requestID)?.resume(returning: "timeout")
+    }
+
+    @MainActor
     func addAgentLocalMessage(_ content: String, to peerID: PeerID) {
         let msg = SafeGuardianMessage(sender: "local", content: content, timestamp: Date(), isRelay: false)
         if privateChats[peerID] == nil { privateChats[peerID] = [] }

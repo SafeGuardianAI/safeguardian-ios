@@ -65,6 +65,8 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
     private let _registerAgentContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
     private let _registerApprovalContinuation: @MainActor (String, CheckedContinuation<Bool, Never>) -> Void
+    private let _cancelAgentRequest: @MainActor (String) -> Void
+    private let _cancelPeerRequest: @MainActor (String) -> Void
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
@@ -90,6 +92,12 @@ final class AgentContextProxy: @unchecked Sendable {
         _registerApprovalContinuation = { token, continuation in
             context.registerToolApprovalContinuation(token, continuation)
         }
+        _cancelAgentRequest = { requestID in
+            context.cancelAgentRequest(requestID)
+        }
+        _cancelPeerRequest = { requestID in
+            context.cancelPeerRequest(requestID)
+        }
     }
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
@@ -104,37 +112,54 @@ final class AgentContextProxy: @unchecked Sendable {
         await MainActor.run { _sendMesh(toAgentID, content, peerID, nil) }
     }
 
+    func cancelAgentRequest(_ requestID: String) async {
+        await MainActor.run { _cancelAgentRequest(requestID) }
+    }
+
+    func cancelPeerRequest(_ requestID: String) async {
+        await MainActor.run { _cancelPeerRequest(requestID) }
+    }
+
     /// Sends a query to a remote agent and suspends until its reply arrives.
+    /// Resumes with "timeout" if the parent Task is cancelled before a reply arrives,
+    /// preventing the CheckedContinuation from leaking in pendingAgentReplies.
     func requestFromAgent(agentID: String, content: String, peerID: PeerID) async -> String {
         let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-        return await withCheckedContinuation { continuation in
-            Task { @MainActor in
-                self._registerAgentContinuation(requestID, continuation)
-                self._sendMesh(agentID, content, peerID, requestID)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    self._registerAgentContinuation(requestID, continuation)
+                    self._sendMesh(agentID, content, peerID, requestID)
+                }
             }
+        } onCancel: {
+            Task { @MainActor in self._cancelAgentRequest(requestID) }
         }
     }
 
     /// Sends a structured peer request and suspends until the peer responds or declines.
+    /// Resumes with "timeout" if the parent Task is cancelled before the peer replies.
     func requestFromPeer(type: String, peerID: PeerID) async -> String {
-        let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12).lowercased()
-        let id = String(requestID)
-        return await withCheckedContinuation { continuation in
-            Task { @MainActor in
-                self._registerPeerContinuation(id, continuation)
-                self._sendRequest(type, id, peerID)
+        let requestID = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12).lowercased())
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    self._registerPeerContinuation(requestID, continuation)
+                    self._sendRequest(type, requestID, peerID)
+                }
             }
+        } onCancel: {
+            Task { @MainActor in self._cancelPeerRequest(requestID) }
         }
     }
 
     /// Suspends until the host context approves or denies execution of the named tool.
     /// Safe from any isolation context — uses CheckedContinuation, does not block.
     func requestApproval(for toolName: String) async -> Bool {
-        let token = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased()
-        let id = String(token)
+        let token = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased())
         return await withCheckedContinuation { continuation in
             Task { @MainActor in
-                self._registerApprovalContinuation(id, continuation)
+                self._registerApprovalContinuation(token, continuation)
             }
         }
     }

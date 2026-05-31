@@ -6,10 +6,10 @@ import MLXLMCommon
         let modelID: String
         let promptHash: Int
         /// Offset of the oldest turn in the current history window.
-        /// Increments each time the window slides past historyWindowSize turns.
-        /// A change in this value means the existing session must be discarded
-        /// and a new one seeded from the incoming windowed history.
         let historyOffset: Int
+        /// Thread identifier. Each conversation thread gets its own ChatSession
+        /// so KV caches from different threads never mix.
+        let threadID: String
     }
 
     private var sessions: [Key: ChatSession] = [:]

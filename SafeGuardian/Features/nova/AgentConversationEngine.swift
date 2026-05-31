@@ -39,12 +39,11 @@ final class AgentConversationEngine {
         // surface the error immediately rather than letting generate() fail asynchronously
         // and flooding the thread with status messages before the real error arrives.
         if replyTo == nil && provider.capabilities.requiresNetwork && !provider.isModelLoaded {
-            let response = context.addResponse(
+            context.addResponse(
                 sender: config.displayName,
                 content: "[provider not configured — open Settings and set the URL and model]",
                 privatePeerID: threadPeerID ?? config.peerID
             )
-            _ = response
             context.notifyChange()
             return
         }
@@ -119,6 +118,7 @@ final class AgentConversationEngine {
                 isMeshQuery: replyTo != nil
             )
             input.imageData = image.map { [$0] } ?? []
+            input.threadID = effectivePeerID.id
             let hasThinking = provider.capabilities.modelCapabilities?.hasThinkingMode == true
 
             for await event in provider.generate(input: input) {

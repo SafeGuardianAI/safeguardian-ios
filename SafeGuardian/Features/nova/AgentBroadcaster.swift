@@ -116,9 +116,12 @@ final class AgentBroadcaster {
 
         #if os(iOS)
         let battery = UIDevice.current.batteryLevel
-        let batteryPct = battery < 0 ? 1.0 : Double(battery)
+        // Skip emission entirely when battery monitoring has not yet produced a reading.
+        // Reporting 1.0 as a fallback misleads the model and peers about actual charge level.
+        guard battery >= 0 else { return }
+        let batteryPct = Double(battery)
 
-        if battery >= 0, battery < config.batterySuspendThreshold {
+        if battery < config.batterySuspendThreshold {
             _ = emit(batteryPct: batteryPct, isDelta: false)
             suspended = true
             timerCancellable?.cancel()
@@ -126,7 +129,7 @@ final class AgentBroadcaster {
         }
 
         if !isDelta {
-            let target: TimeInterval = battery >= 0 && battery < config.batteryReducedThreshold
+            let target: TimeInterval = battery < config.batteryReducedThreshold
                 ? config.reducedInterval
                 : config.normalInterval
             rescheduleIfNeeded(interval: target)

@@ -40,7 +40,8 @@ import MLXLMCommon
         let key = MLXSessionPool.Key(
             modelID: modelID,
             promptHash: input.systemPrompt.hashValue,
-            historyOffset: historyOffset
+            historyOffset: historyOffset,
+            threadID: input.threadID
         )
         let chatHistory: [Chat.Message] = input.history.map {
             $0.role == .assistant ? .assistant($0.content) : .user($0.content)

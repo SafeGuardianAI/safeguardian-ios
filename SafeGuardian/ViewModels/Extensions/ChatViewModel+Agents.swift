@@ -85,6 +85,7 @@ extension ChatViewModel: AgentContext {
     }
 
     @MainActor
+    @discardableResult
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage {
         let msg = SafeGuardianMessage(sender: sender, content: content, timestamp: Date(), isRelay: false)
         if let peerID = privatePeerID {

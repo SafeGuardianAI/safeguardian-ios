@@ -17,6 +17,9 @@ struct AgentPromptInput: Sendable {
     /// JPEG-encoded images attached to this user turn. Empty for text-only queries.
     /// Only passed for the current turn; prior history is always text-only.
     var imageData: [Data] = []
+    /// Thread identifier used to key the session pool. Each thread gets its own
+    /// ChatSession so KV caches from different conversations never mix.
+    var threadID: String = ""
 
     func decorated(modelID: String) -> String {
         let caps = NovaConfig.capabilities(for: modelID)

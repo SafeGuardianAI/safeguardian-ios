@@ -122,6 +122,7 @@ protocol AgentContext {
     var meshPeerIDs: Set<PeerID> { get }
     func addLocalMessage(_ content: String)
     func addAgentLocalMessage(_ content: String, to peerID: PeerID)
+    @discardableResult
     func addResponse(sender: String, content: String, privatePeerID: PeerID?) -> SafeGuardianMessage
     /// Removes a previously added response from a thread — used to suppress
     /// placeholder messages when an agent decides to skip a mesh query.

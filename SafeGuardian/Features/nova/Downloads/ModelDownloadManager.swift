@@ -14,8 +14,16 @@ final class ModelDownloadManager {
     static let shared = ModelDownloadManager()
 
     private let hubCacheDir: URL = {
+        #if os(macOS)
+        // The HuggingFace Swift library writes to ~/.cache/huggingface/hub on macOS,
+        // following the XDG convention used by the Python HuggingFace toolchain.
+        // Library/Caches is only correct for sandboxed iOS targets.
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache/huggingface/hub", isDirectory: true)
+        #else
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         return caches.appendingPathComponent("huggingface/hub", isDirectory: true)
+        #endif
     }()
 
     private init() {}

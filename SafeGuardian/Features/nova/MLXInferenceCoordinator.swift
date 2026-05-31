@@ -155,6 +155,12 @@ import MLXLMCommon
     }
 
     private func rescheduleIdleTimer() {
+        #if os(macOS)
+        // macOS has no meaningful memory pressure from a resident model; let the OS
+        // manage paging. Evicting after an idle window forces a disk reload on every
+        // multi-minute gap in conversation, which is the wrong trade-off on desktop.
+        return
+        #endif
         idleWork?.cancel()
         idleWork = DispatchWorkItem { [weak self] in
             Task { await self?.releaseModel() }

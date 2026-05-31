@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Combine
 #if os(iOS)
@@ -51,19 +52,68 @@ final class NovaBroadcaster: ObservableObject {
             .sink { [weak self] location in
                 guard let self else { return }
                 self.locationFixDate = location.timestamp
-                // Delta trigger: emit immediately when position moves > 50m
-                // from the last emitted coordinate, subject to minDeltaInterval.
                 broadcaster.significantChange = { [weak self] in
                     guard let self,
                           let last = self.lastEmittedCoordinate else { return true }
                     let dlat = location.coordinate.latitude  - last.lat
                     let dlon = location.coordinate.longitude - last.lon
-                    let approxMeters = sqrt(dlat*dlat + dlon*dlon) * 111_320
-                    return approxMeters > 50
+                    let movedMeters = sqrt(dlat*dlat + dlon*dlon) * 111_320
+                    guard let threshold = self.deltaThreshold(fix: location) else {
+                        return true   // emergency override: distance irrelevant, fire unconditionally
+                    }
+                    return movedMeters > threshold
                 }
                 broadcaster.triggerIfChanged()
             }
             .store(in: &cancellables)
+    }
+
+    /// Dynamic displacement threshold for delta-triggered emission.
+    ///
+    /// Returns nil when the node is in a critical medical state — in that case the
+    /// caller fires unconditionally (distance is irrelevant when position is life-critical).
+    ///
+    /// Otherwise returns a threshold in meters computed from three factors:
+    ///
+    /// GPS accuracy: the threshold floors at 1.5× the fix's horizontal accuracy so that
+    /// apparent movement within measurement noise never causes a spurious emission.
+    /// A poor fix (horizontalAccuracy > 100m) naturally raises the threshold.
+    ///
+    /// Medical urgency: serious injury halves the threshold; minor injury reduces it by 30%.
+    /// The more urgent the state, the smaller the displacement needed to justify an update.
+    ///
+    /// Battery conservation: low battery doubles the threshold; critically low battery
+    /// quintuples it. A nearly dead node should not flood the mesh with position refinements.
+    private func deltaThreshold(fix: CLLocation) -> Double? {
+        let medical = latestTick?.medicalStatus ?? .unknown
+
+        // Critical state: emit on every location event regardless of displacement.
+        // minDeltaInterval in AgentBroadcaster (10s for Nova) is still the rate gate.
+        if medical == .critical { return nil }
+
+        // Accuracy-based floor: movement must exceed GPS noise to be meaningful.
+        // horizontalAccuracy < 0 indicates an invalid fix; treat as very poor.
+        let accuracy = fix.horizontalAccuracy > 0 ? min(fix.horizontalAccuracy, 500.0) : 300.0
+        var threshold = max(accuracy * 1.5, 15.0)
+
+        // Medical urgency scaling.
+        switch medical {
+        case .serious:  threshold = max(accuracy, 10.0)  // near-raw accuracy, minimal filter
+        case .minor:    threshold *= 0.7
+        case .uninjured, .unknown, .critical: break
+        }
+
+        // Battery conservation: coarser threshold preserves both local energy and
+        // mesh bandwidth that other low-battery nodes also need.
+        #if os(iOS)
+        let battery = UIDevice.current.batteryLevel
+        if battery >= 0 {
+            if battery < 0.05 { threshold *= 5.0 }
+            else if battery < 0.20 { threshold *= 2.0 }
+        }
+        #endif
+
+        return threshold
     }
 
     private func buildTick(batteryPct: Double, sequence: Int) -> NovaStateTick? {

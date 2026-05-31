@@ -81,7 +81,8 @@ struct BenchCommandTests {
             remotePeerId: "peer123",
             remoteNickname: "testpeer",
             payloadBytes: 1024,
-            trialCount: 1
+            trialCount: 1,
+            distM: nil
         )
         exporter.append(session)
         #expect(FileManager.default.fileExists(atPath: exporter.exportURL.path))

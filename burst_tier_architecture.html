@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SafeGuardian True Mesh & Burst Tier Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; align-items: center; padding: 40px;
+        }
+        .container {
+            background-color: #161b22; padding: 30px; border-radius: 12px; border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); width: 95%; max-width: 1200px;
+        }
+        h1 { color: #58a6ff; margin-bottom: 10px; }
+        p { color: #8b949e; text-align: center; line-height: 1.6; }
+        .mermaid { background: transparent; }
+        .legend {
+            display: flex; justify-content: space-around; width: 100%; margin-top: 20px; font-size: 0.9em;
+            flex-wrap: wrap; gap: 15px;
+        }
+        .legend-item { display: flex; align-items: center; }
+        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>SafeGuardian "True Mesh" & Burst Tier</h1>
+    <p>
+        Unified P2P Mesh with <strong>UWB Spatial Awareness</strong> and <strong>MPC High-Speed Bursts</strong>.
+    </p>
+
+    <div class="container">
+        <div class="mermaid">
+            graph TD
+                %% Styles
+                classDef apex fill:#7e22ce,stroke:#c084fc,stroke-width:3px,color:#fff;
+                classDef trek fill:#047857,stroke:#34d399,stroke-width:2px,color:#fff;
+                classDef nova fill:#1d4ed8,stroke:#60a5fa,stroke-width:1px,color:#fff;
+                classDef burst fill:#f59e0b,stroke:#fbbf24,stroke-width:2px,color:#000;
+                classDef uwb fill:#ec4899,stroke:#f472b6,stroke-width:1px,color:#fff;
+                classDef graphNode fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#fff;
+
+                subgraph GlobalLayer [Global Strategic]
+                    AP1["Apex Strategic Overseer"]
+                end
+
+                subgraph TacticalLayer [Tactical Bridge Hub]
+                    direction TB
+                    TR1["Trek Node libp2p Bridge"]
+                    DRONE["Drone Backhaul Relay"]
+                end
+
+                subgraph LocalLayer [Local Unified Mesh]
+                    direction LR
+                    N1["Nova Agent 1"]
+                    N2["Nova Agent 2"]
+                end
+
+                %% Edges
+                AP1 --- DRONE
+                DRONE --- TR1
+                
+                %% The Tiered Transport Links between Nova nodes
+                N1 -- "BLE Heartbeat" --- N2
+                N1 -. "UWB Ranging" .- N2
+                
+                %% The Burst Connection
+                N2 -- "MPC Burst" --- TR1
+                
+                %% Traditional Mesh Hop
+                N1 -- "BLE Relay" --- TR1
+
+                %% Metadata Flow
+                N1 -. "Gossip" .-> TR1
+                N2 -. "Gossip" .-> TR1
+                TR1 -. "Collective Vitals" .-> AP1
+
+                %% Formatting
+                class AP1 apex;
+                class TR1 trek;
+                class N1,N2 nova;
+                class DRONE burst;
+                
+                %% Style specific links
+                linkStyle 0 stroke:#8b949e,stroke-width:3px,stroke-dasharray: 5 5;
+                linkStyle 3 stroke:#ec4899,stroke-width:2px,stroke-dasharray: 2 2;
+                linkStyle 4 stroke:#f59e0b,stroke-width:4px;
+        </div>
+
+        <h2>Adaptive Transport Logic</h2>
+        <div style="text-align: left; padding: 20px;">
+            <ul>
+                <li><strong>Spatial awareness (UWB)</strong>: Nova 1 uses NearbyInteraction to measure the exact distance to Nova 2. This metadata is used to optimize the BLE routing path without sending extra data.</li>
+                <li><strong>High-Speed Burst (MPC)</strong>: When Nova 2 needs to send a large structural photo, it triggers a MultipeerConnectivity link to the Trek node. This provides Mbps throughput, bypassing the 15KB/s BLE limit.</li>
+                <li><strong>Unified P2P Host</strong>: All nodes run a libp2p-compatible substrate, allowing them to switch between BLE, UWB, and MPC transports seamlessly based on the payload size and distance.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><span class="dot" style="background-color: #60a5fa;"></span> Nova (Local)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #34d399;"></span> Trek (Regional)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #f59e0b;"></span> Burst / Drone (High-Bandwidth)</div>
+        <div class="legend-item"><span class="dot" style="background-color: #ec4899;"></span> UWB (Spatial Metadata)</div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+    </script>
+</body>
+</html>

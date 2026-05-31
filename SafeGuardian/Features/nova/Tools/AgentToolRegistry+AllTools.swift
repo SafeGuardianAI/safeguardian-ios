@@ -21,7 +21,10 @@ extension AgentToolRegistry {
                 .getMemory(),
                 .getDeviceState(),
                 .getStatus(),
-                .getFullStatus()
+                .getFullStatus(),
+                .getMeshLoad(),
+                .setTickInterval(),
+                .setMessageTTL()
             ],
             meshTools: [
                 .listPeers(),

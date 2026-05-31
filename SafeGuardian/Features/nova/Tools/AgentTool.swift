@@ -55,6 +55,11 @@ final class StatusCallback: @unchecked Sendable {
 final class AgentContextProxy: @unchecked Sendable {
     private let _meshPeerIDs: @MainActor () -> Set<PeerID>
     private let _tick: @MainActor () -> NovaStateTick?
+    private let _meshPacketRate: @MainActor () -> Double
+    private let _broadcastInterval: @MainActor () -> TimeInterval
+    private let _broadcastTTL: @MainActor () -> UInt8
+    private let _setTickInterval: @MainActor (TimeInterval) -> Void
+    private let _setMessageTTL: @MainActor (UInt8) -> Void
     private let _sendMesh: @MainActor (String, String, PeerID, String?) -> Void
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
     private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
@@ -63,8 +68,13 @@ final class AgentContextProxy: @unchecked Sendable {
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
-        _meshPeerIDs = { context.meshPeerIDs }
-        _tick = { context.deviceTick }
+        _meshPeerIDs       = { context.meshPeerIDs }
+        _tick              = { context.deviceTick }
+        _meshPacketRate    = { context.meshPacketRate }
+        _broadcastInterval = { context.broadcastInterval }
+        _broadcastTTL      = { context.broadcastTTL }
+        _setTickInterval   = { context.setTickInterval($0) }
+        _setMessageTTL     = { context.setMessageTTL($0) }
         _sendMesh = { toAgentID, content, peerID, requestID in
             context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID, requestID: requestID)
         }
@@ -84,6 +94,11 @@ final class AgentContextProxy: @unchecked Sendable {
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
     func tick() async -> NovaStateTick? { await MainActor.run { _tick() } }
+    func meshPacketRate() async -> Double { await MainActor.run { _meshPacketRate() } }
+    func broadcastInterval() async -> TimeInterval { await MainActor.run { _broadcastInterval() } }
+    func broadcastTTL() async -> UInt8 { await MainActor.run { _broadcastTTL() } }
+    func setTickInterval(_ s: TimeInterval) async { await MainActor.run { _setTickInterval(s) } }
+    func setMessageTTL(_ ttl: UInt8) async { await MainActor.run { _setMessageTTL(ttl) } }
 
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
         await MainActor.run { _sendMesh(toAgentID, content, peerID, nil) }

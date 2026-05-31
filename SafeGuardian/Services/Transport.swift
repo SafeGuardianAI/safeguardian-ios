@@ -70,11 +70,15 @@ protocol Transport: AnyObject {
     // Bench instrumentation
     func negotiatedMTU(for peerID: PeerID) -> Int
     func lastKnownRSSI(for peerID: PeerID) -> Int?
+
+    // Mesh load
+    func meshPacketRate() -> Double   // packets/second observed in last 30s
 }
 
 extension Transport {
     func negotiatedMTU(for peerID: PeerID) -> Int { TransportConfig.bleDefaultFragmentSize + 43 }
     func lastKnownRSSI(for peerID: PeerID) -> Int? { nil }
+    func meshPacketRate() -> Double { 0 }
     func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
     func sendVerifyChallenge(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}
     func sendVerifyResponse(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}

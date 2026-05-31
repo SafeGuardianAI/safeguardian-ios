@@ -6,6 +6,18 @@ extension ChatViewModel: AgentContext {
     var selectedGeohash: String? { LocationChannelManager.shared.selectedChannel.nostrGeohashTag }
     var meshPeerIDs: Set<PeerID> { unifiedPeerService.connectedPeerIDs }
 
+    var meshPacketRate: Double { meshService.meshPacketRate() }
+    var broadcastInterval: TimeInterval { NovaBroadcaster.shared?.broadcaster.currentInterval ?? 60 }
+    var broadcastTTL: UInt8 { NovaBroadcaster.shared?.broadcaster.preferredTTL ?? 7 }
+
+    func setTickInterval(_ seconds: TimeInterval) {
+        NovaBroadcaster.shared?.broadcaster.setAgentInterval(seconds)
+    }
+
+    func setMessageTTL(_ ttl: UInt8) {
+        NovaBroadcaster.shared?.broadcaster.setPreferredTTL(ttl)
+    }
+
     @MainActor
     func sendMeshMessage(agentID: String, content: String, to peerID: PeerID, requestID: String? = nil) {
         sendPrivateMessage(AgentMeshRouting.format(agentID: agentID, content: content, requestID: requestID), to: peerID)

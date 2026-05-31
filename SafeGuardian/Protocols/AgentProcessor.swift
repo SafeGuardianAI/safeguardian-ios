@@ -136,6 +136,13 @@ protocol AgentContext {
     func sendMeshReply(agentID: String, content: String, to peerID: PeerID, requestID: String?)
     /// Sends an AGENT message to the named agent on every connected peer.
     func broadcastAgentMessage(agentID: String, content: String)
+    // Mesh adaptation — Nova tools read and adjust broadcast parameters.
+    var meshPacketRate: Double { get }
+    var broadcastInterval: TimeInterval { get }
+    var broadcastTTL: UInt8 { get }
+    func setTickInterval(_ seconds: TimeInterval)
+    func setMessageTTL(_ ttl: UInt8)
+
     /// Sends a [REQUEST:{type}:{requestID}] wire message to the peer, initiating a structured peer request.
     func sendPeerRequest(type: String, requestID: String, to peerID: PeerID)
     /// Stores a continuation to be resumed when the peer sends back [REQUEST_RESPONSE:{requestID}].

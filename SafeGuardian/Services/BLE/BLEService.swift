@@ -492,6 +492,15 @@ final class BLEService: NSObject {
         return bleQueue.sync { peripherals[uuid]?.lastSeenRSSI }
     }
 
+    func meshPacketRate() -> Double {
+        collectionsQueue.sync {
+            let window = TransportConfig.bleRecentPacketWindowSeconds
+            let cutoff = Date().addingTimeInterval(-window)
+            let count = recentPacketTimestamps.filter { $0 >= cutoff }.count
+            return Double(count) / window
+        }
+    }
+
     func currentPeerSnapshots() -> [TransportPeerSnapshot] {
         collectionsQueue.sync {
             let snapshot = Array(peers.values)

@@ -1,122 +1,72 @@
-//
-//  NovaBroadcaster.swift
-//  SafeGuardian
-//
-//  This is free and unencumbered software released into the public domain.
-//
-
 import Foundation
 import Combine
 #if os(iOS)
 import UIKit
 #endif
 
-/// Rule-based behavioral agent that observes device and mesh state and emits
-/// signed Nova StateTick atoms at a rate governed by battery policy.
-///
-/// Sits above the existing BLE mesh event stream without modifying it.
-/// Constructed by ChatViewModel alongside UnifiedPeerService.
+/// Nova-specific tick source. Owns location resolution and the published
+/// latestTick observable. All timing, battery gating, TTL preference, and
+/// agent-adjustable parameters live in the shared AgentBroadcaster engine.
 @MainActor
 final class NovaBroadcaster: ObservableObject {
-    /// Global access for state-aware agents. Set by ChatViewModel on boot.
     static var shared: NovaBroadcaster?
-
-    // MARK: - Published Output
 
     @Published private(set) var latestTick: NovaStateTick?
 
-    // MARK: - Private State
+    // Exposed so Nova tools can read/adjust broadcast parameters.
+    let broadcaster: AgentBroadcaster
 
     private let peerService: UnifiedPeerService
     private let locationManager: LocationStateManager
-    private var tickSequence: Int
     private var locationFixDate: Date?
-    private var suspended: Bool = false
+    private var lastEmittedCoordinate: (lat: Double, lon: Double)?
     private var cancellables = Set<AnyCancellable>()
-    private var timerCancellable: AnyCancellable?
 
-    // 5-minute confidence decay window, matching Android contract.
     private static let confidenceDecaySeconds: TimeInterval = 300
-
-    // Normal and reduced-rate intervals in seconds.
-    private static let normalInterval: TimeInterval = 60
-    private static let reducedInterval: TimeInterval = 120
-
-    // Battery thresholds.
-    private static let reducedRateThreshold: Float = 0.20
-    private static let suspendThreshold: Float = 0.05
-
-    // UserDefaults key for persisting tick sequence across launches.
-    private static let sequenceKey = "nova.tick_sequence"
-
-    // MARK: - Initialization
 
     init(peerService: UnifiedPeerService,
          locationManager: LocationStateManager = .shared) {
         self.peerService = peerService
         self.locationManager = locationManager
-        self.tickSequence = UserDefaults.standard.integer(forKey: Self.sequenceKey)
-
-#if os(iOS)
-        UIDevice.current.isBatteryMonitoringEnabled = true
-#endif
+        self.broadcaster = AgentBroadcaster(config: .nova)
         setupLocationObserver()
-        scheduleTimer(interval: Self.normalInterval)
+
+        broadcaster.onTick = { [weak self] ctx in
+            guard let self else { return false }
+            guard let tick = self.buildTick(batteryPct: ctx.batteryPct,
+                                            sequence: ctx.sequence) else { return false }
+            self.latestTick = tick
+            self.lastEmittedCoordinate = (tick.lat, tick.lon)
+            return true
+        }
+
+        broadcaster.start()
     }
 
-    // MARK: - Setup
+    // MARK: - Location
 
     private func setupLocationObserver() {
         locationManager.$currentLocation
             .compactMap { $0 }
             .sink { [weak self] location in
-                self?.locationFixDate = location.timestamp
+                guard let self else { return }
+                self.locationFixDate = location.timestamp
+                // Delta trigger: emit immediately when position moves > 50m
+                // from the last emitted coordinate, subject to minDeltaInterval.
+                broadcaster.significantChange = { [weak self] in
+                    guard let self,
+                          let last = self.lastEmittedCoordinate else { return true }
+                    let dlat = location.coordinate.latitude  - last.lat
+                    let dlon = location.coordinate.longitude - last.lon
+                    let approxMeters = sqrt(dlat*dlat + dlon*dlon) * 111_320
+                    return approxMeters > 50
+                }
+                broadcaster.triggerIfChanged()
             }
             .store(in: &cancellables)
     }
 
-    private func scheduleTimer(interval: TimeInterval) {
-        timerCancellable?.cancel()
-        timerCancellable = Timer.publish(every: interval, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.emitTick()
-            }
-    }
-
-    // MARK: - Tick Emission
-
-    /// Emits a tick if the location-first guard passes.
-    /// At 5% battery this will be the final emission before suspension.
-    func emitTick() {
-        guard !suspended else { return }
-
-#if os(iOS)
-        let battery = UIDevice.current.batteryLevel
-        let batteryPct = battery < 0 ? 1.0 : Double(battery)
-
-        if battery >= 0, battery < Self.suspendThreshold {
-            emitBeacon(batteryPct: batteryPct)
-            suspended = true
-            timerCancellable?.cancel()
-            return
-        }
-
-        let targetInterval: TimeInterval = battery >= 0 && battery < Self.reducedRateThreshold
-            ? Self.reducedInterval
-            : Self.normalInterval
-        rescheduleIfNeeded(interval: targetInterval)
-
-        guard let tick = buildTick(batteryPct: batteryPct) else { return }
-#else
-        guard let tick = buildTick(batteryPct: 1.0) else { return }
-#endif
-        publish(tick)
-    }
-
-    // MARK: - Tick Construction
-
-    private func buildTick(batteryPct: Double) -> NovaStateTick? {
+    private func buildTick(batteryPct: Double, sequence: Int) -> NovaStateTick? {
         let (lat, lon, source, confidence) = resolveLocation()
         guard confidence > 0 else { return nil }
 
@@ -130,17 +80,10 @@ final class NovaBroadcaster: ObservableObject {
             batteryPct: batteryPct,
             transportTier: .ble_coded,
             peerCount: peerService.connectedPeerIDs.count,
-            tickSequence: nextSequence(),
+            tickSequence: sequence,
             confidenceAtEmit: confidence
         )
     }
-
-    private func emitBeacon(batteryPct: Double) {
-        guard let tick = buildTick(batteryPct: batteryPct) else { return }
-        publish(tick)
-    }
-
-    // MARK: - Location Resolution
 
     private func resolveLocation() -> (lat: Double, lon: Double,
                                        source: NovaStateTick.LocationSource,
@@ -150,34 +93,11 @@ final class NovaBroadcaster: ObservableObject {
             let confidence = max(0.0, 1.0 - age / Self.confidenceDecaySeconds)
             return (fix.coordinate.latitude, fix.coordinate.longitude, .gps, confidence)
         }
-
-        // Teleported: user manually selected a geohash channel with no GPS fix.
         if locationManager.teleported,
            case .location(let ch) = locationManager.selectedChannel {
             let center = Geohash.decodeCenter(ch.geohash)
             return (center.lat, center.lon, .reported, 0.5)
         }
-
         return (0, 0, .gps, 0)
-    }
-
-    // MARK: - Helpers
-
-    private func nextSequence() -> Int {
-        tickSequence += 1
-        UserDefaults.standard.set(tickSequence, forKey: Self.sequenceKey)
-        return tickSequence
-    }
-
-    private func publish(_ tick: NovaStateTick) {
-        latestTick = tick
-    }
-
-    private var currentInterval: TimeInterval = NovaBroadcaster.normalInterval
-
-    private func rescheduleIfNeeded(interval: TimeInterval) {
-        guard interval != currentInterval else { return }
-        currentInterval = interval
-        scheduleTimer(interval: interval)
     }
 }

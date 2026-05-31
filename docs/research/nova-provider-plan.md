@@ -1,4 +1,6 @@
-# Nova Provider Abstraction — Implementation Plan
+# Nova Provider Abstraction — Implementation Plan (HISTORICAL)
+
+> This document reflects the pre-implementation design. Current code uses `AgentLanguageProvider`, `AgentGenerationEvent`, `MLXInferenceCoordinator`, and `MLXSessionPool`. References to `NovaLanguageProvider`, `NovaGenerationEvent`, `NovaInferenceCoordinator`, `NovaSessionPool`, and `NovaAgent` are superseded.
 
 Date: 2026-05-28
 

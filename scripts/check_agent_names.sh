@@ -17,10 +17,10 @@ INFRA_DIRS=(
 # Types that are explicitly allowed to carry agent names because they ARE the
 # agent or its direct behavioral contract.
 ALLOWLIST=(
-  "NovaAgent"
   "NovaConfig"
   "NovaStateTick"
   "NovaBroadcaster"
+  "NovaPersonalizationStore"
   "TrekAgent"
   "TrekConfig"
   "ApexAgent"

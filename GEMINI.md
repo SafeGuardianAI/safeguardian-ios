@@ -20,23 +20,23 @@ The bitchat-originated files are the upstream merge surface. Minimizing diffs in
 
 ## Agent System (Nova / AgentProcessor)
 
-The agent abstraction lives in `SafeGuardian/Protocols/AgentProcessor.swift`. `AgentContext` is the restricted interface agents use to interact with `ChatViewModel`. `ChatViewModel` conforms to it via `ChatViewModel+AgentContext.swift`.
+The agent abstraction lives in `SafeGuardian/Protocols/AgentProcessor.swift`. `AgentContext` is the restricted interface agents use to interact with `ChatViewModel`. `ChatViewModel` conforms to it via `ChatViewModel+Agents.swift`.
 
 When adding or modifying agents:
 - `AgentContext.notifyChange()` maps to `objectWillChange.send()`. Do NOT name any protocol method `objectWillChange` — that shadows the `ObservableObject` publisher and breaks conformance.
-- `ChatViewModel.sendMessage` is responsible for recording the user's turn in `privateChats[NovaAgent.novaPeerID]` before calling `novaAgent.handle`. The agent itself only appends the response via `context.addResponse`. Never delete this user-turn recording step or multi-turn history and the DM view will break.
-- `NovaAgent` receives the prompt already stripped of the `@nova ` trigger prefix. The double-strip logic in `handle` is harmless but unnecessary; do not add additional stripping layers.
+- `ChatViewModel.sendMessage` is responsible for recording the user's turn in `privateChats[Agent.nova.peerID]` before the agent handles the prompt. The agent itself only appends the response via `context.addResponse`. Never delete this user-turn recording step or multi-turn history and the DM view will break.
+- `Agent.nova` receives the prompt already stripped of the `@nova ` trigger prefix. The double-strip logic in `handle` is harmless but unnecessary; do not add additional stripping layers.
 
 ## Nova / MLX Inference Guardrails
 
-The current Nova inference path is `MLXInferenceService` -> `NovaInferenceCoordinator` -> `MLXModelLoader` + `NovaSessionPool`. Do not restore older notes that built inference directly inside `ChatViewModel+Nova`.
+The current Nova inference path is `MLXInferenceService` -> `MLXInferenceCoordinator` -> `MLXModelLoader` + `MLXSessionPool`. Do not restore older notes that built inference directly inside `ChatViewModel+Nova`.
 
 - Use `ChatSession.streamResponse(to:)` for text generation. Do not use direct `container.perform` generation for chat unless there is a specific lower-level MLX task and the Sendable/cancellation behavior has been reviewed.
 - Runtime state such as battery, GPS, geohash, peer count, or transport tier must not be part of the stable system prompt. Inject it as per-turn context in the user prompt so `ChatSession` reuse and KV cache behavior stay stable.
 - Do not use `Memory.cacheLimit`. The MLX API is `MLX.GPU.set(cacheLimit:)`; prefer an active/idle memory policy over one global cache limit when changing this area.
 - Treat model loading, session reuse, and model release as lifecycle-sensitive code. A model container must not be invalidated while inference is still unwinding; cancellation should be awaited before dropping sessions or containers.
 - `MLXModelLoader` must be keyed by model ID before adding richer model switching. Returning a loaded container for a different requested model is a correctness bug.
-- `NovaAgent` token streaming should avoid per-token main-thread churn where practical. Keep the O(1) `<think>...</think>` drain, but batch UI updates if generation volume grows.
+- `AgentConversationEngine` token streaming should avoid per-token main-thread churn where practical. Keep the O(1) `<think>...</think>` drain, but batch UI updates if generation volume grows.
 
 ## Package Integration
 

@@ -90,10 +90,10 @@ Pattern 1 and 2 use cases cover most immediate needs.
 
 Both Pattern 2 and Pattern 3 require the receiving agent to decide whether
 to run inference at all before paying the compute cost. The current implementation
-has a battery threshold hardcoded directly in NovaAgent.handle() and a
-post-inference sentinel (SKIP) that burns tokens to decide not to reply.
-The sentinel approach is strictly worse: inference has already run, memory
-bandwidth was consumed, and the skip decision is non-deterministic.
+had a battery threshold hardcoded directly in `NovaAgent.handle()` and a
+post-inference sentinel (SKIP) that burned tokens to decide not to reply.
+That approach has been superseded: `AgentGateRegistry` and `BatteryGate` now
+evaluate gates before `provider.generate()` is called.
 
 The correct architecture is a gate protocol evaluated before provider.generate()
 is called. Every gate is a pure synchronous predicate on AgentGateContext — no

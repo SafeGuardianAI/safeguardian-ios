@@ -123,12 +123,12 @@ Agents are on-device or cloud-connected processors that intercept trigger-prefix
 
 The two protocols are in `SafeGuardian/Protocols/AgentProcessor.swift`.
 
-`AgentProcessor` defines the agent's identity and message handling:
+`AgentProcessor` has a single required property: `conversationConfig: AgentConversationConfig`. All identity fields — `agentID`, `displayName`, `peerID`, `triggerPrefix` — are derived from it as default protocol implementations. Conforming types must fill out an `AgentConversationConfig` and are otherwise free to define their behavior in `handle(prompt:context:)`.
 
-- `agentID: String` — unique lowercase key (e.g. `"nova"`).
-- `displayName: String` — shown in the sidebar and DM header (e.g. `"Nova"`).
-- `triggerPrefix: String` — the string the user types to address this agent (e.g. `"@nova"`).
-- `peerID: PeerID` — the synthetic peer ID for this agent's DM thread. Must not collide with real BLE peer IDs. Use a short descriptive string like `PeerID(str: "nova-local")`.
+- `conversationConfig.agentID` — unique lowercase key (e.g. `"nova"`).
+- `conversationConfig.displayName` — shown in the sidebar and DM header (e.g. `"Nova"`).
+- `conversationConfig.triggerPrefix` — the string the user types to address this agent (e.g. `"@nova"`).
+- `conversationConfig.peerID` — the synthetic peer ID for this agent's DM thread. Must not collide with real BLE peer IDs.
 - `shouldHandle(_ message: String) -> Bool` — returns true when the message is addressed to this agent.
 - `handle(prompt: String, context: AgentContext)` — called with the stripped prompt (trigger prefix removed). Use `context.addResponse(sender: displayName, content: ..., privatePeerID: peerID)` to insert response messages and `context.notifyChange()` to push streaming updates to the UI.
 
@@ -137,7 +137,7 @@ The two protocols are in `SafeGuardian/Protocols/AgentProcessor.swift`.
 To register an agent, add it to the `agents` array in `ChatViewModel.swift`:
 
 ```swift
-let agents: [any AgentProcessor] = [NovaAgent(), YourNewAgent()]
+let agents: [any AgentProcessor] = [Agent.nova, YourNewAgent()]
 ```
 
 The `sendMessage` routing loop iterates `agents` and calls `shouldHandle` on each. It also intercepts follow-up messages sent while the user is already inside an agent's DM thread (without the trigger prefix), so multi-turn conversations work without requiring the user to re-type the prefix every turn.
@@ -146,7 +146,7 @@ Agent response messages use `sender: displayName`, not `sender: "local"`. The DM
 
 ### Model capabilities
 
-If your agent uses an LLM that supports thinking mode (chain-of-thought), register it in `NovaConfig.capabilities(for:)` in `SafeGuardian/Features/nova/NovaConfig.swift`. The `ModelCapabilities` struct carries two fields: `hasThinkingMode: Bool` and `noThinkSuffix: String?`. `NovaInferenceCoordinator.decoratePrompt` reads this at generation time and appends the suppression suffix when present. For models where thinking cannot be suppressed via message text (e.g. DeepSeek-R1), set `noThinkSuffix: nil` and rely on the `drainVisible` token filter in `NovaAgent` to strip `<think>…</think>` blocks from the output.
+If your agent uses an LLM that supports thinking mode (chain-of-thought), register it in `NovaConfig.capabilities(for:)` in `SafeGuardian/Features/nova/NovaConfig.swift`. The `ModelCapabilities` struct carries four fields: `hasThinkingMode: Bool`, `noThinkSuffix: String?`, `supportsToolCalling: Bool`, and `supportsVision: Bool`. Prompt decoration is handled by `AgentPromptInput.decorated(modelID:)`, which appends the suppression suffix when present. For models where thinking cannot be suppressed via message text (e.g. DeepSeek-R1), set `noThinkSuffix: nil` and rely on the `<think>…</think>` drain in `AgentConversationEngine` to strip chain-of-thought blocks from the output.
 
 ---
 
@@ -247,11 +247,11 @@ For details on simulating broadcast flooding, TTL behavior, and Noise rehandshak
 
 The Nova subsystem has two orthogonal extension surfaces: the device-state tick and the inference layer.
 
-The tick (`NovaStateTick`) carries the ambient context injected as a prefix on every user message — battery level, geolocation, peer count. To add a new field: add it to `NovaStateTick.swift`, update `NovaBroadcaster.buildTick(batteryPct:)` to populate it, and update `NovaInferenceCoordinator.decoratePrompt` to include it in the injected prefix string. Ticks are ephemeral and signed; avoid putting high-bandwidth data in them.
+The tick (`NovaStateTick`) carries the ambient context injected as a prefix on every user message — battery level, geolocation, peer count. To add a new field: add it to `NovaStateTick.swift`, update `NovaBroadcaster.buildTick(batteryPct:)` to populate it, and update `AgentPromptInput.decorated(modelID:)` to include it in the injected prefix string. Ticks are built locally by `NovaBroadcaster` and stored in `latestTick` for tool and context use; avoid putting high-bandwidth data in them.
 
-The inference layer is `MLXInferenceService` → `NovaInferenceCoordinator` → `NovaSessionPool`. The coordinator manages a single active generation task and a session cache keyed by model ID and system-prompt hash. Switching the active model (`MLXInferenceService.selectModel`) invalidates the session cache and the loader state machine, ensuring the next generation downloads and loads the new model cleanly.
+The inference layer is `MLXInferenceService` → `MLXInferenceCoordinator` → `MLXSessionPool`. The coordinator manages a single active generation task and a session cache keyed by model ID and system-prompt hash. Switching the active model (`MLXInferenceService.selectModel`) invalidates the session cache and the loader state machine, ensuring the next generation downloads and loads the new model cleanly.
 
-To change how prompts are constructed without breaking session caching, modify `NovaInferenceCoordinator.decoratePrompt`. Device state is prepended as a bracketed prefix on the user message rather than injected into the system prompt, which keeps the session key (a hash of the stable system prompt) stable across state changes.
+To change how prompts are constructed without breaking session caching, modify `AgentPromptInput.decorated(modelID:)`. Device state is prepended as a bracketed prefix on the user message rather than injected into the system prompt, which keeps the session key (a hash of the stable system prompt) stable across state changes.
 
 `NovaConfig` is the single source of truth for default model ID, temperature, timeout, idle release interval, the stable system prompt, and the model capability registry. Changes to the stable system prompt invalidate all cached sessions on the next generation call.
 

@@ -7,16 +7,22 @@ This document records which Swift source files are SafeGuardian additions versus
 These files did not exist in bitchat. They are wholly SafeGuardian work.
 
 ### Nova agent and inference
-- `SafeGuardian/Features/nova/NovaAgent.swift`
-- `SafeGuardian/Features/nova/NovaConfig.swift` — also defines `AgentGenerationEvent`
-- `SafeGuardian/Features/nova/MLXInferenceCoordinator.swift` — renamed from `NovaInferenceCoordinator`
-- `SafeGuardian/Features/nova/MLXSessionPool.swift` — renamed from `NovaSessionPool`
+- `SafeGuardian/Features/nova/Agent.swift` — `Agent` struct with `Agent.nova` singleton; replaces the former `NovaAgent.swift`
+- `SafeGuardian/Features/nova/AgentConversationEngine.swift`
+- `SafeGuardian/Features/nova/AgentConversationConfig.swift`
+- `SafeGuardian/Features/nova/AgentThreadStore.swift`
+- `SafeGuardian/Features/nova/NovaConfig.swift` — model capability registry, `ModelCapabilities`, `AgentGenerationEvent`
+- `SafeGuardian/Features/nova/MLXInferenceCoordinator.swift`
+- `SafeGuardian/Features/nova/MLXSessionPool.swift`
 - `SafeGuardian/Features/nova/MLXInferenceService.swift`
 - `SafeGuardian/Features/nova/MLXModelLoader.swift`
 - `SafeGuardian/Features/nova/NovaBroadcaster.swift`
 - `SafeGuardian/Features/nova/NovaStateTick.swift`
+- `SafeGuardian/Features/nova/Gates/AgentGateRegistry.swift`
+- `SafeGuardian/Features/nova/Gates/BatteryGate.swift`
+- `SafeGuardian/Features/nova/Tools/AgentTool.swift`
 - `SafeGuardian/Protocols/AgentProcessor.swift`
-- `SafeGuardian/ViewModels/Extensions/ChatViewModel+AgentContext.swift`
+- `SafeGuardian/ViewModels/Extensions/ChatViewModel+Agents.swift`
 
 ### Agent provider abstraction
 - `SafeGuardian/Features/nova/AgentLanguageProvider.swift` — `AgentLanguageProvider` protocol, `AgentPromptInput`, `AgentProviderCapabilities`

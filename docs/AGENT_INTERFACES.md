@@ -63,6 +63,7 @@ Input to a single inference call.
         systemPrompt: string                  -- composed at call time: base prompt + optional user personalization blurb
         history:      list<ConversationTurn>  -- windowed prior turns, oldest first; excludes current user message
                                               -- assembled by the agent layer, capped at NovaConfig.historyWindowSize
+        threadID:     string                  -- identifies the conversation thread; empty string for the default thread
         toolRegistry: AgentToolRegistry|null  -- null when model does not support tools
         isMeshQuery:  bool                    -- true when prompt originated from a remote peer via AgentMeshRouting
         imageData:    list<bytes>             -- JPEG-encoded images attached to current turn; empty for text-only queries
@@ -111,11 +112,12 @@ Standard gates:
 The single interface for all inference backends (MLX, Ollama, OpenAI, Anthropic, etc.).
 
     interface AgentLanguageProvider:
-        id:           string   -- e.g. "mlx", "ollama", "openai"
-        displayName:  string
-        capabilities: AgentProviderCapabilities
-        isLoading:    bool
-        isModelLoaded: bool
+        id:             string   -- e.g. "mlx", "ollama", "openai"
+        displayName:    string
+        activeModelID:  string   -- ID of the currently loaded model; empty if none loaded
+        capabilities:   AgentProviderCapabilities
+        isLoading:      bool
+        isModelLoaded:  bool
 
         generate(input: AgentPromptInput) -> Stream<AgentGenerationEvent>
         cancel() -> void
@@ -175,7 +177,7 @@ All MainActor state access routes through MainActor.run.
 
     interface AgentContextProxy:
         meshPeerIDs() -> async set<PeerID>
-        deviceTick()  -> async NovaStateTick|null
+        tick()        -> async NovaStateTick|null
         sendMesh(toAgentID: string, content: string, peerID: PeerID) -> async void
             -- fire-and-forget; reply goes to human DM thread
         requestFromAgent(agentID: string, content: string, peerID: PeerID) -> async string
@@ -239,6 +241,8 @@ On the receiver, inference runs silently for mesh queries (no placeholder in the
 local agent thread). The reply is sent back only to the originating peer.
 
 ### Pattern 3 — Agent Session (inference on both sides, shared context)
+
+NOT YET IMPLEMENTED. Documented here as the intended design; no Swift code exists for this pattern.
 
 A multi-turn agent-to-agent exchange. Both sides maintain per-session
 conversation history keyed by sessionID. Sessions have a maximum turn count
@@ -409,8 +413,7 @@ Gate with compile-time debug flag on every platform.
 
 ## NovaStateTick
 
-Behavioral state observation broadcast by a Nova agent over the mesh.
-Maps to the nova.state_tick ADSP atom schema.
+Behavioral state observation built locally by `NovaBroadcaster` and stored in `latestTick` for tool and prompt context use. Mesh broadcast of ticks as ADSP atoms is not yet implemented; ticks do not currently leave the device.
 
     struct NovaStateTick:
         lat:                 float

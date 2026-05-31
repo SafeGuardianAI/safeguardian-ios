@@ -59,13 +59,16 @@ extension SafeGuardianIPCHost {
             }
             .store(in: &clientCancellables[fd, default: Set()])
 
-        // Nova private channel — responses go to privateChats[novaPeerID], not $messages.
+        // Nova private channel — responses go to per-thread privateChats entries, not $messages.
+        // Watch all threads for the nova agent so switching threads in the UI is reflected in TUI.
         vm.privateChatManager.$privateChats
             .receive(on: DispatchQueue.main)
             .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] chats in
                 guard let self, self.activeClients[fd] != nil else { return }
-                let novaMessages = chats[Agent.nova.peerID] ?? []
+                let novaThreadPeerIDs = AgentThreadStore.shared.threads(for: "nova").map { $0.peerID }
+                let novaMessages = novaThreadPeerIDs.flatMap { chats[$0] ?? [] }
+                    .sorted { $0.timestamp < $1.timestamp }
                 for msg in novaMessages {
                     guard msg.timestamp >= connectionTime else { continue }
                     let text = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)

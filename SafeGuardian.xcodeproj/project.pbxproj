@@ -16,6 +16,16 @@
 		A6E3E5722E7703760032EA8A /* BitLogger in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3E5712E7703760032EA8A /* BitLogger */; };
 		A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA7E2E7706720032EA8A /* Tor */; };
 		A6E3EA812E7706A80032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA802E7706A80032EA8A /* Tor */; };
+		BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A02 /* MLXLLM */; };
+		BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A03 /* MLXLMCommon */; };
+		BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A04 /* MLXHuggingFace */; };
+		BAEC911A2FCC139D00F1DA8D /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111B02 /* Transformers */; };
+		BAEC911B2FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C02 /* HuggingFace */; };
+		BAEC911C2FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A05 /* MLXLLM */; };
+		BAEC911D2FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A06 /* MLXLMCommon */; };
+		BAEC911E2FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A07 /* MLXHuggingFace */; };
+		BAEC911F2FCC139D00F1DA8D /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111B03 /* Transformers */; };
+		BAEC91202FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C03 /* HuggingFace */; };
 		E0A1B2C3D4E5F6012345678D /* relays/online_relays_gps.csv in Resources */ = {isa = PBXBuildFile; fileRef = E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */; };
 		E0A1B2C3D4E5F6012345678E /* relays/online_relays_gps.csv in Resources */ = {isa = PBXBuildFile; fileRef = E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */; };
 /* End PBXBuildFile section */
@@ -155,6 +165,11 @@
 		31F6FDADA63050361C14F3A1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				BAEC91202FCC139D00F1DA8D /* HuggingFace in Frameworks */,
+				BAEC911F2FCC139D00F1DA8D /* Transformers in Frameworks */,
+				BAEC911E2FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */,
+				BAEC911D2FCC139D00F1DA8D /* MLXLMCommon in Frameworks */,
+				BAEC911C2FCC139D00F1DA8D /* MLXLLM in Frameworks */,
 				A6E3E5722E7703760032EA8A /* BitLogger in Frameworks */,
 				3EE336D150427F736F32B56C /* P256K in Frameworks */,
 				A6E3EA812E7706A80032EA8A /* Tor in Frameworks */,
@@ -164,6 +179,11 @@
 		B5A5CC493FFB3D8966548140 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				BAEC911B2FCC139D00F1DA8D /* HuggingFace in Frameworks */,
+				BAEC911A2FCC139D00F1DA8D /* Transformers in Frameworks */,
+				BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */,
+				BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */,
+				BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */,
 				A6E3E5702E77036A0032EA8A /* BitLogger in Frameworks */,
 				885BBED78092484A5B069461 /* P256K in Frameworks */,
 				A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */,
@@ -231,8 +251,8 @@
 				CC1111111111111111111A05 /* MLXLLM */,
 				CC1111111111111111111A06 /* MLXLMCommon */,
 				CC1111111111111111111A07 /* MLXHuggingFace */,
-				DD1111111111111111111B03 /* Tokenizers (macOS) */,
-				DD1111111111111111111C03 /* HuggingFace (macOS) */,
+				DD1111111111111111111B03 /* Transformers */,
+				DD1111111111111111111C03 /* HuggingFace */,
 			);
 			productName = SafeGuardian_macOS;
 			productReference = 8F3A7C058C2C8E1A06C8CF8B /* SafeGuardian.app */;
@@ -1003,26 +1023,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		DD1111111111111111111B02 /* Transformers (iOS) */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Transformers;
-		};
-		DD1111111111111111111B03 /* Transformers (macOS) */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Transformers;
-		};
-		DD1111111111111111111C02 /* HuggingFace (iOS) */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
-			productName = HuggingFace;
-		};
-		DD1111111111111111111C03 /* HuggingFace (macOS) */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
-			productName = HuggingFace;
-		};
 		4EB6BA1B8464F1EA38F4E286 /* P256K */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B8C407587481BBB190741C93 /* XCRemoteSwiftPackageReference "swift-secp256k1" */;
@@ -1093,7 +1093,17 @@
 			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Transformers;
 		};
+		DD1111111111111111111B03 /* Transformers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Transformers;
+		};
 		DD1111111111111111111C02 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+		DD1111111111111111111C03 /* HuggingFace */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
 			productName = HuggingFace;

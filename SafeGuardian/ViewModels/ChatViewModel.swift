@@ -101,7 +101,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     var isInAgentDM: Bool {
         guard let peer = selectedPrivateChatPeer else { return false }
-        return agents.contains(where: { $0.peerID == peer })
+        return AgentThreadStore.shared.isThreadPeerID(peer)
     }
 
     #if os(iOS)
@@ -1043,9 +1043,12 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Also intercept plain messages sent while already inside an agent DM so follow-up turns
         // don't fall through to BLE routing against a synthetic peer that doesn't exist.
         let lower = trimmed.lowercased()
+        let threadStore = AgentThreadStore.shared
         for agent in agents {
             let triggeredByPrefix = agent.shouldHandle(lower)
-            let inAgentDM = selectedPrivateChatPeer == agent.peerID
+            let inAgentDM = selectedPrivateChatPeer.map {
+                threadStore.agentID(for: $0) == agent.agentID
+            } ?? false
             guard triggeredByPrefix || inAgentDM else { continue }
 
             let stripped: String
@@ -1068,11 +1071,16 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 addLocalMessage("usage: \(agent.triggerPrefix) <message>")
             } else {
                 let displayContent = stripped.isEmpty ? "[image]" : stripped
+                let threadPeerID = threadStore.activePeerID(for: agent.agentID)
                 let userTurn = SafeGuardianMessage(sender: nickname, content: displayContent, timestamp: Date(), isRelay: false)
-                if privateChats[agent.peerID] == nil { privateChats[agent.peerID] = [] }
-                privateChats[agent.peerID]?.append(userTurn)
-                startPrivateChat(with: agent.peerID)
-                agent.handle(prompt: stripped, image: imageData, context: self, replyTo: nil)
+                if privateChats[threadPeerID] == nil { privateChats[threadPeerID] = [] }
+                privateChats[threadPeerID]?.append(userTurn)
+                // Auto-title new threads from their first user message.
+                if let t = threadStore.activeThread(for: agent.agentID), t.title == "New conversation" {
+                    threadStore.updateTitle(displayContent, threadID: t.id, agentID: agent.agentID)
+                }
+                startPrivateChat(with: threadPeerID)
+                agent.handle(prompt: stripped, image: imageData, context: self, threadPeerID: threadPeerID, replyTo: nil)
             }
             return
         }

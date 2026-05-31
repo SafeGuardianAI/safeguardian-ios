@@ -21,6 +21,7 @@ final class AgentConversationEngine {
         image: Data? = nil,
         config: AgentConversationConfig,
         context: any AgentContext,
+        threadPeerID: PeerID? = nil,
         replyTo: PeerID? = nil,
         replyID: String? = nil
     ) {
@@ -35,11 +36,13 @@ final class AgentConversationEngine {
         guard AgentGateRegistry.standard().shouldHandle(gateCtx) else { return }
 
         let isMeshQuery = replyTo != nil
+        // Mesh queries use the canonical agent peerID; local queries use the active thread.
+        let effectivePeerID = isMeshQuery ? config.peerID : (threadPeerID ?? config.peerID)
 
         // Capture the history boundary before any current-turn messages are inserted.
         // For local queries the caller already appended userTurn; subtract 1 to exclude it.
         // For mesh queries no local message was added; use the current count as-is.
-        let currentCount = context.privateChats[config.peerID]?.count ?? 0
+        let currentCount = context.privateChats[effectivePeerID]?.count ?? 0
         let historyBoundary = isMeshQuery ? currentCount : max(0, currentCount - 1)
 
         // For local queries only: show loading state and insert a response placeholder
@@ -48,7 +51,7 @@ final class AgentConversationEngine {
         if !isMeshQuery && !provider.isModelLoaded {
             context.addAgentLocalMessage(
                 provider.isLoading ? "downloading model..." : "initializing...",
-                to: config.peerID
+                to: effectivePeerID
             )
         }
 
@@ -59,7 +62,7 @@ final class AgentConversationEngine {
             )
         } else {
             response = context.addResponse(
-                sender: config.displayName, content: "[thinking...]", privatePeerID: config.peerID
+                sender: config.displayName, content: "[thinking...]", privatePeerID: effectivePeerID
             )
             context.notifyChange()
         }
@@ -86,7 +89,7 @@ final class AgentConversationEngine {
             let systemPrompt = config.systemPrompt()
             let modelID = provider.activeModelID
             let maxTurns = await PromptBudgetService.shared.recommendedTurnCount(modelID: modelID)
-            let fullThread = context.privateChats[config.peerID] ?? []
+            let fullThread = context.privateChats[effectivePeerID] ?? []
             let historySlice = historyBoundary > 0 ? Array(fullThread.prefix(historyBoundary)) : []
             let history = Self.buildHistory(
                 from: historySlice,
@@ -156,7 +159,7 @@ final class AgentConversationEngine {
                             context.notifyChange()
                         } else {
                             // Remove the placeholder entirely so the UI shows no orphaned bubble.
-                            context.removeResponse(response, from: config.peerID)
+                            context.removeResponse(response, from: effectivePeerID)
                         }
                     }
                     if send, let peer = replyTo, !state.visible.isEmpty {
@@ -174,7 +177,7 @@ final class AgentConversationEngine {
                     }
                     #if DEBUG
                     ConversationLogger.shared.record(
-                        agentThread: context.privateChats[config.peerID] ?? [],
+                        agentThread: context.privateChats[effectivePeerID] ?? [],
                         systemPrompt: input.systemPrompt,
                         agentSenderID: config.displayName,
                         providerID: provider.id,

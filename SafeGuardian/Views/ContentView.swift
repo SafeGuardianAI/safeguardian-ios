@@ -574,26 +574,56 @@ struct ContentView: View {
                             }
                         )
                     }
-                    let activeAgents = viewModel.agents.filter {
-                        !(viewModel.privateChats[$0.peerID]?.isEmpty ?? true)
-                    }
-                    if !activeAgents.isEmpty {
-                        Divider().padding(.horizontal, 16).padding(.top, 4)
-                        ForEach(activeAgents, id: \.agentID) { agent in
+                    let threadStore = AgentThreadStore.shared
+                    Divider().padding(.horizontal, 16).padding(.top, 4)
+                    ForEach(viewModel.agents, id: \.agentID) { agent in
+                        let agentThreads = threadStore.threads(for: agent.agentID)
+                        let activeThread = threadStore.activeThread(for: agent.agentID)
+                        // Agent header row with + button to start a new thread.
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(textColor)
+                            Text(agent.displayName)
+                                .font(.safeguardianSystem(size: 14))
+                                .foregroundColor(textColor)
+                            Spacer()
                             Button {
-                                viewModel.startPrivateChat(with: agent.peerID)
+                                let t = threadStore.newThread(for: agent.agentID)
+                                viewModel.startPrivateChat(with: t.peerID)
                                 showSidebar = true
                             } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "sparkles")
-                                        .foregroundColor(textColor)
-                                    Text(agent.displayName)
-                                        .font(.safeguardianSystem(size: 14))
-                                        .foregroundColor(textColor)
-                                    Spacer()
+                                Image(systemName: "plus")
+                                    .foregroundColor(textColor.opacity(0.6))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        // Thread list — always show at least the active thread.
+                        ForEach(agentThreads, id: \.id) { thread in
+                            let isActive = thread.id == activeThread?.id
+                            let hasMessages = !(viewModel.privateChats[thread.peerID]?.isEmpty ?? true)
+                            if hasMessages || isActive {
+                                Button {
+                                    threadStore.switchToThread(thread.id, agentID: agent.agentID)
+                                    viewModel.startPrivateChat(with: thread.peerID)
+                                    showSidebar = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: isActive ? "bubble.left.fill" : "bubble.left")
+                                            .foregroundColor(isActive ? textColor : textColor.opacity(0.5))
+                                            .font(.system(size: 11))
+                                        Text(thread.title)
+                                            .font(.safeguardianSystem(size: 12))
+                                            .foregroundColor(isActive ? textColor : textColor.opacity(0.6))
+                                            .lineLimit(1)
+                                        Spacer()
+                                    }
+                                    .padding(.leading, 32)
+                                    .padding(.trailing, 16)
+                                    .padding(.vertical, 4)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
                             }
                         }
                     }
@@ -795,8 +825,10 @@ struct ContentView: View {
         let peer = viewModel.getPeer(byID: headerPeerID)
 
         let displayName: String = {
-            if let agent = viewModel.agents.first(where: { $0.peerID == privatePeerID }) {
-                return agent.displayName
+            if let thread = AgentThreadStore.shared.thread(for: privatePeerID),
+               let agent = viewModel.agents.first(where: { $0.agentID == thread.agentID }) {
+                let threads = AgentThreadStore.shared.threads(for: agent.agentID)
+                return threads.count > 1 ? "\(agent.displayName) · \(thread.title)" : agent.displayName
             }
             if privatePeerID.isGeoDM, case .location(let ch) = locationManager.selectedChannel {
                 let disp = viewModel.geohashDisplayName(for: privatePeerID)

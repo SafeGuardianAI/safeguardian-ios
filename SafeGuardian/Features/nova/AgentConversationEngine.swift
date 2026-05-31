@@ -36,6 +36,12 @@ final class AgentConversationEngine {
 
         let isMeshQuery = replyTo != nil
 
+        // Capture the history boundary before any current-turn messages are inserted.
+        // For local queries the caller already appended userTurn; subtract 1 to exclude it.
+        // For mesh queries no local message was added; use the current count as-is.
+        let currentCount = context.privateChats[config.peerID]?.count ?? 0
+        let historyBoundary = isMeshQuery ? currentCount : max(0, currentCount - 1)
+
         // For local queries only: show loading state and insert a response placeholder
         // that streams tokens into the chat. Mesh queries run inference silently —
         // the reply goes back to the requester; nothing appears in the local thread.
@@ -80,8 +86,10 @@ final class AgentConversationEngine {
             let systemPrompt = config.systemPrompt()
             let modelID = provider.activeModelID
             let maxTurns = await PromptBudgetService.shared.recommendedTurnCount(modelID: modelID)
+            let fullThread = context.privateChats[config.peerID] ?? []
+            let historySlice = historyBoundary > 0 ? Array(fullThread.prefix(historyBoundary)) : []
             let history = Self.buildHistory(
-                from: context.privateChats[config.peerID] ?? [],
+                from: historySlice,
                 agentDisplayName: config.displayName,
                 maxTurns: maxTurns
             )
@@ -196,8 +204,7 @@ final class AgentConversationEngine {
         agentDisplayName: String,
         maxTurns: Int = NovaConfig.historyWindowSize
     ) -> [ConversationTurn] {
-        let completed = thread.count >= 2 ? Array(thread.dropLast(2)) : []
-        let turns: [ConversationTurn] = completed.compactMap { msg in
+        let turns: [ConversationTurn] = thread.compactMap { msg in
             guard msg.sender != "local", msg.sender != "system" else { return nil }
             let c = msg.content
             guard !(c.hasPrefix("[") && c.hasSuffix("]")) else { return nil }

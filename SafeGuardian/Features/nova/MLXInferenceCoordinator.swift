@@ -7,6 +7,7 @@ import MLXLMCommon
     private let loader: MLXModelLoader
     private let sessionPool = MLXSessionPool()
     private var activeTask: Task<Void, Never>?
+    private var activeSessionKey: MLXSessionPool.Key?
     private var pendingRelease = false
     private var idleWork: DispatchWorkItem?
     private var gpuCacheConfigured = false
@@ -27,6 +28,10 @@ import MLXLMCommon
             return AsyncStream { c in c.yield(.status("[model releasing]")); c.finish() }
         }
         activeTask?.cancel()
+        // Evict the session the cancelled task was using so the new task cannot
+        // race against it on the same ChatSession instance.
+        if let key = activeSessionKey { sessionPool.invalidate(key: key) }
+        activeSessionKey = nil
         rescheduleIdleTimer()
         let decorated = input.decorated(modelID: modelID)
         // historyOffset encodes how far the window has slid: when it changes,
@@ -73,6 +78,7 @@ import MLXLMCommon
                         for: key, container: model, systemPrompt: input.systemPrompt,
                         history: chatHistory, toolRegistry: input.toolRegistry
                     )
+                    await MainActor.run { self.activeSessionKey = key }
                     guard !decorated.isEmpty, !Task.isCancelled else {
                         continuation.yield(.status("[error: empty prompt]"))
                         continuation.finish()
@@ -116,6 +122,7 @@ import MLXLMCommon
                     log("Error: \(error.localizedDescription)")
                     continuation.yield(.failure(error.localizedDescription))
                 }
+                await MainActor.run { self.activeSessionKey = nil }
                 continuation.finish()
             }
             activeTask = task
@@ -123,10 +130,15 @@ import MLXLMCommon
         }
     }
 
-    func cancel() { activeTask?.cancel() }
+    func cancel() {
+        activeTask?.cancel()
+        if let key = activeSessionKey { sessionPool.invalidate(key: key) }
+        activeSessionKey = nil
+    }
 
     func cancelAndClearSessions() {
         activeTask?.cancel()
+        activeSessionKey = nil
         sessionPool.invalidateAll()
     }
 

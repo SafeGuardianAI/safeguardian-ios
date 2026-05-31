@@ -19,7 +19,7 @@ struct TextMessageView: View {
     var body: some View {
         let isSelf = viewModel.isSelfMessage(message)
         HStack(spacing: 0) {
-            if isSelf { Spacer(minLength: 56) }
+            if isSelf { Spacer(minLength: 0) }
             VStack(alignment: .leading, spacing: 0) {
                 let cashuLinks = message.content.extractCashuLinks()
                 let lightningLinks = message.content.extractLightningLinks()
@@ -29,7 +29,6 @@ struct TextMessageView: View {
                     Text(viewModel.formatMessageAsText(message, colorScheme: colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
                         .lineLimit(isLong && !isExpanded ? TransportConfig.uiLongMessageLineLimit : nil)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     if message.isPrivate && message.sender == viewModel.nickname,
                        let status = message.deliveryStatus {
                         DeliveryStatusView(status: status)
@@ -60,7 +59,7 @@ struct TextMessageView: View {
                     .padding(.leading, 2)
                 }
             }
-            if !isSelf { Spacer(minLength: 56) }
+            if !isSelf { Spacer(minLength: 0) }
         }
     }
 }

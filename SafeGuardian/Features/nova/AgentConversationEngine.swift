@@ -35,6 +35,20 @@ final class AgentConversationEngine {
         )
         guard AgentGateRegistry.standard().shouldHandle(gateCtx) else { return }
 
+        // For local queries: if the active provider requires configuration that is missing,
+        // surface the error immediately rather than letting generate() fail asynchronously
+        // and flooding the thread with status messages before the real error arrives.
+        if replyTo == nil && provider.capabilities.requiresNetwork && !provider.isModelLoaded {
+            let response = context.addResponse(
+                sender: config.displayName,
+                content: "[provider not configured — open Settings and set the URL and model]",
+                privatePeerID: threadPeerID ?? config.peerID
+            )
+            _ = response
+            context.notifyChange()
+            return
+        }
+
         let isMeshQuery = replyTo != nil
         // Mesh queries use the canonical agent peerID; local queries use the active thread.
         let effectivePeerID = isMeshQuery ? config.peerID : (threadPeerID ?? config.peerID)

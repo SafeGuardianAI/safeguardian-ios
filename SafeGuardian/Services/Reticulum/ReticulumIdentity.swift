@@ -41,6 +41,14 @@ final class ReticulumIdentity {
 
     // MARK: - Lifecycle
 
+    // Generate a non-persisted identity for use when keychain access fails at startup.
+    static func makeEphemeral() -> ReticulumIdentity {
+        ReticulumIdentity(
+            signingPrivateKey: Curve25519.Signing.PrivateKey(),
+            encryptionPrivateKey: Curve25519.KeyAgreement.PrivateKey()
+        )
+    }
+
     static func loadOrCreate(keychain: KeychainManagerProtocol) throws -> ReticulumIdentity {
         let service = ReticulumConfig.reticulumIdentityServiceTag
         // Try to load persisted keys first.

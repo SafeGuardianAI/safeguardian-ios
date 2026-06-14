@@ -117,6 +117,9 @@ protocol SafeGuardianDelegate: AnyObject {
     // Bluetooth state updates for user notifications
     func didUpdateBluetoothState(_ state: CBManagerState)
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?)
+
+    // SafeGuardian-specific envelope (entity / task / triage / agent messages)
+    func didReceiveSGEnvelope(_ envelope: SGEnvelope, from peerID: PeerID)
 }
 
 // Provide default implementation to make it effectively optional
@@ -134,6 +137,10 @@ extension SafeGuardianDelegate {
     }
 
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?) {
+        // Default empty implementation
+    }
+
+    func didReceiveSGEnvelope(_ envelope: SGEnvelope, from peerID: PeerID) {
         // Default empty implementation
     }
 }

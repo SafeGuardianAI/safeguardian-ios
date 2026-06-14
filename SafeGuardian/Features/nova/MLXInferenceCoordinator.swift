@@ -1,3 +1,4 @@
+import AgentInfra
 import CoreImage
 import Foundation
 import MLX
@@ -51,7 +52,7 @@ import MLXLMCommon
                 do {
                     continuation.yield(.status("[initializing...]"))
                     let dm = await MainActor.run { ModelDownloadManager.shared }
-                    let isCached = await MainActor.run { dm.cachedSize(modelID: modelID) != nil }
+                    let isCached = await MainActor.run { dm.localSnapshotURL(modelID: modelID) != nil }
                     if !isCached {
                         let hasSpace = await MainActor.run { dm.hasStorageForDownload(modelID: modelID) }
                         if !hasSpace {
@@ -63,21 +64,26 @@ import MLXLMCommon
                             continuation.finish()
                             return
                         }
+                        continuation.yield(.status("[downloading model...]"))
+                    } else {
+                        continuation.yield(.status("[loading model...]"))
                     }
                     if await MainActor.run(body: { !self.gpuCacheConfigured }) {
                         let totalGB = Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824)
                         let limitGB = max(1, min(totalGB / 10, 4))
-                        MLX.GPU.set(cacheLimit: limitGB * 1_073_741_824)
+                        MLX.Memory.cacheLimit = limitGB * 1_073_741_824
                         await MainActor.run { self.gpuCacheConfigured = true }
                     }
                     let model = try await loader.container(modelID: modelID) { progress in
-                        continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))
+                        if !isCached {
+                            continuation.yield(.status("[downloading: \(Int(progress * 100))%]"))
+                        }
                     }
                     await PromptBudgetService.shared.register(modelID: modelID)
                     guard !Task.isCancelled else { continuation.finish(); return }
                     let session = sessionPool.session(
                         for: key, container: model, systemPrompt: input.systemPrompt,
-                        history: chatHistory, toolRegistry: input.toolRegistry
+                        history: chatHistory, toolRegistry: input.toolRegistry as? AgentToolRegistry
                     )
                     await MainActor.run { self.activeSessionKey = key }
                     guard !decorated.isEmpty, !Task.isCancelled else {

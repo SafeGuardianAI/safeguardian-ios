@@ -3,6 +3,7 @@ import Foundation
 import CryptoKit
 import P256K
 import Security
+import BitFoundation
 
 // Note: This file depends on Data extension from BinaryEncodingUtils.swift
 // Make sure BinaryEncodingUtils.swift is included in the target

@@ -18,12 +18,12 @@ struct AgentConversationConfig: Sendable {
 
     /// Called at each handle invocation to compose the full system prompt.
     /// Evaluated on MainActor so it may safely read MainActor-isolated state.
-    let systemPrompt: @MainActor () -> String
+    let systemPrompt: @Sendable @MainActor () -> String
 
     /// Called only when the active provider's modelCapabilities.supportsToolCalling == true.
     /// Receives the engine-created StatusCallback and the agent's approvalRequired predicate
     /// so each provider can wire them into AgentToolRegistry.build.
-    let toolRegistry: (@MainActor (any AgentContext, StatusCallback, (@Sendable (String) -> Bool)?) -> AgentToolRegistry?)?
+    let toolRegistry: (@Sendable @MainActor (any AgentContext, StatusCallback, (@Sendable (String) -> Bool)?) -> AgentToolRegistry?)?
 
     /// Return true for a tool name to require human approval before that tool executes.
     /// nil means all tools are auto-approved. The suspension mechanism is safe (CheckedContinuation);

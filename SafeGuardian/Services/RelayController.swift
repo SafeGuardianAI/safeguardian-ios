@@ -18,7 +18,13 @@ struct RelayController {
                        isHandshake: Bool,
                        isAnnounce: Bool,
                        degree: Int,
-                       highDegreeThreshold: Int) -> RelayDecision {
+                       highDegreeThreshold: Int,
+                       priority: MessagePriority = .routine) -> RelayDecision {
+        // Immediate-priority packets bypass jitter — life-safety traffic cannot queue.
+        if priority == .immediate && !senderIsSelf && ttl > 1 {
+            return RelayDecision(shouldRelay: true, newTTL: ttl &- 1, delayMs: 0)
+        }
+
         let ttlCap = min(ttl, TransportConfig.messageTTLDefault)
 
         // Suppress obvious non-relays

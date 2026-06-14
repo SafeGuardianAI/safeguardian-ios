@@ -1,0 +1,5 @@
+app_identifier "chat.safeguardian"
+team_id "V9KH637N7P"
+
+# App Store Connect credentials are supplied via environment variables or
+# the API key configured in Fastfile — do not put credentials here.

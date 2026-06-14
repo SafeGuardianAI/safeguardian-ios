@@ -16,6 +16,10 @@
 		A6E3E5722E7703760032EA8A /* BitLogger in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3E5712E7703760032EA8A /* BitLogger */; };
 		A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA7E2E7706720032EA8A /* Tor */; };
 		A6E3EA812E7706A80032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA802E7706A80032EA8A /* Tor */; };
+		AA1100000000000000000004 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000002 /* AgentInfra */; };
+		AA1100000000000000000005 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000003 /* AgentInfra */; };
+		AA1100000000000000000010 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000012 /* WhisperInfra */; };
+		AA1100000000000000000011 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000013 /* WhisperInfra */; };
 		BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A02 /* MLXLLM */; };
 		BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A03 /* MLXLMCommon */; };
 		BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A04 /* MLXHuggingFace */; };
@@ -174,6 +178,8 @@
 				3EE336D150427F736F32B56C /* P256K in Frameworks */,
 				A6E3EA812E7706A80032EA8A /* Tor in Frameworks */,
 				A6BCF94A2F809550001CF9B9 /* BitFoundation in Frameworks */,
+				AA1100000000000000000005 /* AgentInfra in Frameworks */,
+				AA1100000000000000000011 /* WhisperInfra in Frameworks */,
 			);
 		};
 		B5A5CC493FFB3D8966548140 /* Frameworks */ = {
@@ -188,6 +194,8 @@
 				885BBED78092484A5B069461 /* P256K in Frameworks */,
 				A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */,
 				A6BCF9482F80953E001CF9B9 /* BitFoundation in Frameworks */,
+				AA1100000000000000000004 /* AgentInfra in Frameworks */,
+				AA1100000000000000000010 /* WhisperInfra in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -248,6 +256,8 @@
 				A6E3E5712E7703760032EA8A /* BitLogger */,
 				A6E3EA802E7706A80032EA8A /* Tor */,
 				A6BCF9492F809550001CF9B9 /* BitFoundation */,
+				AA1100000000000000000003 /* AgentInfra */,
+				AA1100000000000000000013 /* WhisperInfra */,
 				CC1111111111111111111A05 /* MLXLLM */,
 				CC1111111111111111111A06 /* MLXLMCommon */,
 				CC1111111111111111111A07 /* MLXHuggingFace */,
@@ -334,6 +344,8 @@
 				A6E3E56F2E77036A0032EA8A /* BitLogger */,
 				A6E3EA7E2E7706720032EA8A /* Tor */,
 				A6BCF9472F80953E001CF9B9 /* BitFoundation */,
+				AA1100000000000000000002 /* AgentInfra */,
+				AA1100000000000000000012 /* WhisperInfra */,
 				CC1111111111111111111A02 /* MLXLLM */,
 				CC1111111111111111111A03 /* MLXLMCommon */,
 				CC1111111111111111111A04 /* MLXHuggingFace */,
@@ -384,6 +396,8 @@
 				A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "localPackages/BitLogger" */,
 				A6E3EA7D2E7706720032EA8A /* XCLocalSwiftPackageReference "localPackages/Arti" */,
 				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "localPackages/BitFoundation" */,
+				AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */,
+				AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */,
 			);
 			preferredProjectObjectVersion = 90;
 			projectDirPath = "";
@@ -985,6 +999,14 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = localPackages/Arti;
 		};
+		AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = localPackages/AgentInfra;
+		};
+		AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = localPackages/WhisperInfra;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1052,6 +1074,25 @@
 		A6E3EA802E7706A80032EA8A /* Tor */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Tor;
+		};
+		AA1100000000000000000002 /* AgentInfra */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgentInfra;
+		};
+		AA1100000000000000000003 /* AgentInfra */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */;
+			productName = AgentInfra;
+		};
+		AA1100000000000000000012 /* WhisperInfra */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
+			productName = WhisperInfra;
+		};
+		AA1100000000000000000013 /* WhisperInfra */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
+			productName = WhisperInfra;
 		};
 		B1D9136AA0083366353BFA2F /* P256K */ = {
 			isa = XCSwiftPackageProductDependency;

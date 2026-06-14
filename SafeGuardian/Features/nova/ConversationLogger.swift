@@ -1,4 +1,5 @@
 #if DEBUG
+import AgentInfra
 import BitFoundation
 import Foundation
 
@@ -73,7 +74,7 @@ final class ConversationLogger {
         agentSenderID: String,
         providerID: String,
         modelID: String,
-        tick: NovaStateTick?,
+        tick: AgentStateTick?,
         startedAt: Date,
         thinkingContent: String? = nil,
         toolCallNames: [String] = [],

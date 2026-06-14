@@ -426,11 +426,15 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         idBridge: NostrIdentityBridge,
         identityManager: SecureIdentityStateManagerProtocol
     ) {
+        let bleService = BLEService(keychain: keychain, idBridge: idBridge, identityManager: identityManager)
+        let reticulumIdentity = (try? ReticulumIdentity.loadOrCreate(keychain: keychain)) ??
+            ReticulumIdentity.makeEphemeral()
+        let reticulumTransport = ReticulumTransport(identity: reticulumIdentity, keychain: keychain)
         self.init(
             keychain: keychain,
             idBridge: idBridge,
             identityManager: identityManager,
-            transport: BLEService(keychain: keychain, idBridge: idBridge, identityManager: identityManager)
+            transport: MultiTransportManager(transports: [bleService, reticulumTransport])
         )
     }
 
@@ -521,10 +525,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Check initial Bluetooth state after a brief delay to allow centralManager initialization
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self else { return }
-            if let bleService = self.meshService as? BLEService {
-                let state = bleService.getCurrentBluetoothState()
-                self.updateBluetoothState(state)
-            }
+            self.updateBluetoothState(self.meshService.getCurrentBluetoothState())
         }
 
         // Announce Tor status (geohash-only; do not show in mesh chat). Only when auto-start is allowed.
@@ -1731,10 +1732,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     @MainActor
     @objc private func appDidBecomeActive() {
         // Check Bluetooth state and show alert if needed
-        if let bleService = meshService as? BLEService {
-            let currentState = bleService.getCurrentBluetoothState()
-            updateBluetoothState(currentState)
-        }
+        updateBluetoothState(meshService.getCurrentBluetoothState())
 
         // When app becomes active, send read receipts for visible private chat
         if let peerID = selectedPrivateChatPeer {
@@ -2322,10 +2320,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         let bodyColor: Color = isSelf ? .orange : (isAgentSender ? .purple : (isDark ? .green : Color(red: 0, green: 0.5, blue: 0)))
 
         if message.sender != "system" {
-            // In private DMs the header already identifies the other party and self is
-            // obvious from message position, so suppress the sender prefix there.
-            // Agent responses always show their name so the reader knows it is Nova, not a human.
-            let showSenderName = !message.isPrivate || isAgentSender
+            // Self messages are visually indicated by right-alignment and orange color;
+            // the sender prefix adds no information. Agent responses always show their name.
+            let showSenderName = !isSelf || isAgentSender
             if showSenderName {
                 let (baseName, suffix) = message.sender.splitSuffix()
                 var senderStyle = AttributeContainer()
@@ -2660,14 +2657,16 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             senderStyle.link = url
         }
 
-        result.append(AttributedString("<@").mergingAttributes(senderStyle))
-        result.append(AttributedString(baseName).mergingAttributes(senderStyle))
-        if !suffix.isEmpty {
-            var suffixStyle = senderStyle
-            suffixStyle.foregroundColor = baseColor.opacity(0.6)
-            result.append(AttributedString(suffix).mergingAttributes(suffixStyle))
+        if !isSelf || isAgentSender {
+            result.append(AttributedString("<@").mergingAttributes(senderStyle))
+            result.append(AttributedString(baseName).mergingAttributes(senderStyle))
+            if !suffix.isEmpty {
+                var suffixStyle = senderStyle
+                suffixStyle.foregroundColor = baseColor.opacity(0.6)
+                result.append(AttributedString(suffix).mergingAttributes(suffixStyle))
+            }
+            result.append(AttributedString("> ").mergingAttributes(senderStyle))
         }
-        result.append(AttributedString("> ").mergingAttributes(senderStyle))
         return result
     }
 
@@ -3197,7 +3196,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
             // Route to appropriate handler
             if message.isPrivate {
-                handlePrivateMessage(message)
+                await handlePrivateMessage(message)
             } else {
                 handlePublicMessage(message)
             }
@@ -3267,7 +3266,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                     senderPeerID: peerID,
                     mentions: pmMentions.isEmpty ? nil : pmMentions
                 )
-                handlePrivateMessage(msg)
+                await handlePrivateMessage(msg)
                 // Send delivery ACK back over BLE
                 meshService.sendDeliveryAck(for: pm.messageID, to: peerID)
 

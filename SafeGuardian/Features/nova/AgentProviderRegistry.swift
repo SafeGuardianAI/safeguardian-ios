@@ -1,3 +1,4 @@
+import AgentInfra
 import Foundation
 
 @Observable @MainActor
@@ -10,6 +11,12 @@ final class AgentProviderRegistry {
 
     private init() {
         let saved = UserDefaults.standard.string(forKey: Self.providerKey)
+        #if os(macOS)
+        if #available(macOS 26, *), saved == "foundation-models", FoundationModelProvider.isAvailable() {
+            activeProvider = FoundationModelProvider.shared
+            return
+        }
+        #endif
         activeProvider = saved == "remote" ? RemoteInferenceService.shared : MLXInferenceService.shared
     }
 

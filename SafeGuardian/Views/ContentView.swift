@@ -348,7 +348,11 @@ struct ContentView: View {
             }
             #endif
 
-            HStack(alignment: .center, spacing: 4) {
+            if viewModel.isInAgentDM {
+                AgentInputBar(text: $messageText, onSend: sendMessage)
+            }
+
+            if !viewModel.isInAgentDM { HStack(alignment: .center, spacing: 4) {
                 TextField(
                     "",
                     text: $messageText,
@@ -392,7 +396,7 @@ struct ContentView: View {
 
                     sendOrMicButton
                 }
-            }
+            } }
         }
         .padding(.horizontal, 6)
         .padding(.top, 6)
@@ -785,8 +789,11 @@ struct ContentView: View {
                 Text(context.displayName)
                     .font(.safeguardianSystem(size: 16, weight: .medium, design: .monospaced))
                     .foregroundColor(textColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
-                if !privatePeerID.isGeoDM {
+                let isAgentThread = AgentThreadStore.shared.thread(for: privatePeerID) != nil
+                if !privatePeerID.isGeoDM && !isAgentThread {
                     let statusPeerID = viewModel.getShortIDForNoiseKey(privatePeerID)
                     let encryptionStatus = viewModel.getEncryptionStatus(for: statusPeerID)
                     if let icon = encryptionStatus.icon {
@@ -1213,7 +1220,7 @@ private extension ContentView {
 
     private var shouldShowVoiceControl: Bool {
         if let peer = viewModel.selectedPrivateChatPeer, !(peer.isGeoDM || peer.isGeoChat) {
-            return true
+            return !viewModel.isInAgentDM
         }
         switch locationManager.selectedChannel {
         case .mesh:

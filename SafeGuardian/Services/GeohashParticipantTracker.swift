@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BitFoundation
 
 /// Represents a participant in a geohash channel
 public struct GeoPerson: Identifiable, Equatable, Sendable {

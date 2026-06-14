@@ -41,6 +41,8 @@
 	<string>SafeGuardian uses the camera to scan QR codes to verify peers.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SafeGuardian uses your approximate location to compute local geohash channels for optional public chats. Exact GPS is never shared.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>SafeGuardian connects to a local command-post server to exchange mission data over the command-post WiFi network.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SafeGuardian uses the microphone to record voice notes that relay across the mesh.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

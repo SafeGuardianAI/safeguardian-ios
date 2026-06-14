@@ -1,3 +1,4 @@
+import AgentInfra
 import Foundation
 import MLXLMCommon
 
@@ -21,8 +22,8 @@ final class MLXInferenceService: AgentLanguageProvider {
     // Models always present in the saved list regardless of UserDefaults state.
     // Order determines the order they appear in the picker on first install.
     private static let builtinModelIDs: [String] = [
+        "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
         "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
-        "mlx-community/Qwen2.5-3B-Instruct-4bit",
     ]
 
     private let loader: MLXModelLoader
@@ -50,6 +51,17 @@ final class MLXInferenceService: AgentLanguageProvider {
         coordinator = MLXInferenceCoordinator(loader: l)
         savedModelIDs = merged
         activeModelID = merged.contains(active) ? active : Self.defaultModelID
+        Self.pruneOrphanedCache(keeping: Set(merged))
+    }
+
+    // Evict any cached model directories whose IDs are not in `known`. Runs once
+    // on init so that renamed or removed builtins don't accumulate on the device
+    // across app rebuilds where the data container is preserved.
+    private static func pruneOrphanedCache(keeping known: Set<String>) {
+        let manager = ModelDownloadManager.shared
+        for cached in manager.cachedModelIDs() where !known.contains(cached) {
+            try? manager.evict(modelID: cached)
+        }
     }
 
     // MARK: - Inference

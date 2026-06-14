@@ -5,6 +5,7 @@ import UIKit
 #else
 import AppKit
 #endif
+import BitFoundation
 struct LocationChannelsSheet: View {
     @Binding var isPresented: Bool
     @ObservedObject private var manager = LocationChannelManager.shared

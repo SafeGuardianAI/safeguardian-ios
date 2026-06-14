@@ -935,7 +935,7 @@ final class BLEService: NSObject {
         switch MessageType(rawValue: type) {
         case .noiseEncrypted, .noiseHandshake:
             return true
-        case .none, .announce, .message, .leave, .requestSync, .fragment, .fileTransfer:
+        case .none, .announce, .message, .leave, .requestSync, .fragment, .fileTransfer, .sgEnvelope, .relayBeacon, .relayPing:
             return false
         }
     }
@@ -1362,6 +1362,30 @@ final class BLEService: NSObject {
         }
     }
     
+    // MARK: - SGEnvelope
+
+    private func handleSGEnvelope(_ packet: SafeGuardianPacket, from senderID: PeerID) {
+        guard let envelope = SGEnvelope.decode(packet.payload) else { return }
+        notifyUI { [weak self] in
+            self?.delegate?.didReceiveSGEnvelope(envelope, from: senderID)
+        }
+    }
+
+    // Build and broadcast an SGEnvelope packet onto the BLE mesh.
+    func sendSGEnvelope(_ envelope: SGEnvelope) {
+        let encoded = envelope.encode()
+        let packet = SafeGuardianPacket(
+            type: MessageType.sgEnvelope.rawValue,
+            senderID: myPeerIDData,
+            recipientID: nil,
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+            payload: encoded,
+            signature: nil,
+            ttl: TransportConfig.messageTTLDefault
+        )
+        broadcastPacket(packet)
+    }
+
     // MARK: - Helper Functions
 
     private func applicationFilesDirectory() throws -> URL {
@@ -3811,10 +3835,16 @@ extension BLEService {
             
         case .fileTransfer:
             handleFileTransfer(packet, from: senderID)
-            
+
         case .leave:
             handleLeave(packet, from: senderID)
-            
+
+        case .sgEnvelope:
+            handleSGEnvelope(packet, from: senderID)
+
+        case .relayBeacon, .relayPing:
+            break
+
         case .none:
  SecureLogger.warning(" Unknown message type: \(packet.type)", category: .session)
             break
@@ -3828,6 +3858,9 @@ extension BLEService {
         // Relay decision and scheduling (extracted via RelayController)
         do {
             let degree = collectionsQueue.sync { peers.values.filter { $0.isConnected }.count }
+            let sgPriority: MessagePriority = packet.type == MessageType.sgEnvelope.rawValue
+                ? SGEnvelope.peekPriority(from: packet.payload)
+                : .routine
             let decision = RelayController.decide(
                 ttl: packet.ttl,
                 senderIsSelf: senderID == myPeerID,
@@ -3838,7 +3871,8 @@ extension BLEService {
                 isHandshake: packet.type == MessageType.noiseHandshake.rawValue,
                 isAnnounce: packet.type == MessageType.announce.rawValue,
                 degree: degree,
-                highDegreeThreshold: highDegreeThreshold
+                highDegreeThreshold: highDegreeThreshold,
+                priority: sgPriority
             )
             guard decision.shouldRelay else { return }
             let work = DispatchWorkItem { [weak self] in

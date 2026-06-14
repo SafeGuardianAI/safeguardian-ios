@@ -20,6 +20,9 @@ struct SyncTypeFlags: OptionSet {
         case .fragment: return 5
         case .requestSync: return 6
         case .fileTransfer: return 7
+        case .sgEnvelope: return 8
+        case .relayBeacon: return 9
+        case .relayPing: return 10
         }
     }
 
@@ -33,6 +36,9 @@ struct SyncTypeFlags: OptionSet {
         case 5: return .fragment
         case 6: return .requestSync
         case 7: return .fileTransfer
+        case 8: return .sgEnvelope
+        case 9: return .relayBeacon
+        case 10: return .relayPing
         default:
             return nil
         }

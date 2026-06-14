@@ -198,10 +198,24 @@ extension ChatViewModel {
         convKey: PeerID,
         id: NostrIdentity,
         messageTimestamp: Date
-    ) {
+    ) async {
         guard let pm = PrivateMessagePacket.decode(from: payload.data) else { return }
         let messageId = pm.messageID
         
+        let message = SafeGuardianMessage(
+            id: messageId,
+            sender: displayNameForNostrPubkey(senderPubkey),
+            content: pm.content,
+            timestamp: messageTimestamp,
+            isRelay: false,
+            isPrivate: true,
+            recipientNickname: nickname,
+            senderPeerID: convKey,
+            deliveryStatus: .delivered(to: nickname, at: Date())
+        )
+
+        if await interceptAgentInbound(message) { return }
+
         SecureLogger.info("GeoDM: recv PM <- sender=\(senderPubkey.prefix(8))… mid=\(messageId.prefix(8))…", category: .session)
 
         sendDeliveryAckIfNeeded(to: messageId, senderPubKey: senderPubkey, from: id)
@@ -219,23 +233,10 @@ extension ChatViewModel {
             }
         }
         
-        let senderName = displayNameForNostrPubkey(senderPubkey)
-        let msg = SafeGuardianMessage(
-            id: messageId,
-            sender: senderName,
-            content: pm.content,
-            timestamp: messageTimestamp,
-            isRelay: false,
-            isPrivate: true,
-            recipientNickname: nickname,
-            senderPeerID: convKey,
-            deliveryStatus: .delivered(to: nickname, at: Date())
-        )
-        
         if privateChats[convKey] == nil {
             privateChats[convKey] = []
         }
-        privateChats[convKey]?.append(msg)
+        privateChats[convKey]?.append(message)
         
         let isViewing = selectedPrivateChatPeer == convKey
         let wasReadBefore = sentReadReceipts.contains(messageId)
@@ -253,7 +254,7 @@ extension ChatViewModel {
         // Notify for truly unread and recent messages when not viewing
         if !isViewing && shouldMarkUnread {
             NotificationService.shared.sendPrivateMessageNotification(
-                from: senderName,
+                from: message.sender,
                 message: pm.content,
                 peerID: convKey
             )
@@ -611,10 +612,24 @@ extension ChatViewModel {
         targetPeerID: PeerID,
         messageTimestamp: Date,
         senderPubkey: String
-    ) {
+    ) async {
         guard let pm = PrivateMessagePacket.decode(from: payload.data) else { return }
         let messageId = pm.messageID
         let messageContent = pm.content
+
+        let message = SafeGuardianMessage(
+            id: messageId,
+            sender: senderNickname,
+            content: messageContent,
+            timestamp: messageTimestamp,
+            isRelay: false,
+            isPrivate: true,
+            recipientNickname: nickname,
+            senderPeerID: targetPeerID,
+            deliveryStatus: .delivered(to: nickname, at: Date())
+        )
+
+        if await interceptAgentInbound(message) { return }
 
         // Favorite/unfavorite notifications embedded as private messages
         if messageContent.hasPrefix("[FAVORITED]") || messageContent.hasPrefix("[UNFAVORITED]") {
@@ -645,18 +660,6 @@ extension ChatViewModel {
         let isRecentMessage = Date().timeIntervalSince(messageTimestamp) < 30
         let shouldMarkAsUnread = !wasReadBefore && !isViewingThisChat && isRecentMessage
 
-        let message = SafeGuardianMessage(
-            id: messageId,
-            sender: senderNickname,
-            content: messageContent,
-            timestamp: messageTimestamp,
-            isRelay: false,
-            isPrivate: true,
-            recipientNickname: nickname,
-            senderPeerID: targetPeerID,
-            deliveryStatus: .delivered(to: nickname, at: Date())
-        )
-        
         addMessageToPrivateChatsIfNeeded(message, targetPeerID: targetPeerID)
         mirrorToEphemeralIfNeeded(message, targetPeerID: targetPeerID, key: actualSenderNoiseKey)
 
@@ -699,8 +702,10 @@ extension ChatViewModel {
     
     /// Handle incoming private message (Mesh)
     @MainActor
-    func handlePrivateMessage(_ message: SafeGuardianMessage) {
- SecureLogger.debug(" handlePrivateMessage called for message from \(message.sender)", category: .session)
+    func handlePrivateMessage(_ message: SafeGuardianMessage) async {
+        if await interceptAgentInbound(message) { return }
+        
+        SecureLogger.debug(" handlePrivateMessage called for message from \(message.sender)", category: .session)
         let senderPeerID = message.senderPeerID ?? getPeerIDForNickname(message.sender)
         
         guard let peerID = senderPeerID else { 

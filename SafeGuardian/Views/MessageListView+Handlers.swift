@@ -49,13 +49,11 @@ extension MessageListView {
             return
         }
 
-        // If the newest private message is from me, always scroll
         let isFromSelf = (lastMsg.sender == viewModel.nickname) || lastMsg.sender.hasPrefix(viewModel.nickname + "#")
-        if !isFromSelf && !isAtBottom { // Only autoscroll when user is at/near bottom
-            return
-        } else {
-            isAtBottom = true
-        }
+        // Autoscroll own messages always; agent tokens only when pinned at bottom and not actively streaming.
+        // Streaming fires this handler per token — forcing scroll prevents the user from reading earlier context.
+        guard isFromSelf || (isAtBottom && !AgentConversationEngine.shared.isRunning) else { return }
+        if isFromSelf { isAtBottom = true }
 
         func scrollIfNeeded(date: Date) {
             lastScrollTime = date

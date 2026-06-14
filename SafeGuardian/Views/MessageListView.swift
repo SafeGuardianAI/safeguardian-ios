@@ -100,6 +100,7 @@ struct MessageListView: View {
                 .transaction { tx in if viewModel.isBatchingPublic { tx.disablesAnimations = true } }
                 .padding(.vertical, 2)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onOpenURL(perform: handleOpenURL)
             .onTapGesture(count: 3) { viewModel.sendMessage("/clear") }
             .onAppear { scrollToBottom(on: proxy) }

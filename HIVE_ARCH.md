@@ -1,5 +1,17 @@
 # SafeGuardian: Hybrid Multi-Tiered Mesh Architecture
 
+Status: conceptual target architecture, not a current implementation inventory.
+
+| Functional Claim | Status | Code Evidence |
+| --- | --- | --- |
+| BLE mesh, Noise, Nostr, and SafeGuardian app code exist. | verified | `SafeGuardian/Services/`, `SafeGuardian/Noise/`, `SafeGuardian/Nostr/`, and tests. |
+| Nova agent and MLX-related code exists. | verified | `SafeGuardian/Features/nova/`. |
+| Reticulum-related Swift services exist. | partially verified | `SafeGuardian/Services/Reticulum/`. |
+| UWB/NearbyInteraction routing is implemented. | planned | No `NearbyInteraction`/UWB implementation was found in app source. |
+| MultipeerConnectivity burst routing is implemented. | planned | No verified MPC burst transport implementation found. |
+| libp2p bridge is implemented. | aspirational | No libp2p implementation found in this repository. |
+| Drone/satellite relay path is implemented. | aspirational | No runtime integration found in this repository. |
+
 This document specifies the technical architecture for the SafeGuardian Hybrid Mesh—a resilient, "True Mesh" network designed for total infrastructure failure. It bridges low-power local sensors (BLE) to global command (Satellite) using a unified Peer-to-Peer (P2P) substrate.
 
 ---

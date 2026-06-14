@@ -13,15 +13,16 @@ extension AgentToolRegistry {
         onStatus: StatusCallback? = nil,
         approvalCheck: (@Sendable (String) -> Bool)? = nil
     ) -> AgentToolRegistry {
-        build(
+        let record = AgentTaskRecord()
+        return build(
             agentID: agentID,
             context: context,
             deviceTools: [
+                .taskComplete(record: record),
+                .getDeviceState(),
+                .getFullStatus(),
                 .getStorage(),
                 .getMemory(),
-                .getDeviceState(),
-                .getStatus(),
-                .getFullStatus(),
                 .getMeshLoad(),
                 .setTickInterval(),
                 .setMessageTTL()
@@ -30,10 +31,19 @@ extension AgentToolRegistry {
                 .listPeers(),
                 .sendAgentMessage(senderAgentID: agentID),
                 .broadcastToAgents(senderAgentID: agentID),
-                .requestPeerLocation()
+                .requestPeerLocation(),
+                .requestMeshTopology(senderAgentID: agentID),
+                .claimIncident(senderAgentID: agentID),
+                .releaseIncident(senderAgentID: agentID),
+                .floodAlert(senderAgentID: agentID),
+                .publishStateTick(),
+                .openPeerSession(agentID: agentID),
+                .peerSessionRequest(),
+                .closePeerSession()
             ],
             onStatus: onStatus,
-            approvalCheck: approvalCheck
+            approvalCheck: approvalCheck,
+            taskRecord: record
         )
     }
 

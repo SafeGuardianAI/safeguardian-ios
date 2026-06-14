@@ -3,6 +3,7 @@
 //
 // This is free and unencumbered software released into the public domain.
 
+import AgentInfra
 import BitFoundation
 import Foundation
 import MLXLMCommon
@@ -12,9 +13,11 @@ import MLXLMCommon
 /// mesh reply routing, and conversation logging. Agents supply an
 /// AgentConversationConfig that expresses only what is specific to them.
 @MainActor
-final class AgentConversationEngine {
+final class AgentConversationEngine: ObservableObject {
     static let shared = AgentConversationEngine()
     private init() {}
+
+    @Published private(set) var isRunning = false
 
     func handle(
         prompt: String,
@@ -93,22 +96,49 @@ final class AgentConversationEngine {
                 ? config.toolRegistry?(context, statusCallback ?? StatusCallback { _ in }, config.approvalRequired)
                 : nil
 
+        // Capture names and task record now (on MainActor); used inside the Task.
+        let toolNames: [String] = toolRegistry?.names ?? []
+        let taskRecord: AgentTaskRecord? = toolRegistry?.taskRecord
+
         let state = StreamState()
         #if DEBUG
         let startedAt = Date()
         #endif
 
+        if !isMeshQuery { isRunning = true }
         Task { @MainActor in
-            let systemPrompt = config.systemPrompt()
+            defer { if !isMeshQuery { self.isRunning = false } }
+            let baseSystemPrompt = config.systemPrompt()
+            // Append tool names when tools are active so the model knows its vocabulary
+            // regardless of how the chat template formats the injected schemas.
+            // Non-capable models never reach this branch (toolNames is empty when
+            // toolRegistry is nil), so no risk of hallucinated function-call syntax.
+            let systemPrompt: String
+            if toolNames.isEmpty {
+                systemPrompt = baseSystemPrompt
+            } else {
+                systemPrompt = baseSystemPrompt
+                    + "\n\nAvailable tools: \(toolNames.joined(separator: ", "))."
+            }
             let modelID = provider.activeModelID
             let maxTurns = await PromptBudgetService.shared.recommendedTurnCount(modelID: modelID)
             let fullThread = context.privateChats[effectivePeerID] ?? []
             let historySlice = historyBoundary > 0 ? Array(fullThread.prefix(historyBoundary)) : []
-            let history = Self.buildHistory(
+            let rawHistory = Self.buildHistory(
                 from: historySlice,
                 agentDisplayName: config.displayName,
                 maxTurns: maxTurns
             )
+            #if os(macOS)
+            let history: [ConversationTurn]
+            if #available(macOS 26, *) {
+                history = await ContextCompressor.compressAsync(rawHistory, threshold: 2_000)
+            } else {
+                history = ContextCompressor.compactIfNeeded(rawHistory, threshold: 2_000)
+            }
+            #else
+            let history = ContextCompressor.compactIfNeeded(rawHistory, threshold: 2_000)
+            #endif
             var input = AgentPromptInput(
                 text: cleanPrompt,
                 tick: context.deviceTick,
@@ -164,21 +194,24 @@ final class AgentConversationEngine {
                     if hasThinking, !state.inThink { state.visible += state.pending }
                     state.pending = ""
 
+                    // task_complete tool provides the canonical summary; use it over model echo.
+                    let finalContent = taskRecord?.taskCompleteSummary ?? state.visible
+
                     // shouldSendResponse nil = always send; false = suppress cleanly.
-                    let send = config.shouldSendResponse.map { $0(state.visible) } ?? true
+                    let send = config.shouldSendResponse.map { $0(finalContent) } ?? true
 
                     if !isMeshQuery {
                         if send {
-                            response.content = state.visible.isEmpty ? "[no response]" : state.visible
+                            response.content = finalContent.isEmpty ? "[no response]" : finalContent
                             context.notifyChange()
                         } else {
                             // Remove the placeholder entirely so the UI shows no orphaned bubble.
                             context.removeResponse(response, from: effectivePeerID)
                         }
                     }
-                    if send, let peer = replyTo, !state.visible.isEmpty {
+                    if send, let peer = replyTo, !finalContent.isEmpty {
                         context.sendMeshReply(
-                            agentID: config.agentID, content: state.visible,
+                            agentID: config.agentID, content: finalContent,
                             to: peer, requestID: replyID
                         )
                     }

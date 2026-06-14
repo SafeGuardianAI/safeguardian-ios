@@ -166,7 +166,9 @@ extension ChatViewModel {
         
         switch noisePayload.type {
         case .privateMessage:
-            handlePrivateMessage(noisePayload, senderPubkey: senderPubkey, convKey: convKey, id: id, messageTimestamp: messageTimestamp)
+            Task { [weak self] in
+                await self?.handlePrivateMessage(noisePayload, senderPubkey: senderPubkey, convKey: convKey, id: id, messageTimestamp: messageTimestamp)
+            }
         case .delivered:
             handleDelivered(noisePayload, senderPubkey: senderPubkey, convKey: convKey)
         case .readReceipt:
@@ -397,12 +399,14 @@ extension ChatViewModel {
         switch payload.type {
         case .privateMessage:
             let messageTimestamp = Date(timeIntervalSince1970: TimeInterval(rumorTs))
-            handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: id, messageTimestamp: messageTimestamp)
+            Task { [weak self] in
+                await self?.handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: id, messageTimestamp: messageTimestamp)
+            }
         case .delivered:
             handleDelivered(payload, senderPubkey: senderPubkey, convKey: convKey)
         case .readReceipt:
             handleReadReceipt(payload, senderPubkey: senderPubkey, convKey: convKey)
-        
+
         // Explicitly list other cases so we get compile-time check if a new case is added in the future
         case .verifyChallenge, .verifyResponse:
             break
@@ -636,21 +640,21 @@ extension ChatViewModel {
                 if packet.type == MessageType.noiseEncrypted.rawValue,
                    let payload = NoisePayload.decode(packet.payload) {
                     let messageTimestamp = Date(timeIntervalSince1970: TimeInterval(rumorTimestamp))
-                    // Store Nostr mapping
+                    // Store Nostr mapping on main actor before dispatching
                     await MainActor.run {
                         nostrKeyMapping[targetPeerID] = senderPubkey
-                        
-                        // Handle packet types
-                        switch payload.type {
-                        case .privateMessage:
-                            handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: targetPeerID, id: currentIdentity, messageTimestamp: messageTimestamp)
-                        case .delivered:
-                            handleDelivered(payload, senderPubkey: senderPubkey, convKey: targetPeerID)
-                        case .readReceipt:
-                            handleReadReceipt(payload, senderPubkey: senderPubkey, convKey: targetPeerID)
-                        case .verifyChallenge, .verifyResponse:
-                            break
-                        }
+                    }
+
+                    // Handle packet types
+                    switch payload.type {
+                    case .privateMessage:
+                        await handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: targetPeerID, id: currentIdentity, messageTimestamp: messageTimestamp)
+                    case .delivered:
+                        await MainActor.run { self.handleDelivered(payload, senderPubkey: senderPubkey, convKey: targetPeerID) }
+                    case .readReceipt:
+                        await MainActor.run { self.handleReadReceipt(payload, senderPubkey: senderPubkey, convKey: targetPeerID) }
+                    case .verifyChallenge, .verifyResponse:
+                        break
                     }
                 }
             } else {

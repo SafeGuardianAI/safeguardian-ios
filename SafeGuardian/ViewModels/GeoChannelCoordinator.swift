@@ -8,6 +8,7 @@
 import Combine
 import Foundation
 import Tor
+import BitFoundation
 
 @MainActor
 final class GeoChannelCoordinator {

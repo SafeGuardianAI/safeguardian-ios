@@ -23,6 +23,12 @@ public enum MessageType: UInt8 {
     // Fragmentation (simplified)
     case fragment = 0x20        // Single fragment type for large messages
     case fileTransfer = 0x22    // Binary file/audio/image payloads
+
+    // SafeGuardian-specific extension (0x30+).
+    // Unknown to upstream bitchat nodes; they relay via standard TTL flood without decoding.
+    case sgEnvelope   = 0x30    // SG entity / task / triage / agent payload
+    case relayBeacon  = 0x31    // relay → peers: uptime, free heap, peer count
+    case relayPing    = 0x32    // peer → relay: request immediate beacon
     
     public var description: String {
         switch self {
@@ -34,6 +40,9 @@ public enum MessageType: UInt8 {
         case .noiseEncrypted: return "noiseEncrypted"
         case .fragment: return "fragment"
         case .fileTransfer: return "fileTransfer"
+        case .sgEnvelope: return "sgEnvelope"
+        case .relayBeacon: return "relayBeacon"
+        case .relayPing: return "relayPing"
         }
     }
 }

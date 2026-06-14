@@ -1,4 +1,5 @@
 import SwiftUI
+import BitFoundation
 
 struct LocationNotesView: View {
     @EnvironmentObject var viewModel: ChatViewModel

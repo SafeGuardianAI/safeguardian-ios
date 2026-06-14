@@ -105,7 +105,7 @@ struct ChatViewModelPrivateChatExtensionTests {
         )
         
         // Simulate receiving a private message via the handlePrivateMessage extension method
-        viewModel.handlePrivateMessage(message)
+        await viewModel.handlePrivateMessage(message)
         
         // Verify stored
         #expect(viewModel.privateChats[peerID]?.count == 1)
@@ -130,8 +130,8 @@ struct ChatViewModelPrivateChatExtensionTests {
             senderPeerID: peerID
         )
         
-        viewModel.handlePrivateMessage(message)
-        viewModel.handlePrivateMessage(message) // Duplicate
+        await viewModel.handlePrivateMessage(message)
+        await viewModel.handlePrivateMessage(message) // Duplicate
         
         #expect(viewModel.privateChats[peerID]?.count == 1)
     }
@@ -154,7 +154,7 @@ struct ChatViewModelPrivateChatExtensionTests {
             senderPeerID: peerID
         )
         
-        viewModel.handlePrivateMessage(message)
+        await viewModel.handlePrivateMessage(message)
         
         // Should NOT be marked unread
         #expect(!viewModel.unreadPrivateMessages.contains(peerID))
@@ -717,8 +717,8 @@ struct ChatViewModelGeoDMTests {
         let payloadData = try #require(packet.encode(), "Failed to encode private message")
         let payload = NoisePayload(type: .privateMessage, data: payloadData)
 
-        viewModel.handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: identity, messageTimestamp: Date())
-        viewModel.handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: identity, messageTimestamp: Date())
+        await viewModel.handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: identity, messageTimestamp: Date())
+        await viewModel.handlePrivateMessage(payload, senderPubkey: senderPubkey, convKey: convKey, id: identity, messageTimestamp: Date())
 
         #expect(viewModel.privateChats[convKey]?.count == 1)
         #expect(viewModel.sentGeoDeliveryAcks.contains(messageID))
@@ -783,7 +783,7 @@ struct ChatViewModelGeoDMTests {
         let payloadData = try #require(packet.encode(), "Failed to encode private message")
         let payload = NoisePayload(type: .privateMessage, data: payloadData)
 
-        viewModel.handlePrivateMessage(
+        await viewModel.handlePrivateMessage(
             payload,
             senderPubkey: senderPubkey,
             convKey: convKey,

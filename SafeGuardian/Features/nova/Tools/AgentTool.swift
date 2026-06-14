@@ -3,6 +3,7 @@
 //
 // This is free and unencumbered software released into the public domain.
 
+import AgentInfra
 import BitFoundation
 import Foundation
 import MLXLMCommon
@@ -54,7 +55,7 @@ final class StatusCallback: @unchecked Sendable {
 /// routes through MainActor.run — the threading contract is manually enforced.
 final class AgentContextProxy: @unchecked Sendable {
     private let _meshPeerIDs: @MainActor () -> Set<PeerID>
-    private let _tick: @MainActor () -> NovaStateTick?
+    private let _tick: @MainActor () -> AgentStateTick?
     private let _meshPacketRate: @MainActor () -> Double
     private let _broadcastInterval: @MainActor () -> TimeInterval
     private let _broadcastTTL: @MainActor () -> UInt8
@@ -67,6 +68,7 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _registerApprovalContinuation: @MainActor (String, CheckedContinuation<Bool, Never>) -> Void
     private let _cancelAgentRequest: @MainActor (String) -> Void
     private let _cancelPeerRequest: @MainActor (String) -> Void
+    private let _sendRaw: @MainActor (String, PeerID) -> Void
 
     @MainActor
     init(senderAgentID: String, context: some AgentContext) {
@@ -98,10 +100,13 @@ final class AgentContextProxy: @unchecked Sendable {
         _cancelPeerRequest = { requestID in
             context.cancelPeerRequest(requestID)
         }
+        _sendRaw = { content, peerID in
+            context.sendRawPrivate(content, to: peerID)
+        }
     }
 
     func meshPeerIDs() async -> Set<PeerID> { await MainActor.run { _meshPeerIDs() } }
-    func tick() async -> NovaStateTick? { await MainActor.run { _tick() } }
+    func tick() async -> AgentStateTick? { await MainActor.run { _tick() } }
     func meshPacketRate() async -> Double { await MainActor.run { _meshPacketRate() } }
     func broadcastInterval() async -> TimeInterval { await MainActor.run { _broadcastInterval() } }
     func broadcastTTL() async -> UInt8 { await MainActor.run { _broadcastTTL() } }
@@ -118,6 +123,10 @@ final class AgentContextProxy: @unchecked Sendable {
 
     func cancelPeerRequest(_ requestID: String) async {
         await MainActor.run { _cancelPeerRequest(requestID) }
+    }
+
+    func sendRawPrivate(_ content: String, peerID: PeerID) async {
+        await MainActor.run { _sendRaw(content, peerID) }
     }
 
     /// Sends a query to a remote agent and suspends until its reply arrives.
@@ -169,10 +178,19 @@ final class AgentContextProxy: @unchecked Sendable {
 
 /// A Sendable collection of tool specs and a unified dispatch closure.
 /// Build one per inference call; the dispatch closure embeds the iteration
-/// guard, status callback, and approval gate.
+/// guard, status callback, approval gate, stuck guard, and task record.
 struct AgentToolRegistry: Sendable {
     let specs: [ToolSpec]
     let dispatch: @Sendable (ToolCall) async throws -> String
+    let taskRecord: AgentTaskRecord
+
+    /// Extracts tool names from the OpenAI-format spec dictionaries.
+    var names: [String] {
+        specs.compactMap { spec -> String? in
+            guard let fn = spec["function"] as? [String: any Sendable] else { return nil }
+            return fn["name"] as? String
+        }
+    }
 
     @MainActor
     static func build(
@@ -182,13 +200,18 @@ struct AgentToolRegistry: Sendable {
         meshTools: [AgentToolEntry],
         onStatus: StatusCallback? = nil,
         approvalCheck: (@Sendable (String) -> Bool)? = nil,
-        maxIterations: Int = NovaConfig.maxToolIterations
+        maxIterations: Int = NovaConfig.maxToolIterations,
+        mcpRouting: [(name: String, session: MCPSession, spec: ToolSpec)] = [],
+        taskRecord: AgentTaskRecord = AgentTaskRecord()
     ) -> AgentToolRegistry {
         let proxy = AgentContextProxy(senderAgentID: agentID, context: context)
         let guard_ = DispatchGuard(max: maxIterations)
+        let stuck = AgentStuckGuard()
+        let record = taskRecord
         let allTools = deviceTools + meshTools
         let lookup = Dictionary(uniqueKeysWithValues: allTools.map { ($0.name, $0) })
-        let specs = allTools.map { $0.spec }
+        let mcpLookup = Dictionary(uniqueKeysWithValues: mcpRouting.map { ($0.name, $0.session) })
+        let specs: [ToolSpec] = allTools.map { $0.spec } + mcpRouting.map { $0.spec }
 
         let dispatch: @Sendable (ToolCall) async throws -> String = { toolCall in
             let name = toolCall.function.name
@@ -209,13 +232,25 @@ struct AgentToolRegistry: Sendable {
             // Status update — fires before execution so the UI reflects current tool.
             await onStatus?.notify(name)
 
+            // MCP-sourced tools route to their originating session.
+            if let mcpSession = mcpLookup[name] {
+                let args = toolCall.function.arguments.mapValues { $0.anyValue }
+                return try await mcpSession.callTool(name: name, arguments: args)
+            }
+
             guard let entry = lookup[name] else {
                 return #"{"error":"unknown_tool","tool":"\#(name)"}"#
             }
-            return try await entry.handler(toolCall.function.arguments, proxy)
+
+            let result = try await entry.handler(toolCall.function.arguments, proxy)
+            stuck.record(name, result: result)
+            if let nudge = stuck.nudge(for: name) {
+                return result + "\n" + nudge
+            }
+            return result
         }
 
-        return AgentToolRegistry(specs: specs, dispatch: dispatch)
+        return AgentToolRegistry(specs: specs, dispatch: dispatch, taskRecord: record)
     }
 }
 

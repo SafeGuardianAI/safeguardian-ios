@@ -1,9 +1,23 @@
 import BitFoundation
-import Foundation
 import Combine
+import CoreBluetooth
+import Foundation
 
-/// Abstract transport interface used by ChatViewModel and services.
-/// BLEService implements this protocol; a future Nostr transport can too.
+enum LinkType: String, Sendable {
+    case ble         // bitchat BLE mesh
+    case reticulum   // Reticulum / RNode LoRa bridge
+    case wifiMesh    // MultipeerConnectivity peer-to-peer
+    case lanGateway  // UDP LAN gateway (APEX command post)
+}
+
+enum MessagePriority: UInt8, Sendable {
+    case immediate = 0
+    case delayed   = 1
+    case minimal   = 2
+    case expectant = 3
+    case routine   = 4
+}
+
 struct TransportPeerSnapshot: Equatable, Hashable {
     let peerID: PeerID
     let nickname: String
@@ -11,6 +25,8 @@ struct TransportPeerSnapshot: Equatable, Hashable {
     let noisePublicKey: Data?
     let lastSeen: Date
     var agentIDs: [String] = []
+    var linkType: LinkType = .ble
+    var estimatedBandwidthBps: Int = 500_000
 }
 
 protocol Transport: AnyObject {
@@ -73,12 +89,16 @@ protocol Transport: AnyObject {
 
     // Mesh load
     func meshPacketRate() -> Double   // packets/second observed in last 30s
+
+    // Bluetooth state (BLE transports return real state; others return .unknown)
+    func getCurrentBluetoothState() -> CBManagerState
 }
 
 extension Transport {
     func negotiatedMTU(for peerID: PeerID) -> Int { TransportConfig.bleDefaultFragmentSize + 43 }
     func lastKnownRSSI(for peerID: PeerID) -> Int? { nil }
     func meshPacketRate() -> Double { 0 }
+    func getCurrentBluetoothState() -> CBManagerState { .unknown }
     func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
     func sendVerifyChallenge(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}
     func sendVerifyResponse(to peerID: PeerID, noiseKeyHex: String, nonceA: Data) {}

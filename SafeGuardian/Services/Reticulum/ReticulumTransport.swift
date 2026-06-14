@@ -112,7 +112,9 @@ final class ReticulumTransport: @unchecked Sendable {
                 nickname: peerNicknames[peerID] ?? peerID.id.prefix(8).description,
                 isConnected: true,
                 noisePublicKey: Data(pair.0.signingPublicKey),
-                lastSeen: Date()
+                lastSeen: Date(),
+                linkType: .reticulum,
+                estimatedBandwidthBps: 2_000  // LoRa SF7 practical throughput
             )
         }
         peerSubject.send(snapshots)

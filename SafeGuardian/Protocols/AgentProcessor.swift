@@ -1,3 +1,4 @@
+import AgentInfra
 import Foundation
 import BitFoundation
 
@@ -116,7 +117,7 @@ extension AgentProcessor {
 protocol AgentContext {
     var nickname: String { get }
     var privateChats: [PeerID: [SafeGuardianMessage]] { get }
-    var deviceTick: NovaStateTick? { get }
+    var deviceTick: AgentStateTick? { get }
     var selectedGeohash: String? { get }
     /// PeerIDs of devices currently connected on the BLE mesh.
     var meshPeerIDs: Set<PeerID> { get }
@@ -159,4 +160,7 @@ protocol AgentContext {
     /// Removes and resumes the peer request continuation for requestID with "timeout".
     /// Called when the waiting Task is cancelled so the continuation does not leak.
     func cancelPeerRequest(_ requestID: String)
+    /// Send a raw private mesh message to a peer without any agent-routing wrapper.
+    /// Used by session tools to send SESSION_INIT / SESSION / SESSION_CLOSE wire frames.
+    func sendRawPrivate(_ content: String, to peerID: PeerID)
 }

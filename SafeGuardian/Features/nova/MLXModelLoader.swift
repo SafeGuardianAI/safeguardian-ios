@@ -55,11 +55,17 @@ import MLXLMCommon
 
     private func startLoad(modelID: String,
                            onProgress: @escaping (Double) -> Void) async throws -> ModelContainer {
+        // Use cached snapshot directory when available — bypasses hub downloader
+        // entirely so no ETag network check fires and no re-download occurs.
+        let snapshotURL = ModelDownloadManager.shared.localSnapshotURL(modelID: modelID)
+        let config = snapshotURL.map { ModelConfiguration(directory: $0) }
+            ?? ModelConfiguration(id: modelID)
+
         let task = Task<ModelContainer, Error> {
             try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(),
                 using: #huggingFaceTokenizerLoader(),
-                configuration: ModelConfiguration(id: modelID)
+                configuration: config
             ) { [weak self] p in
                 Task { @MainActor [weak self] in
                     self?.downloadProgress = p.fractionCompleted
@@ -67,6 +73,8 @@ import MLXLMCommon
                 }
             }
         }
+        // When loading from cache the progress callback never fires; report done immediately.
+        if snapshotURL != nil { onProgress(1.0) }
         state = .loading(modelID, task)
         isLoading = true
         do {

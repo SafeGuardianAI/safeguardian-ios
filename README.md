@@ -25,7 +25,7 @@ This project is released into the public domain. See the [LICENSE](LICENSE) file
 - **Emergency Wipe**: Triple-tap to instantly clear all data
 - **Performance Optimizations**: LZ4 message compression, adaptive battery modes, and optimized networking
 
-## [Technical Architecture](https://deepwiki.com/SafeGuardianAI/safeguardian-ios)
+## [Technical Architecture](HIVE_ARCH.md)
 
 SafeGuardian uses a **hybrid messaging architecture** with two complementary transport layers:
 
@@ -94,7 +94,7 @@ For detailed protocol documentation, see the [Technical Whitepaper](WHITEPAPER.m
 ### Option 1: Using Xcode
 
    ```bash
-   cd safeguardian-ios
+   cd nova-ios
    open SafeGuardian.xcodeproj
    ```
 

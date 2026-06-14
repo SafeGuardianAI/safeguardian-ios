@@ -1,4 +1,5 @@
 import SwiftUI
+import BitFoundation
 
 struct GeohashPeopleList: View {
     @ObservedObject var viewModel: ChatViewModel

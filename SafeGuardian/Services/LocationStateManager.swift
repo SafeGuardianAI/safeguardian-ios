@@ -1,6 +1,7 @@
 import BitLogger
 import Foundation
 import Combine
+import BitFoundation
 
 #if os(iOS) || os(macOS)
 import CoreLocation

@@ -1,5 +1,6 @@
 import BitLogger
 import Foundation
+import BitFoundation
 
 /// Dependencies for location notes, allowing tests to stub relay/identity behavior.
 struct LocationNotesDependencies {

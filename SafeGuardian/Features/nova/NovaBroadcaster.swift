@@ -1,9 +1,11 @@
+import AgentInfra
 import CoreLocation
 import Foundation
 import Combine
 #if os(iOS)
 import UIKit
 #endif
+import BitFoundation
 
 /// Nova-specific tick source. Owns location resolution and the published
 /// latestTick observable. All timing, battery gating, TTL preference, and
@@ -12,7 +14,7 @@ import UIKit
 final class NovaBroadcaster: ObservableObject {
     static var shared: NovaBroadcaster?
 
-    @Published private(set) var latestTick: NovaStateTick?
+    @Published private(set) var latestTick: AgentStateTick?
 
     // Exposed so Nova tools can read/adjust broadcast parameters.
     let broadcaster: AgentBroadcaster
@@ -116,11 +118,11 @@ final class NovaBroadcaster: ObservableObject {
         return threshold
     }
 
-    private func buildTick(batteryPct: Double, sequence: Int) -> NovaStateTick? {
+    private func buildTick(batteryPct: Double, sequence: Int) -> AgentStateTick? {
         let (lat, lon, source, confidence) = resolveLocation()
         guard confidence > 0 else { return nil }
 
-        return NovaStateTick(
+        return AgentStateTick(
             lat: lat,
             lon: lon,
             locationConfidence: confidence,
@@ -129,14 +131,14 @@ final class NovaBroadcaster: ObservableObject {
             structuralObservations: [],
             batteryPct: batteryPct,
             transportTier: .ble_coded,
-            peerCount: peerService.connectedPeerIDs.count,
+            peerCount: peerService.peers.filter { $0.isConnected || $0.isReachable }.count,
             tickSequence: sequence,
             confidenceAtEmit: confidence
         )
     }
 
     private func resolveLocation() -> (lat: Double, lon: Double,
-                                       source: NovaStateTick.LocationSource,
+                                       source: AgentStateTick.LocationSource,
                                        confidence: Double) {
         if let fix = locationManager.currentLocation {
             let age = Date().timeIntervalSince(fix.timestamp)

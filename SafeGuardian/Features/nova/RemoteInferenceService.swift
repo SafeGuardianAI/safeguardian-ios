@@ -4,6 +4,7 @@
 //
 // This is free and unencumbered software released into the public domain.
 
+import AgentInfra
 import Foundation
 import MLXLMCommon
 
@@ -136,7 +137,7 @@ final class RemoteInferenceService: AgentLanguageProvider {
                         "stream_options": ["include_usage": true],
                         "messages": messages
                     ]
-                    if let registry = input.toolRegistry, !registry.specs.isEmpty {
+                    if let registry = input.toolRegistry as? AgentToolRegistry, !registry.specs.isEmpty {
                         reqBody["tools"] = registry.specs
                         reqBody["tool_choice"] = "auto"
                     }
@@ -203,7 +204,7 @@ final class RemoteInferenceService: AgentLanguageProvider {
                         // containing tool_calls to precede the tool result messages.
                         // Skipping it causes 400 errors on strict endpoints.
                         if finishReason == "tool_calls", !pending.isEmpty,
-                           let registry = input.toolRegistry
+                           let registry = input.toolRegistry as? AgentToolRegistry
                         {
                             let ordered = pending.sorted { $0.key < $1.key }.map { $0.value }
 

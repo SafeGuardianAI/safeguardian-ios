@@ -39,7 +39,18 @@ def main():
     found_emojis = False
 
     for root, _, files in os.walk(base_dir):
-        if any(x in root for x in [".build", ".git", "Pods", ".xcworkspace", ".xcodeproj", "DerivedData", "localPackages"]):
+        if any(
+            x in root
+            for x in [
+                ".build",
+                ".git",
+                "Pods",
+                ".xcworkspace",
+                ".xcodeproj",
+                "DerivedData",
+                "localPackages",
+            ]
+        ):
             continue
         for file in files:
             if not file.endswith((".swift", ".sh", ".py")):
@@ -49,7 +60,9 @@ def main():
             full_path = os.path.join(root, file)
             line_num = check_file(full_path)
             if line_num:
-                print(f"Error: Emoji found in {os.path.relpath(full_path, base_dir)} at line {line_num}")
+                print(
+                    f"Error: Emoji found in {os.path.relpath(full_path, base_dir)} at line {line_num}"
+                )
                 found_emojis = True
 
     if found_emojis:

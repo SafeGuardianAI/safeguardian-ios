@@ -6,6 +6,7 @@ import UIKit
 #elseif os(macOS)
 import AppKit
 #endif
+import BitFoundation
 
 /// Directory of online Nostr relays with approximate GPS locations, used for geohash routing.
 struct GeoRelayDirectoryDependencies {

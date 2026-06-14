@@ -126,7 +126,11 @@ struct ReticulumAnnounce {
     // Build a signed announce for the local identity.
     static func build(identity: ReticulumIdentity, appData: Data = Data()) throws -> ReticulumAnnounce {
         var randomHash = Data(count: randomHashLength)
-        randomHash.withUnsafeMutableBytes { _ = SecRandomCopyBytes(kSecRandomDefault, randomHashLength, $0.baseAddress!) }
+        randomHash.withUnsafeMutableBytes {
+            if let base = $0.baseAddress {
+                _ = SecRandomCopyBytes(kSecRandomDefault, randomHashLength, base)
+            }
+        }
 
         let signPub = identity.signingPrivateKey.publicKey.rawRepresentation
         let encPub  = identity.encryptionPrivateKey.publicKey.rawRepresentation

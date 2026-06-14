@@ -44,7 +44,7 @@ Xcode project package edits are fragile. Before editing `SafeGuardian.xcodeproj/
 
 - `swift-transformers` exposes the package product `Transformers`; `Tokenizers` is an importable module, not the product name to add to the target.
 - If evaluating AnyLanguageModel, do not try to add Swift package traits directly to the Xcode target. Xcode does not provide a first-class traits UI. Use a local Swift 6.1 shim package that depends on AnyLanguageModel with the required traits, then add that local package to the app target.
-- Keep `safeguardian-ios/Package.swift`, Xcode deployment targets, and MLX requirements aligned. MLX and `@Observable` require macOS 14 in this project path.
+- Keep `apps/nova-ios/Package.swift`, Xcode deployment targets, and MLX requirements aligned. MLX and `@Observable` require macOS 14 in this project path.
 
 ## IPC / TUI Socket Host
 

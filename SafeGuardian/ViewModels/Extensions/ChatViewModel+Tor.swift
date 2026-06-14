@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import Tor
+import BitFoundation
 
 extension ChatViewModel {
     

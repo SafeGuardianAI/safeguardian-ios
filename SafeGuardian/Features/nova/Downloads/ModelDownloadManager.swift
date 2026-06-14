@@ -108,6 +108,20 @@ final class ModelDownloadManager {
         return DeviceMetrics.availableStorageBytes() >= needed
     }
 
+    // MARK: - Local snapshot
+
+    /// Returns the snapshot directory URL for a cached model, or nil if not present.
+    /// Used by MLXModelLoader to load directly from disk, bypassing the hub downloader.
+    func localSnapshotURL(modelID: String) -> URL? {
+        let snapshotsDir = hubCacheDir
+            .appendingPathComponent(Self.modelIDToDirectoryName(modelID))
+            .appendingPathComponent("snapshots")
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: snapshotsDir, includingPropertiesForKeys: nil
+        ), let snapshot = entries.first else { return nil }
+        return snapshot
+    }
+
     // MARK: - Model config
 
     /// Reads max_position_embeddings from the model's cached config.json.

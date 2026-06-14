@@ -12,6 +12,7 @@ import Foundation
 import Combine
 import BitLogger
 import Tor
+import BitFoundation
 
 protocol GeohashPresenceTimerProtocol: AnyObject {
     var isValid: Bool { get }

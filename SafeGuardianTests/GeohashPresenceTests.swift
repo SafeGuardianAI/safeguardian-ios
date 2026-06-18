@@ -9,6 +9,7 @@
 import Testing
 import Foundation
 import Combine
+import BitFoundation
 @testable import SafeGuardian
 
 // MARK: - NostrProtocol Presence Event Tests

@@ -74,6 +74,7 @@ protocol Transport: AnyObject {
     func sendFileBroadcast(_ packet: SafeGuardianFilePacket, transferId: String)
     func sendFilePrivate(_ packet: SafeGuardianFilePacket, to peerID: PeerID, transferId: String)
     func cancelTransfer(_ transferId: String)
+    func sendSGEnvelope(_ envelope: SGEnvelope)
 
     // QR verification (optional for transports)
     func sendVerifyChallenge(to peerID: PeerID, noiseKeyHex: String, nonceA: Data)
@@ -105,6 +106,7 @@ extension Transport {
     func sendFileBroadcast(_ packet: SafeGuardianFilePacket, transferId: String) {}
     func sendFilePrivate(_ packet: SafeGuardianFilePacket, to peerID: PeerID, transferId: String) {}
     func cancelTransfer(_ transferId: String) {}
+    func sendSGEnvelope(_ envelope: SGEnvelope) {}
 
     func sendMessage(_ content: String, mentions: [String], messageID: String, timestamp: Date) {
         sendMessage(content, mentions: mentions)

@@ -69,8 +69,17 @@ struct LXMFMessage {
         content: String,
         title: String = ""
     ) throws -> LXMFMessage {
+        try build(from: identity, to: destination, content: Data(content.utf8), title: title)
+    }
+
+    // Build and sign an LXMF message carrying arbitrary app bytes.
+    static func build(
+        from identity: ReticulumIdentity,
+        to destination: Data,
+        content contentData: Data,
+        title: String = ""
+    ) throws -> LXMFMessage {
         let ts = UInt64(Date().timeIntervalSince1970 * 1000)
-        let contentData = Data(content.utf8)
         let titleData   = Data(title.utf8)
 
         var toSign = Data()

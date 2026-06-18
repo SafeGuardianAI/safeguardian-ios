@@ -144,6 +144,8 @@ protocol AgentContext {
     var broadcastTTL: UInt8 { get }
     func setTickInterval(_ seconds: TimeInterval)
     func setMessageTTL(_ ttl: UInt8)
+    @discardableResult
+    func publishCurrentStateTick() -> Bool
 
     /// Sends a [REQUEST:{type}:{requestID}] wire message to the peer, initiating a structured peer request.
     func sendPeerRequest(type: String, requestID: String, to peerID: PeerID)

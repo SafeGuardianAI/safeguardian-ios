@@ -21,6 +21,14 @@ extension ChatViewModel: AgentContext {
         NovaBroadcaster.shared?.broadcaster.setPreferredTTL(ttl)
     }
 
+    @discardableResult
+    func publishCurrentStateTick() -> Bool {
+        guard let tick = deviceTick,
+              let sgClient else { return false }
+        sgClient.publishStateTick(tick)
+        return true
+    }
+
     @MainActor
     func sendMeshMessage(agentID: String, content: String, to peerID: PeerID, requestID: String? = nil) {
         sendPrivateMessage(AgentMeshRouting.format(agentID: agentID, content: content, requestID: requestID), to: peerID)

@@ -10,6 +10,7 @@ import Foundation
 // and are delivered to the SafeGuardianDelegate, making this transport a drop-in
 // replacement for BLEService at the ChatViewModel injection point.
 final class ReticulumTransport: @unchecked Sendable {
+    private static let sgEnvelopeTitle = "sg-envelope"
 
     // MARK: - Transport State
 
@@ -19,16 +20,12 @@ final class ReticulumTransport: @unchecked Sendable {
 
     let identity: ReticulumIdentity
 
-    #if os(iOS)
     let bleInterface: ReticulumBLEInterface
-    #endif
+    let toolRouter: LXMFToolRouter
 
     private let noiseService: NoiseEncryptionService
 
-    // peer hash (hex) → (announce, CBPeripheral)
-    #if os(iOS)
     private var connectedPeers: [PeerID: (ReticulumAnnounce, CBPeripheral)] = [:]
-    #endif
     private var peerNicknames: [PeerID: String] = [:]
 
     private let peerSubject = CurrentValueSubject<[TransportPeerSnapshot], Never>([])
@@ -42,18 +39,15 @@ final class ReticulumTransport: @unchecked Sendable {
         self.noiseService = NoiseEncryptionService(keychain: keychain)
         self._myNickname = UserDefaults.standard.string(forKey: "bitchat.nickname") ?? "anon"
 
-        #if os(iOS)
         self.bleInterface = ReticulumBLEInterface()
-        #endif
-
-        #if os(iOS)
+        self.toolRouter = LXMFToolRouter(identity: identity)
         wireBLECallbacks()
-        #endif
+        MeshAgentRegistry.shared.toolRouter = toolRouter
+        MeshAgentRegistry.shared.localDestinationHash = identity.destinationHash.hexEncodedString()
     }
 
     // MARK: - BLE Callbacks
 
-    #if os(iOS)
     private func wireBLECallbacks() {
         bleInterface.onPacket = { [weak self] data, peripheral in
             self?.handleInboundPacket(data, from: peripheral)
@@ -66,13 +60,23 @@ final class ReticulumTransport: @unchecked Sendable {
             self?.peerNicknames.removeValue(forKey: peerID)
             self?.delegate?.didDisconnectFromPeer(peerID)
             self?.emitPeerSnapshots()
+            MeshAgentRegistry.shared.remove(peerID: peerID)
+        }
+        toolRouter.sendDirected = { [weak self] destHash, lxmfPayload in
+            guard let self else { return }
+            let peerID = PeerID(hexData: destHash)
+            if let (_, peripheral) = connectedPeers[peerID] {
+                let packet = ReticulumDataPacket.directed(to: destHash, payload: lxmfPayload)
+                bleInterface.send(packet.encode(), to: peripheral)
+            } else {
+                let packet = ReticulumDataPacket.broadcast(payload: lxmfPayload, identity: identity)
+                bleInterface.broadcast(packet.encode())
+            }
         }
     }
-    #endif
 
     // MARK: - Packet Handling
 
-    #if os(iOS)
     private func handleInboundPacket(_ data: Data, from peripheral: CBPeripheral) {
         guard let packet = ReticulumDataPacket.decode(data) else { return }
         switch packet.header.packetType {
@@ -80,11 +84,26 @@ final class ReticulumTransport: @unchecked Sendable {
             guard let announce = ReticulumAnnounce.decode(packet.payload) else { return }
             let peerID = PeerID(hexData: announce.destinationHash)
             connectedPeers[peerID] = (announce, peripheral)
+            if !announce.appData.isEmpty,
+               let agentPeer = ReticulumAgentPeer.decode(
+                   peerID: peerID, destinationHash: announce.destinationHash, appData: announce.appData) {
+                MeshAgentRegistry.shared.register(agentPeer)
+            }
             emitPeerSnapshots()
             delegate?.didConnectToPeer(peerID)
         case .data:
             guard let lxmf = LXMFMessage.decode(packet.payload) else { return }
             let senderID = PeerID(hexData: lxmf.source)
+            let titleStr = String(data: lxmf.title, encoding: .utf8) ?? ""
+            if titleStr.hasPrefix("tool_response:") {
+                toolRouter.handleResponse(title: titleStr, content: lxmf.content)
+                return
+            }
+            if lxmf.title == Data(Self.sgEnvelopeTitle.utf8),
+               let envelope = SGEnvelope.decode(lxmf.content) {
+                delegate?.didReceiveSGEnvelope(envelope, from: senderID)
+                return
+            }
             let nickname = peerNicknames[senderID] ?? senderID.id.prefix(8).description
             let isPrivate = lxmf.destination != Data(repeating: 0, count: 16)
             let content = String(data: lxmf.content, encoding: .utf8) ?? ""
@@ -123,7 +142,6 @@ final class ReticulumTransport: @unchecked Sendable {
             self.peerEventsDelegate?.didUpdatePeerSnapshots(snapshots)
         }
     }
-    #endif
 }
 
 // MARK: - Transport Conformance
@@ -148,9 +166,7 @@ extension ReticulumTransport: Transport {
     }
 
     func startServices() {
-        #if os(iOS)
         bleInterface.start()
-        #endif
         announceTimer = Timer.scheduledTimer(
             withTimeInterval: ReticulumConfig.reticulumAnnounceInterval,
             repeats: true
@@ -161,26 +177,18 @@ extension ReticulumTransport: Transport {
     func stopServices() {
         announceTimer?.invalidate()
         announceTimer = nil
-        #if os(iOS)
         bleInterface.stop()
-        #endif
     }
 
     func emergencyDisconnectAll() {
         stopServices()
-        #if os(iOS)
         connectedPeers.removeAll()
-        #endif
         peerNicknames.removeAll()
         peerSubject.send([])
     }
 
     func isPeerConnected(_ peerID: PeerID) -> Bool {
-        #if os(iOS)
-        return connectedPeers[peerID] != nil
-        #else
-        return false
-        #endif
+        connectedPeers[peerID] != nil
     }
 
     func isPeerReachable(_ peerID: PeerID) -> Bool { isPeerConnected(peerID) }
@@ -196,14 +204,11 @@ extension ReticulumTransport: Transport {
             content: content
         ) else { return }
         let packet = ReticulumDataPacket.broadcast(payload: lxmf.encode(), identity: identity)
-        #if os(iOS)
         bleInterface.broadcast(packet.encode())
-        #endif
     }
 
     func sendPrivateMessage(_ content: String, to peerID: PeerID,
                             recipientNickname: String, messageID: String) {
-        #if os(iOS)
         guard let (announce, peripheral) = connectedPeers[peerID],
               let lxmf = try? LXMFMessage.build(
                 from: identity,
@@ -215,7 +220,6 @@ extension ReticulumTransport: Transport {
             payload: lxmf.encode()
         )
         bleInterface.send(packet.encode(), to: peripheral)
-        #endif
     }
 
     func sendReadReceipt(_ receipt: ReadReceipt, to peerID: PeerID) {}
@@ -225,6 +229,17 @@ extension ReticulumTransport: Transport {
     func sendBroadcastAnnounce() { broadcastAnnounce() }
 
     func sendDeliveryAck(for messageID: String, to peerID: PeerID) {}
+
+    func sendSGEnvelope(_ envelope: SGEnvelope) {
+        guard let lxmf = try? LXMFMessage.build(
+            from: identity,
+            to: Data(repeating: 0, count: 16),
+            content: envelope.encode(),
+            title: Self.sgEnvelopeTitle
+        ) else { return }
+        let packet = ReticulumDataPacket.broadcast(payload: lxmf.encode(), identity: identity)
+        bleInterface.broadcast(packet.encode())
+    }
 
     func triggerHandshake(with peerID: PeerID) {}
 
@@ -237,10 +252,11 @@ extension ReticulumTransport: Transport {
     // MARK: - Private helpers
 
     private func broadcastAnnounce() {
-        guard let nickData = _myNickname.data(using: .utf8) else { return }
-        // Embed nickname as appData by rebuilding with appData set.
-        // ReticulumAnnounce is a value type; rebuild with appData.
-        guard let signed = try? ReticulumAnnounce.build(identity: identity, appData: nickData) else { return }
+        // Emit structured JSON so Python agents can discover this Nova node via the
+        // FieldMesh announce protocol. caps is empty until agent-callable tools are added.
+        let appDataObj: [String: Any] = ["type": "nova", "caps": [String]()]
+        guard let appDataJSON = try? JSONSerialization.data(withJSONObject: appDataObj, options: .sortedKeys),
+              let signed = try? ReticulumAnnounce.build(identity: identity, appData: appDataJSON) else { return }
         let header = ReticulumPacketHeader(
             ifac: false, headerType: 0, contextFlags: 0,
             propagation: .broadcast, destinationType: .single,
@@ -252,8 +268,6 @@ extension ReticulumTransport: Transport {
             context: 0,
             payload: signed.encode()
         )
-        #if os(iOS)
         bleInterface.broadcast(packet.encode())
-        #endif
     }
 }

@@ -132,9 +132,9 @@ enum SGSourceType: UInt8, Sendable {
 }
 
 enum SGPayloadType: UInt8, Sendable {
-    case entity     = 0x01  // FIM entity publish
-    case task       = 0x02  // Mission task create
-    case triage     = 0x03  // Triage classification
-    case agentMsg   = 0x04  // Agent-to-agent message
-    case taskStatus = 0x05  // Task status update
+    case entity    = 0x01  // FIM entity publish (contracts and sitreps use entityType field)
+    case triage    = 0x03  // Triage classification
+    case agentMsg  = 0x04  // Agent-to-agent message
+    case stateTick = 0x06  // Agent state heartbeat
+    // 0x02 (.task) and 0x05 (.taskStatus) retired; contract entities use .entity with entityType "contract"
 }

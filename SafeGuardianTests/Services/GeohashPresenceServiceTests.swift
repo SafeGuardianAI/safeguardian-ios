@@ -1,5 +1,6 @@
 import Combine
 import XCTest
+import BitFoundation
 @testable import SafeGuardian
 
 @MainActor

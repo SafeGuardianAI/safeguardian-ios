@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import BitFoundation
 @testable import SafeGuardian
 
 struct LocationChannelsTests {

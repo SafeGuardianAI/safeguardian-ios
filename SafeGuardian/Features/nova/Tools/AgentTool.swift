@@ -61,6 +61,7 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _broadcastTTL: @MainActor () -> UInt8
     private let _setTickInterval: @MainActor (TimeInterval) -> Void
     private let _setMessageTTL: @MainActor (UInt8) -> Void
+    private let _publishCurrentStateTick: @MainActor () -> Bool
     private let _sendMesh: @MainActor (String, String, PeerID, String?) -> Void
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
     private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
@@ -79,6 +80,7 @@ final class AgentContextProxy: @unchecked Sendable {
         _broadcastTTL      = { context.broadcastTTL }
         _setTickInterval   = { context.setTickInterval($0) }
         _setMessageTTL     = { context.setMessageTTL($0) }
+        _publishCurrentStateTick = { context.publishCurrentStateTick() }
         _sendMesh = { toAgentID, content, peerID, requestID in
             context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID, requestID: requestID)
         }
@@ -112,6 +114,7 @@ final class AgentContextProxy: @unchecked Sendable {
     func broadcastTTL() async -> UInt8 { await MainActor.run { _broadcastTTL() } }
     func setTickInterval(_ s: TimeInterval) async { await MainActor.run { _setTickInterval(s) } }
     func setMessageTTL(_ ttl: UInt8) async { await MainActor.run { _setMessageTTL(ttl) } }
+    func publishCurrentStateTick() async -> Bool { await MainActor.run { _publishCurrentStateTick() } }
 
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
         await MainActor.run { _sendMesh(toAgentID, content, peerID, nil) }

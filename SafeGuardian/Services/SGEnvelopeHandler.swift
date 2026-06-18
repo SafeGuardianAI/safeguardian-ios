@@ -10,18 +10,16 @@ import Foundation
 final class SGEnvelopeHandler {
 
     var onEntity: ((Data, PeerID) -> Void)?
-    var onTask: ((Data, PeerID) -> Void)?
     var onTriage: ((Data, PeerID) -> Void)?
     var onAgentMsg: ((Data, PeerID) -> Void)?
-    var onTaskStatus: ((Data, PeerID) -> Void)?
+    var onStateTick: ((Data, PeerID) -> Void)?
 
     func handle(_ envelope: SGEnvelope, from peerID: PeerID) {
         switch envelope.payloadType {
-        case .entity:     onEntity?(envelope.payload, peerID)
-        case .task:       onTask?(envelope.payload, peerID)
-        case .triage:     onTriage?(envelope.payload, peerID)
-        case .agentMsg:   onAgentMsg?(envelope.payload, peerID)
-        case .taskStatus: onTaskStatus?(envelope.payload, peerID)
+        case .entity:    onEntity?(envelope.payload, peerID)
+        case .triage:    onTriage?(envelope.payload, peerID)
+        case .agentMsg:  onAgentMsg?(envelope.payload, peerID)
+        case .stateTick: onStateTick?(envelope.payload, peerID)
         }
     }
 }

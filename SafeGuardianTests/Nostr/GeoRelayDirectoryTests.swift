@@ -1,6 +1,7 @@
 import Foundation
 import Tor
 import XCTest
+import BitFoundation
 @testable import SafeGuardian
 
 @MainActor

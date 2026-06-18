@@ -1,3 +1,4 @@
+import BitFoundation
 import Foundation
 
 // TriageProfile maps system-specific triage labels to the canonical 5-level
@@ -56,5 +57,38 @@ struct TriageProfile {
 
     static var allBuiltIn: [TriageProfile] {
         [.tccc, .start, .salt, .jumpstart, .medevac, .ics]
+    }
+
+    // MARK: - Tenant config factory
+
+    // Reads `triage_profile` from tenant.json-style config dict, defaulting to .tccc.
+    // If value is "custom", reads `triage_mapping` as [String: String] and builds
+    // a TriageProfile with canonical priority values.
+    static func fromTenantConfig(_ config: [String: Any]) -> TriageProfile {
+        let profileName = config["triage_profile"] as? String ?? "tccc"
+        if let builtin = named(profileName) { return builtin }
+        if profileName == "custom",
+           let raw = config["triage_mapping"] as? [String: String] {
+            let mapping = raw.compactMapValues { priorityFromCanonicalString($0) }
+            return TriageProfile(name: "custom", mapping: mapping)
+        }
+        return .tccc
+    }
+
+    // Reads `sg.triage_profile` from UserDefaults for app-launch initialization.
+    static func fromUserDefaults() -> TriageProfile {
+        let stored = UserDefaults.standard.string(forKey: "sg.triage_profile") ?? "tccc"
+        return named(stored) ?? .tccc
+    }
+}
+
+private func priorityFromCanonicalString(_ s: String) -> MessagePriority? {
+    switch s.lowercased() {
+    case "immediate": return .immediate
+    case "delayed":   return .delayed
+    case "minimal":   return .minimal
+    case "expectant": return .expectant
+    case "routine":   return .routine
+    default:          return nil
     }
 }

@@ -13,7 +13,7 @@ struct SGEnvelopeTests {
         let envelope = SGEnvelope(
             priority: .delayed,
             sourceType: .apex,
-            payloadType: .task,
+            payloadType: .entity,
             tenantHash: tenant,
             messageId: messageId,
             sourceId: sourceId,
@@ -25,7 +25,7 @@ struct SGEnvelopeTests {
         #expect(encoded.count == SGEnvelope.headerSize + payload.count)
         #expect(encoded[0] == SGEnvelope.currentVersion)
         #expect(encoded[1] == expectedControl)
-        #expect(encoded[2] == SGPayloadType.task.rawValue)
+        #expect(encoded[2] == SGPayloadType.entity.rawValue)
         #expect(Data(encoded[3..<7]) == tenant)
         #expect(Data(encoded[7..<23]) == messageId)
         #expect(Data(encoded[23..<31]) == sourceId)
@@ -52,5 +52,23 @@ struct SGEnvelopeTests {
         legacy[2] = SGPayloadType.agentMsg.rawValue
 
         #expect(SGEnvelope.decode(legacy) == nil)
+    }
+
+    @Test
+    func decode_acceptsStateTickPayloadType() throws {
+        let envelope = SGEnvelope(
+            priority: .routine,
+            sourceType: .nova,
+            payloadType: .stateTick,
+            tenantHash: Data(repeating: 0, count: 4),
+            messageId: Data((0x10...0x1F).map { UInt8($0) }),
+            sourceId: Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11]),
+            payload: Data(#"{"lat":29.95,"lon":-90.07}"#.utf8)
+        )
+
+        let decoded = try #require(SGEnvelope.decode(envelope.encode()))
+
+        #expect(decoded.payloadType == .stateTick)
+        #expect(SGPayloadType.stateTick.rawValue == 0x06)
     }
 }

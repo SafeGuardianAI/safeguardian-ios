@@ -1,4 +1,3 @@
-#if os(iOS)
 import BitFoundation
 import CoreBluetooth
 import Foundation
@@ -37,15 +36,19 @@ final class ReticulumBLEInterface: NSObject {
     // MARK: - Lifecycle
 
     func start() {
+        #if os(iOS)
         let centralOpts: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: ReticulumConfig.reticulumRestorationCentral
         ]
         central = CBCentralManager(delegate: self, queue: nil, options: centralOpts)
-
         let peripheralOpts: [String: Any] = [
             CBPeripheralManagerOptionRestoreIdentifierKey: ReticulumConfig.reticulumRestorationPeripheral
         ]
         peripheral = CBPeripheralManager(delegate: self, queue: nil, options: peripheralOpts)
+        #else
+        central    = CBCentralManager(delegate: self, queue: nil, options: nil)
+        peripheral = CBPeripheralManager(delegate: self, queue: nil, options: nil)
+        #endif
     }
 
     func stop() {
@@ -116,8 +119,10 @@ extension ReticulumBLEInterface: CBCentralManagerDelegate {
         peripherals.removeValue(forKey: uuid)
     }
 
+    #if os(iOS)
     func centralManager(_ central: CBCentralManager,
                         willRestoreState dict: [String: Any]) {}
+    #endif
 }
 
 // MARK: - CBPeripheralDelegate
@@ -239,7 +244,8 @@ extension ReticulumBLEInterface: CBPeripheralManagerDelegate {
         }
     }
 
+    #if os(iOS)
     func peripheralManager(_ peripheral: CBPeripheralManager,
                            willRestoreState dict: [String: Any]) {}
+    #endif
 }
-#endif

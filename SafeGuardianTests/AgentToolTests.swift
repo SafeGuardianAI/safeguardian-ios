@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AgentInfra
 @testable import SafeGuardian
 
 // MARK: - AgentMeshRouting
@@ -79,12 +80,12 @@ struct ModelDownloadManagerTests {
     }
 }
 
-// MARK: - NovaStateTick.toolJSON
+// MARK: - AgentStateTick.toolJSON
 
-@Suite("NovaStateTick toolJSON")
-struct NovaStateTickToolJSONTests {
+@Suite("AgentStateTick toolJSON")
+struct AgentStateTickToolJSONTests {
     @Test func toolJSONIsValidJSON() throws {
-        let tick = NovaStateTick(
+        let tick = AgentStateTick(
             lat: 30.123, lon: -90.456,
             locationConfidence: 0.85,
             locationSource: .gps,

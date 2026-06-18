@@ -1,3 +1,4 @@
+import AgentInfra
 import BitFoundation
 import Combine
 import Foundation
@@ -19,7 +20,6 @@ final class SGClient {
     // MARK: - Subsystems
 
     let entityManager = SGEntityManager()
-    let taskManager   = SGTaskManager()
     let triageEngine: SGTriageEngine
     let envelopeHandler = SGEnvelopeHandler()
 
@@ -38,14 +38,7 @@ final class SGClient {
         envelopeHandler.onEntity = { [weak self] payload, peerID in
             self?.entityManager.receive(payload, from: peerID)
         }
-        envelopeHandler.onTask = { [weak self] payload, peerID in
-            self?.taskManager.receiveTask(payload, from: peerID)
-        }
-        envelopeHandler.onTaskStatus = { [weak self] payload, peerID in
-            self?.taskManager.receiveStatus(payload, from: peerID)
-        }
         envelopeHandler.onTriage = { [weak self] payload, peerID in
-            // Triage payloads are forwarded to entity manager as triage entities.
             self?.entityManager.receive(payload, from: peerID)
         }
         envelopeHandler.onAgentMsg = { payload, _ in
@@ -65,30 +58,18 @@ final class SGClient {
         transport?.sendSGEnvelope(envelope)
     }
 
-    // MARK: - Task API
+    // MARK: - Agent State API
 
-    var taskPublisher: AnyPublisher<[SGTask], Never> {
-        taskManager.taskPublisher
-    }
-
-    var agentRequestPublisher: AnyPublisher<SGAgentRequest, Never> {
-        taskManager.agentRequestPublisher
-    }
-
-    func createTask(_ task: SGTask) {
-        guard let sourceId = sourceIdData() else { return }
-        if let envelope = taskManager.taskEnvelope(for: task, sourceId: sourceId) {
-            transport?.sendSGEnvelope(envelope)
-        }
-    }
-
-    func updateTaskStatus(taskId: String, status: SGTaskStatusValue, version: Int) {
-        guard let sourceId = sourceIdData() else { return }
-        if let envelope = taskManager.statusEnvelope(
-            taskId: taskId, status: status, version: version, sourceId: sourceId
-        ) {
-            transport?.sendSGEnvelope(envelope)
-        }
+    func publishStateTick(_ tick: AgentStateTick) {
+        guard let sourceId = sourceIdData(),
+              let payload = encodeStateTick(tick) else { return }
+        let envelope = SGEnvelope.build(
+            priority: priority(for: tick),
+            payloadType: .stateTick,
+            sourceId: sourceId,
+            payload: payload
+        )
+        transport?.sendSGEnvelope(envelope)
     }
 
     // MARK: - Triage API
@@ -140,6 +121,21 @@ final class SGClient {
             if idx >= hex.endIndex { break }
         }
         return data.count == 8 ? data : Data(repeating: 0, count: 8)
+    }
+
+    private func encodeStateTick(_ tick: AgentStateTick) -> Data? {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        return try? encoder.encode(tick)
+    }
+
+    private func priority(for tick: AgentStateTick) -> MessagePriority {
+        switch tick.medicalStatus {
+        case .critical: return .immediate
+        case .serious: return .delayed
+        case .minor: return .minimal
+        case .uninjured, .unknown: return .routine
+        }
     }
 }
 

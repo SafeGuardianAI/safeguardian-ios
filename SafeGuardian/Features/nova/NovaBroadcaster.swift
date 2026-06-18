@@ -15,6 +15,7 @@ final class NovaBroadcaster: ObservableObject {
     static var shared: NovaBroadcaster?
 
     @Published private(set) var latestTick: AgentStateTick?
+    var onTickEmit: ((AgentStateTick) -> Void)?
 
     // Exposed so Nova tools can read/adjust broadcast parameters.
     let broadcaster: AgentBroadcaster
@@ -40,6 +41,7 @@ final class NovaBroadcaster: ObservableObject {
                                             sequence: ctx.sequence) else { return false }
             self.latestTick = tick
             self.lastEmittedCoordinate = (tick.lat, tick.lon)
+            self.onTickEmit?(tick)
             return true
         }
 

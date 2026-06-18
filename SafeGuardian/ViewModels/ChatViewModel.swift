@@ -294,6 +294,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     // MARK: - Services and Storage
     
     let meshService: Transport
+    let sgClient: SGClient?
     let idBridge: NostrIdentityBridge
     let identityManager: SecureIdentityStateManagerProtocol
     
@@ -451,6 +452,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         self.idBridge = idBridge
         self.identityManager = identityManager
         self.meshService = transport
+        if let multiTransport = transport as? MultiTransportManager {
+            let sgClient = SGClient(transport: multiTransport, triageProfile: TriageProfile.fromUserDefaults())
+            multiTransport.sgEnvelopeHandler = sgClient.envelopeHandler
+            self.sgClient = sgClient
+        } else {
+            self.sgClient = nil
+        }
         self.publicMessagePipeline = PublicMessagePipeline()
         
         // Load persisted read receipts
@@ -479,6 +487,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         self.deduplicationService = MessageDeduplicationService()
         self.novaBroadcaster = NovaBroadcaster(peerService: self.unifiedPeerService)
         NovaBroadcaster.shared = self.novaBroadcaster
+        let sgClient = self.sgClient
+        self.novaBroadcaster.onTickEmit = { tick in
+            sgClient?.publishStateTick(tick)
+        }
 
         // Wire up dependencies
         self.commandProcessor.contextProvider = self

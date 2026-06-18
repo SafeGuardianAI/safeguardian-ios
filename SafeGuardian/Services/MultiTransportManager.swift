@@ -12,9 +12,8 @@ import Foundation
 // delivered exactly once.
 //
 // Outbound: broadcast messages go to the primary (BLEService). Directed messages
-// route to whichever transport has the destination peer connected. When SGEnvelope
-// priority routing is added in Phase 2, the outbound path will consult message
-// priority and dispatch to all links for immediate-priority traffic.
+// route to whichever transport has the destination peer connected. SGEnvelopes
+// fan out across links when priority or payload type requires resilient routing.
 //
 // Peer snapshots are merged across all transports, deduplicating by peerID with
 // the most-recently-seen snapshot winning when a peer is visible on multiple links.
@@ -243,13 +242,13 @@ extension MultiTransportManager: Transport {
     }
 
     // Broadcast an SGEnvelope.
-    // Immediate-priority fires on BLE mesh + LAN gateway simultaneously.
+    // Immediate-priority and state ticks fire on registered mesh transports + LAN.
     // Other priorities use primary (BLE) + LAN gateway if available.
     func sendSGEnvelope(_ envelope: SGEnvelope) {
-        if envelope.priority == .immediate {
-            transports.forEach { ($0 as? BLEService)?.sendSGEnvelope(envelope) }
+        if envelope.priority == .immediate || envelope.payloadType == .stateTick {
+            transports.forEach { $0.sendSGEnvelope(envelope) }
         } else {
-            (primary as? BLEService)?.sendSGEnvelope(envelope)
+            primary.sendSGEnvelope(envelope)
         }
         lanGateway?.send(envelope)
     }

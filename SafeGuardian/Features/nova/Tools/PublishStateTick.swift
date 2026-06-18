@@ -2,16 +2,15 @@ import Foundation
 import MLXLMCommon
 
 extension AgentToolEntry {
-    // Shortens the broadcast interval to 2 seconds so the next StateTick fires
-    // almost immediately, then restores the original interval after 4 seconds.
-    // The restore runs in a detached task so this tool returns without blocking.
-    // Use when field conditions change rapidly and the normal tick cadence is
-    // too slow to propagate current device state to mesh peers.
+    // Publishes the latest StateTick immediately, then briefly requests the
+    // shortest broadcaster interval so a fresh tick can follow if state changes.
+    // Use when field conditions change rapidly and stale state on peer devices
+    // would cause bad decisions.
     static func publishStateTick() -> AgentToolEntry {
         make(
             name: "publish_state_tick",
-            description: "Force the next StateTick broadcast to fire within 2 seconds by " +
-                         "temporarily tightening the broadcast interval, then restoring it. " +
+            description: "Immediately transmit the latest StateTick over the mesh and " +
+                         "briefly request the shortest broadcast interval for a follow-up tick. " +
                          "Use after a significant location change, battery threshold crossing, " +
                          "or any event where stale state on peer devices would cause bad decisions.",
             parameters: [
@@ -22,14 +21,19 @@ extension AgentToolEntry {
             guard case .string(let reason) = args["reason"] else {
                 return #"{"error":"reason required"}"#
             }
+            let published = await proxy.publishCurrentStateTick()
             let previous = await proxy.broadcastInterval()
             await proxy.setTickInterval(2.0)
+            let applied = await proxy.broadcastInterval()
             Task.detached {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 await proxy.setTickInterval(previous)
             }
+            let escapedReason = reason
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
             return """
-            {"scheduled":true,"reason":"\(reason)","next_tick_within_seconds":2,"previous_interval":\(previous)}
+            {"published":\(published),"scheduled":true,"reason":"\(escapedReason)","temporary_interval":\(applied),"previous_interval":\(previous)}
             """
         }
     }

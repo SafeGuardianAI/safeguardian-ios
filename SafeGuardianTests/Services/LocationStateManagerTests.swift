@@ -1,6 +1,7 @@
 import CoreLocation
 import MapKit
 import XCTest
+import BitFoundation
 @testable import SafeGuardian
 
 @MainActor

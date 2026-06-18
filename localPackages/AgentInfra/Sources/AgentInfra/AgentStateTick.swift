@@ -8,17 +8,17 @@ import Foundation
 /// A single behavioral state observation from a SafeGuardian agent node.
 /// Corresponds to the nova.state_tick ADSP atom schema. Provider-agnostic —
 /// Nova, Trek, and any future agent use this same structure.
-public struct AgentStateTick: Equatable, Sendable {
+public struct AgentStateTick: Codable, Equatable, Sendable {
 
-    public enum LocationSource: String, Equatable, Sendable {
+    public enum LocationSource: String, Codable, Equatable, Sendable {
         case gps, derived, reported
     }
 
-    public enum MedicalStatus: String, Equatable, Sendable {
+    public enum MedicalStatus: String, Codable, Equatable, Sendable {
         case unknown, uninjured, minor, serious, critical
     }
 
-    public enum TransportTier: String, Equatable, Sendable {
+    public enum TransportTier: String, Codable, Equatable, Sendable {
         case ble_coded, halow, lora, tcp
     }
 

@@ -39,7 +39,11 @@ extension AgentToolRegistry {
                 .publishStateTick(),
                 .openPeerSession(agentID: agentID),
                 .peerSessionRequest(),
-                .closePeerSession()
+                .closePeerSession(),
+                .sdrScan(),
+                .sdrTune(),
+                .sdrMonitor(),
+                .sdrCancel()
             ],
             onStatus: onStatus,
             approvalCheck: approvalCheck,

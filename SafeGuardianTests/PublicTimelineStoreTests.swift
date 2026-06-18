@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import BitFoundation
 @testable import SafeGuardian
 
 @Suite("PublicTimelineStore Tests")

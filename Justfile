@@ -61,13 +61,9 @@ build-ios:
     @echo "Building SafeGuardian (iOS)..."
     @xcodebuild -project SafeGuardian.xcodeproj \
         -scheme "{{SCHEME_IOS}}" \
-        -destination "generic/platform=iOS" \
+        -destination "generic/platform=iOS Simulator" \
         -configuration Debug \
-        CODE_SIGN_STYLE=Automatic \
-        DEVELOPMENT_TEAM={{TEAM_ID}} \
-        -allowProvisioningUpdates \
-        -jobs 4 \
-        COMPILER_INDEX_STORE_ENABLE=NO \
+        {{BUILD_FLAGS}} \
         build
 
 # Build and install directly onto the paired iPhone 16.

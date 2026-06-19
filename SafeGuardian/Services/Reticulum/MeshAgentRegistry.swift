@@ -25,7 +25,7 @@ final class MeshAgentRegistry: @unchecked Sendable {
     func agents(type agentType: String) -> [ReticulumAgentPeer] {
         lock.lock()
         defer { lock.unlock() }
-        return peers.values.filter { $0.agentType == agentType }
+        return peers.values.filter { $0.agentType == agentType && !$0.isStale }
     }
 
     // Convenience — returns first matching peer. Sufficient for single-node deployments.
@@ -45,6 +45,14 @@ struct ReticulumAgentPeer: Sendable {
     let destinationHash: Data
     let agentType:       String
     let capabilities:    [String]
+    let lastSeenAt:      Date
+
+    // A peer that has not re-announced within 2× the 300s re-announce interval is considered stale.
+    static let stalenessThreshold: TimeInterval = 600
+
+    var isStale: Bool {
+        Date().timeIntervalSince(lastSeenAt) > Self.stalenessThreshold
+    }
 
     // Returns true when caps is non-empty and tool is absent from it.
     // An empty caps list does not constrain calls (backward compat).
@@ -60,7 +68,8 @@ struct ReticulumAgentPeer: Sendable {
             peerID: peerID,
             destinationHash: destinationHash,
             agentType: type_,
-            capabilities: caps
+            capabilities: caps,
+            lastSeenAt: Date()
         )
     }
 }

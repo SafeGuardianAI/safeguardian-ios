@@ -2366,7 +2366,22 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 let rx = Patterns.quickCashuPresence
                 return rx.numberOfMatches(in: content, options: [], range: NSRange(location: 0, length: nsLen)) > 0
             }()
-            if (content.count > 4000 || content.hasVeryLongToken(threshold: 1024)) && !containsCashuEarly {
+            if isAgentSender {
+                // Agent responses (Nova etc.) are Markdown — parse inline syntax so **bold**,
+                // _italic_, and `code` render correctly in the monospace terminal aesthetic.
+                let mdOpts = AttributedString.MarkdownParsingOptions(
+                    interpretedSyntax: .inlineOnlyPreservingWhitespace
+                )
+                var contentAttr = (try? AttributedString(markdown: content, options: mdOpts))
+                    ?? AttributedString(content)
+                var baseStyle = AttributeContainer()
+                baseStyle.foregroundColor = bodyColor
+                baseStyle.font = .safeguardianSystem(size: 14, design: .monospaced)
+                // keepCurrent preserves inline presentation intents set by markdown
+                // (bold, italic, code) while applying our base font/color to plain runs.
+                contentAttr.mergeAttributes(baseStyle, mergePolicy: .keepCurrent)
+                result.append(contentAttr)
+            } else if (content.count > 4000 || content.hasVeryLongToken(threshold: 1024)) && !containsCashuEarly {
                 var plainStyle = AttributeContainer()
                 plainStyle.foregroundColor = bodyColor
                 plainStyle.font = isSelf

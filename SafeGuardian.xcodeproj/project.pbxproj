@@ -20,6 +20,7 @@
 		AA1100000000000000000005 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000003 /* AgentInfra */; };
 		AA1100000000000000000010 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000012 /* WhisperInfra */; };
 		AA1100000000000000000011 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000013 /* WhisperInfra */; };
+		AA1100000000000000000020 /* FieldMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000021 /* FieldMesh */; };
 		BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A02 /* MLXLLM */; };
 		BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A03 /* MLXLMCommon */; };
 		BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A04 /* MLXHuggingFace */; };
@@ -196,6 +197,7 @@
 				A6BCF9482F80953E001CF9B9 /* BitFoundation in Frameworks */,
 				AA1100000000000000000004 /* AgentInfra in Frameworks */,
 				AA1100000000000000000010 /* WhisperInfra in Frameworks */,
+				AA1100000000000000000020 /* FieldMesh in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -346,6 +348,7 @@
 				A6BCF9472F80953E001CF9B9 /* BitFoundation */,
 				AA1100000000000000000002 /* AgentInfra */,
 				AA1100000000000000000012 /* WhisperInfra */,
+				AA1100000000000000000021 /* FieldMesh */,
 				CC1111111111111111111A02 /* MLXLLM */,
 				CC1111111111111111111A03 /* MLXLMCommon */,
 				CC1111111111111111111A04 /* MLXHuggingFace */,
@@ -398,6 +401,7 @@
 				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "localPackages/BitFoundation" */,
 				AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */,
 				AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */,
+				AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */,
 			);
 			preferredProjectObjectVersion = 90;
 			projectDirPath = "";
@@ -1007,6 +1011,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = localPackages/WhisperInfra;
 		};
+		AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = localPackages/FieldMesh;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1093,6 +1101,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
 			productName = WhisperInfra;
+		};
+		AA1100000000000000000021 /* FieldMesh */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */;
+			productName = FieldMesh;
 		};
 		B1D9136AA0083366353BFA2F /* P256K */ = {
 			isa = XCSwiftPackageProductDependency;

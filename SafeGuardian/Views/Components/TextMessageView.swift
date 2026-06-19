@@ -43,7 +43,8 @@ struct TextMessageView: View {
                         else { expandedMessageIDs.insert(message.id) }
                     }
                     .font(.safeguardianSystem(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(colorScheme == .dark ? Color.green.opacity(0.7) : Color(red: 0, green: 0.5, blue: 0).opacity(0.7))
+                    .buttonStyle(.plain)
                     .padding(.top, 4)
                 }
                 if !lightningLinks.isEmpty || !cashuLinks.isEmpty {

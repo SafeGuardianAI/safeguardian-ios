@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import FieldMesh
+#endif
 
 struct AppInfoView: View {
     @Environment(\.dismiss) var dismiss
@@ -11,6 +14,9 @@ struct AppInfoView: View {
     @State private var showAddModelAlert = false
     @State private var personalizationStore = NovaPersonalizationStore.shared
     @State private var personalizationDraft = ""
+    #if os(iOS)
+    @State private var reticulumAddress: String? = nil
+    #endif
     
     private var backgroundColor: Color {
         colorScheme == .dark ? Color.black : Color.white
@@ -367,6 +373,60 @@ struct AppInfoView: View {
                     }
                 }
             }
+            #if DEBUG && os(iOS)
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader("mesh transport")
+
+                // LXMF address row — readable only while the Reticulum node is running.
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.safeguardianSystem(size: 20))
+                        .foregroundColor(textColor)
+                        .frame(width: 30)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("lxmf address")
+                            .font(.safeguardianSystem(size: 11, design: .monospaced))
+                            .foregroundColor(secondaryTextColor)
+                        if let addr = reticulumAddress {
+                            Text(addr)
+                                .font(.safeguardianSystem(size: 13, design: .monospaced))
+                                .foregroundColor(textColor)
+                                .contextMenu {
+                                    Button("copy") {
+                                        UIPasteboard.general.string = addr
+                                    }
+                                }
+                        } else {
+                            Text("node offline — open reticulum console to start")
+                                .font(.safeguardianSystem(size: 12, design: .monospaced))
+                                .foregroundColor(secondaryTextColor.opacity(0.6))
+                        }
+                    }
+                }
+                .task {
+                    if let s = await ReticulumService.shared.status() {
+                        reticulumAddress = s.lxmfDestinationHex
+                    }
+                }
+
+                NavigationLink(destination: ReticulumTestView()) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.safeguardianSystem(size: 20))
+                            .foregroundColor(textColor)
+                            .frame(width: 30)
+                        Text("reticulum console")
+                            .font(.safeguardianSystem(size: 14, design: .monospaced))
+                            .foregroundColor(textColor)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.safeguardianSystem(size: 12))
+                            .foregroundColor(secondaryTextColor)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            #endif
         }
         .padding()
         .alert("add huggingface model", isPresented: $showAddModelAlert) {

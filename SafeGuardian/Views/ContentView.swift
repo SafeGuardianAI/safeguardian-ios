@@ -9,6 +9,8 @@
 import SwiftUI
 #if os(iOS)
 import UIKit
+import AVFoundation
+import WhisperInfra
 #endif
 #if os(macOS)
 import AppKit
@@ -41,6 +43,7 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: ChatViewModel
     @StateObject private var voiceRecordingVM = VoiceRecordingViewModel()
     @ObservedObject private var locationManager = LocationChannelManager.shared
+    @ObservedObject private var novaEngine = AgentConversationEngine.shared
     @ObservedObject private var bookmarks = GeohashBookmarksStore.shared
     @State private var messageText = ""
     @FocusState private var isTextFieldFocused: Bool
@@ -348,11 +351,19 @@ struct ContentView: View {
             }
             #endif
 
-            if viewModel.isInAgentDM {
-                AgentInputBar(text: $messageText, onSend: sendMessage)
+            if viewModel.isInAgentDM && novaEngine.isRunning {
+                HStack(spacing: 6) {
+                    ProgressView().scaleEffect(0.7)
+                    Text("Nova is thinking...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
             }
 
-            if !viewModel.isInAgentDM { HStack(alignment: .center, spacing: 4) {
+            HStack(alignment: .center, spacing: 4) {
                 TextField(
                     "",
                     text: $messageText,
@@ -396,7 +407,7 @@ struct ContentView: View {
 
                     sendOrMicButton
                 }
-            } }
+            }
         }
         .padding(.horizontal, 6)
         .padding(.top, 6)
@@ -419,6 +430,39 @@ struct ContentView: View {
             self.viewModel.sendMessage(trimmed)
         }
     }
+
+    #if os(iOS)
+    // Transcribes a completed voice recording via Whisper and sends the result
+    // to the active agent as a text prompt, bypassing the BLE mesh send path.
+    private func transcribeAndSendToAgent(at url: URL) {
+        Task {
+            defer { try? FileManager.default.removeItem(at: url) }
+            do {
+                let file = try AVAudioFile(forReading: url)
+                let format = file.processingFormat
+                let frameCount = AVAudioFrameCount(file.length)
+                guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+                      let channelData = buffer.floatChannelData else { return }
+                try file.read(into: buffer)
+                let samples = Array(
+                    UnsafeBufferPointer(start: channelData[0], count: Int(buffer.frameLength))
+                )
+                let resampled = SpeechInferenceCoordinator.downsample(samples, from: format.sampleRate)
+                guard let transcript = await SpeechInferenceCoordinator.shared.transcribe(
+                    audioSamples: resampled
+                ) else { return }
+                let trimmed = transcript.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { return }
+                await MainActor.run {
+                    messageText = trimmed
+                    sendMessage()
+                }
+            } catch {
+                SecureLogger.error("agent voice transcription failed: \(error)", category: .session)
+            }
+        }
+    }
+    #endif
     
     // MARK: - Sheet Content
     
@@ -1220,7 +1264,7 @@ private extension ContentView {
 
     private var shouldShowVoiceControl: Bool {
         if let peer = viewModel.selectedPrivateChatPeer, !(peer.isGeoDM || peer.isGeoChat) {
-            return !viewModel.isInAgentDM
+            return true
         }
         switch locationManager.selectedChannel {
         case .mesh:
@@ -1300,7 +1344,17 @@ private extension ContentView {
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { _ in voiceRecordingVM.start(shouldShow: shouldShowVoiceControl) }
-                            .onEnded { _ in voiceRecordingVM.finish(completion: viewModel.sendVoiceNote) }
+                            .onEnded { _ in
+                                #if os(iOS)
+                                if viewModel.isInAgentDM {
+                                    voiceRecordingVM.finish(completion: transcribeAndSendToAgent)
+                                } else {
+                                    voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
+                                }
+                                #else
+                                voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
+                                #endif
+                            }
                     )
             )
             .accessibilityLabel("Hold to record a voice note")

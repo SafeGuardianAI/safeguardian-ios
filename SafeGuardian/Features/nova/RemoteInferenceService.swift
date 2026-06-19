@@ -124,7 +124,23 @@ final class RemoteInferenceService: AgentLanguageProvider {
                 for turn in input.history {
                     messages.append(["role": turn.role.rawValue, "content": turn.content])
                 }
-                messages.append(["role": "user", "content": prompt])
+                // When images are attached, use the OpenAI vision multipart content format.
+                // Text-only endpoints receive a plain string as before.
+                if input.imageData.isEmpty {
+                    messages.append(["role": "user", "content": prompt])
+                } else {
+                    var parts: [[String: Any]] = []
+                    if !prompt.isEmpty {
+                        parts.append(["type": "text", "text": prompt])
+                    }
+                    for data in input.imageData {
+                        parts.append([
+                            "type": "image_url",
+                            "image_url": ["url": "data:image/jpeg;base64,\(data.base64EncodedString())"]
+                        ])
+                    }
+                    messages.append(["role": "user", "content": parts])
+                }
 
                 var totalTokens = 0
                 var promptTokens = 0

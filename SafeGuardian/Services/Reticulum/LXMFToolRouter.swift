@@ -25,7 +25,7 @@ final class LXMFToolRouter: @unchecked Sendable {
         let requestID = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let title = "tool_call:\(requestID):\(toolName)"
         let senderHex = identity.destinationHash.hexEncodedString()
-        let bodyObj: [String: Any] = ["sender": senderHex, "args": args]
+        let bodyObj: [String: Any] = ["api_version": "1.0", "sender": senderHex, "args": args]
         let bodyData = try JSONSerialization.data(withJSONObject: bodyObj)
         let lxmf = try LXMFMessage.build(from: identity, to: destHash, content: bodyData, title: title)
         let lxmfPayload = lxmf.encode()
@@ -61,8 +61,15 @@ final class LXMFToolRouter: @unchecked Sendable {
 
         guard let cont else { return }
 
-        guard let json = try? JSONSerialization.jsonObject(with: content) as? [String: Any],
-              let result = json["result"] as? String else {
+        guard let json = try? JSONSerialization.jsonObject(with: content) as? [String: Any] else {
+            cont.resume(throwing: LXMFToolError.malformedResponse)
+            return
+        }
+        if let ver = json["api_version"] as? String, !ver.hasPrefix("1.") {
+            cont.resume(throwing: LXMFToolError.versionMismatch(version: ver))
+            return
+        }
+        guard let result = json["result"] as? String else {
             cont.resume(throwing: LXMFToolError.malformedResponse)
             return
         }
@@ -74,4 +81,5 @@ enum LXMFToolError: Error {
     case timeout(tool: String)
     case malformedResponse
     case noAgent(type: String)
+    case versionMismatch(version: String)
 }

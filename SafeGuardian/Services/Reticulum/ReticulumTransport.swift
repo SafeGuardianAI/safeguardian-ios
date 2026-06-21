@@ -252,7 +252,7 @@ extension ReticulumTransport: Transport {
     // MARK: - Private helpers
 
     private func broadcastAnnounce() {
-        // Emit structured JSON so Python agents can discover this Nova node via the
+        // Emit structured JSON so peer agents can discover this node via the
         // FieldMesh announce protocol. caps is empty until agent-callable tools are added.
         let appDataObj: [String: Any] = ["type": "nova", "caps": [String]()]
         guard let appDataJSON = try? JSONSerialization.data(withJSONObject: appDataObj, options: .sortedKeys),

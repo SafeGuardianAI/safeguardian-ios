@@ -1,8 +1,8 @@
 import BitFoundation
 import Foundation
 
-// Implements the LXMF tool_call / tool_response wire protocol used by Python agents.
-// Wire format (matches agents/shared/tool_router.py):
+// Implements the LXMF tool_call / tool_response wire protocol — universal across all agent implementations.
+// Wire format (mirrors agents/shared/tool_router.py — both sides speak the same schema):
 //   outbound title:  "tool_call:{request_id}:{tool_name}"
 //   outbound body:   {"sender": "<dest_hash_hex>", "args": {...}}
 //   inbound title:   "tool_response:{request_id}"

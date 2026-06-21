@@ -5,12 +5,18 @@ Status: conceptual target architecture, not a current implementation inventory.
 | Functional Claim | Status | Code Evidence |
 | --- | --- | --- |
 | BLE mesh, Noise, Nostr, and SafeGuardian app code exist. | verified | `SafeGuardian/Services/`, `SafeGuardian/Noise/`, `SafeGuardian/Nostr/`, and tests. |
-| Nova agent and MLX-related code exists. | verified | `SafeGuardian/Features/nova/`. |
-| Reticulum-related Swift services exist. | partially verified | `SafeGuardian/Services/Reticulum/`. |
-| UWB/NearbyInteraction routing is implemented. | planned | No `NearbyInteraction`/UWB implementation was found in app source. |
-| MultipeerConnectivity burst routing is implemented. | planned | No verified MPC burst transport implementation found. |
-| libp2p bridge is implemented. | aspirational | No libp2p implementation found in this repository. |
-| Drone/satellite relay path is implemented. | aspirational | No runtime integration found in this repository. |
+| Nova agent with MLX on-device inference. | verified | `SafeGuardian/Features/nova/MLXInferenceCoordinator.swift`, `AgentConversationEngine.swift`. |
+| Nova agent with remote OpenAI-compatible inference. | verified | `SafeGuardian/Features/nova/RemoteInferenceService.swift`. |
+| Nova vision input (image → model). | verified | `AgentConversationEngine` passes `imageData` as `[Data]`; `MLXInferenceCoordinator` converts to `CIImage`; `RemoteInferenceService` encodes as base64 data-URI in multipart content array. |
+| Nova voice input via Whisper STT. | verified | `ContentView.transcribeAndSendToAgent` decodes AVAudioFile → PCM → `SpeechInferenceCoordinator.transcribe` → `sendMessage`. |
+| Reticulum TCP transport via reticulum-rs XCFramework. | verified | `localPackages/FieldMesh/` — `ReticulumService` actor, TCP client to `rmap.world:4242`; `ReticulumTestView` in DEBUG. |
+| Reticulum RNode BLE transport (existing). | verified | `SafeGuardian/Services/Reticulum/ReticulumTransport.swift`, `MeshAgentRegistry.swift`, `LXMFToolRouter.swift`. |
+| Whisper STT package. | verified | `localPackages/WhisperInfra/` — `SpeechInferenceCoordinator`, `WhisperModelManager`, `WhisperContext`. Stub mode by default; `scripts/fetch_whisper.sh` activates real inference. |
+| Tor integration. | verified | `localPackages/Arti/` — pre-built XCFramework; `TorManager`, `TorURLSession`. |
+| UWB/NearbyInteraction routing. | planned | No `NearbyInteraction`/UWB implementation found in source. |
+| MultipeerConnectivity burst routing. | planned | No MPC burst transport implementation found. iOS 26 dropped AWDL peer-to-peer without infrastructure. |
+| libp2p bridge. | aspirational | No libp2p implementation in this repository. |
+| Drone/satellite relay path. | aspirational | No runtime integration found in this repository. |
 
 This document specifies the technical architecture for the SafeGuardian Hybrid Mesh—a resilient, "True Mesh" network designed for total infrastructure failure. It bridges low-power local sensors (BLE) to global command (Satellite) using a unified Peer-to-Peer (P2P) substrate.
 

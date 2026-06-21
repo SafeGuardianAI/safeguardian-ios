@@ -103,3 +103,25 @@ Parameters: `session_id` (string) — session to close.
 Tool specs are passed to `MLXLMCommon.ChatSession` via the `tools:` and `toolDispatch:` parameters in `MLXSessionPool`. The `ChatSession` calls `toolDispatch` internally when the model emits a tool call, injects the result as a continuation turn, and resumes generation. The engine receives `.toolCall` events as informational notifications only — it does not re-invoke dispatch. The iteration cap (`NovaConfig.maxToolIterations = 8`) is enforced inside the dispatch closure via `DispatchGuard`; when reached, the closure returns a terminal error message that tells the model to stop and produce a final answer.
 
 Tool calls are logged in DEBUG builds through `ConversationLogger` with the called tool names recorded on each session turn.
+
+---
+
+## Input modalities
+
+Nova accepts three distinct input channels that all converge on the same `AgentConversationEngine.handle(prompt:image:...)` entry point.
+
+### Text
+
+The default path. The user types in the Nova DM composer and submits via the send button or Return. The text reaches `ChatViewModel.sendMessage`, which strips the trigger prefix (`@nova`) if present, constructs a display turn in `privateChats[threadPeerID]`, and calls `agent.handle(prompt:image:nil:...)`.
+
+### Voice (Whisper STT)
+
+Holding the microphone button in the Nova DM records audio via `VoiceRecordingViewModel` and `VoiceRecorder`. On release, `ContentView.transcribeAndSendToAgent(at:)` intercepts the completed recording URL instead of routing to `ChatViewModel.sendVoiceNote` (which sends a BLE file transfer). The function opens the M4A file with `AVAudioFile`, reads it into an `AVAudioPCMBuffer` at the file's native sample rate, takes channel 0 as mono float samples, downsamples to 16 kHz with `SpeechInferenceCoordinator.downsample(_:from:)`, and calls `SpeechInferenceCoordinator.shared.transcribe(audioSamples:)`. The resulting string is placed into the message composer and sent as a normal text turn. In stub mode (no Whisper model downloaded) `transcribe` returns nil and the recording is silently discarded. Run `scripts/fetch_whisper.sh` to activate real inference.
+
+### Vision (image attachment)
+
+The camera icon in the Nova DM composer opens `ImagePickerView`. The selected or captured `UIImage` is stored as `ChatViewModel.pendingAgentImage`. A 56×56 thumbnail appears above the input bar as a preview. On send, `ChatViewModel.sendMessage` captures the pending image, encodes it as JPEG at 0.8 quality, and passes the `Data` to `agent.handle(prompt:image:imageData:...)`. `AgentConversationEngine` places it in `AgentPromptInput.imageData` as `[Data]`.
+
+For the on-device MLX path, `MLXInferenceCoordinator` converts each `Data` to a `CIImage` and passes it in the `images:` array to `MLXLMCommon.ChatSession.streamDetails`. This requires a vision-capable model (e.g. `mlx-community/Qwen2-VL-2B-Instruct-4bit`); text-only models will ignore the image array.
+
+For the remote path, `RemoteInferenceService` builds the user message as a multipart content array following the OpenAI vision message format: a `{"type":"text","text":prompt}` part followed by one `{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,..."}}` part per image. Any OpenAI-compatible vision endpoint (Ollama with llava/qwen-vl, vLLM, OpenAI GPT-4o) will accept this without configuration changes on the endpoint side.

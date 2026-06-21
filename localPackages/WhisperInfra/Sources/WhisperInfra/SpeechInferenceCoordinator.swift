@@ -19,8 +19,8 @@ import Foundation
 @MainActor
 public final class SpeechInferenceCoordinator: AgentTranscriptionProvider, ObservableObject {
 
-    public static let shared = SpeechInferenceCoordinator()
-    private init() {}
+    public nonisolated(unsafe) static let shared = SpeechInferenceCoordinator()
+    nonisolated private init() {}
 
     @Published public private(set) var isReady = false
     @Published public private(set) var isLoading = false

@@ -10,6 +10,7 @@ import Tor
 import SwiftUI
 import BitFoundation
 import UserNotifications
+import WhisperInfra
 
 struct SafeGuardianApp: App {
     static let bundleID = Bundle.main.bundleIdentifier ?? "chat.safeguardian"
@@ -42,6 +43,10 @@ struct SafeGuardianApp: App {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         // Warm up georelay directory and refresh if stale (once/day)
         GeoRelayDirectory.shared.prefetchIfNeeded()
+        // Pre-load Whisper model so voice input to Nova is ready before first use.
+        Task.detached(priority: .utility) {
+            try? await SpeechInferenceCoordinator.shared.load()
+        }
         
         #if os(macOS)
         // Start the IPC host for the terminal CLI

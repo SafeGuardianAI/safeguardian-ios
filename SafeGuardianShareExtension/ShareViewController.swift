@@ -172,7 +172,7 @@ final class ShareViewController: UIViewController {
     private func finishWithMessage(_ msg: String) {
         statusLabel.text = msg
         // Complete shortly after showing status
-        DispatchQueue.main.asyncAfter(deadline: .now() + TransportConfig.uiShareExtensionDismissDelaySeconds) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
         }
     }

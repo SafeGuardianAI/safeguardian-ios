@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import SwiftUI
 #if os(iOS)
 import FieldMesh
@@ -281,7 +282,7 @@ struct AppInfoView: View {
                             .frame(width: 30)
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(mlxService.activeModelID.components(separatedBy: "/").last ?? mlxService.activeModelID)
+                            Text("local model (on-device)")
                                 .font(.safeguardianSystem(size: 14, weight: .semibold, design: .monospaced))
                                 .foregroundColor(textColor)
 

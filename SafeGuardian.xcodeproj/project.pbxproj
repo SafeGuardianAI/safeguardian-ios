@@ -21,6 +21,7 @@
 		AA1100000000000000000010 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000012 /* WhisperInfra */; };
 		AA1100000000000000000011 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000013 /* WhisperInfra */; };
 		AA1100000000000000000020 /* FieldMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000021 /* FieldMesh */; };
+		AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000031 /* SafeGuardianMesh */; };
 		BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A02 /* MLXLLM */; };
 		BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A03 /* MLXLMCommon */; };
 		BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A04 /* MLXHuggingFace */; };
@@ -82,13 +83,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A6E32D1B2E762EA70032EA8A /* Exceptions for "SafeGuardian" folder in "SafeGuardianShareExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Services/TransportConfig.swift,
-			);
-			target = 57CA17A36A2532A6CFF367BB /* SafeGuardianShareExtension */;
-		};
 		A6E32D1C2E762EA70032EA8A /* Exceptions for "SafeGuardian" folder in "SafeGuardian_iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -135,7 +129,6 @@
 		A6E32C972E762EA70032EA8A /* SafeGuardian */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A6E32D1B2E762EA70032EA8A /* Exceptions for "SafeGuardian" folder in "SafeGuardianShareExtension" target */,
 				A6E32D1C2E762EA70032EA8A /* Exceptions for "SafeGuardian" folder in "SafeGuardian_iOS" target */,
 				A6E32D1D2E762EA70032EA8A /* Exceptions for "SafeGuardian" folder in "SafeGuardian_macOS" target */,
 			);
@@ -198,6 +191,7 @@
 				AA1100000000000000000004 /* AgentInfra in Frameworks */,
 				AA1100000000000000000010 /* WhisperInfra in Frameworks */,
 				AA1100000000000000000020 /* FieldMesh in Frameworks */,
+				AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -349,6 +343,7 @@
 				AA1100000000000000000002 /* AgentInfra */,
 				AA1100000000000000000012 /* WhisperInfra */,
 				AA1100000000000000000021 /* FieldMesh */,
+				AA1100000000000000000031 /* SafeGuardianMesh */,
 				CC1111111111111111111A02 /* MLXLLM */,
 				CC1111111111111111111A03 /* MLXLMCommon */,
 				CC1111111111111111111A04 /* MLXHuggingFace */,
@@ -396,12 +391,13 @@
 				DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 				DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 				B8C407587481BBB190741C93 /* XCRemoteSwiftPackageReference "swift-secp256k1" */,
-				A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "localPackages/BitLogger" */,
+				A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "../../shared/BitLogger" */,
 				A6E3EA7D2E7706720032EA8A /* XCLocalSwiftPackageReference "localPackages/Arti" */,
-				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "localPackages/BitFoundation" */,
+				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "../../shared/BitFoundation" */,
 				AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */,
 				AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */,
 				AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */,
+				AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */,
 			);
 			preferredProjectObjectVersion = 90;
 			projectDirPath = "";
@@ -991,13 +987,13 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "localPackages/BitFoundation" */ = {
+		A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "../../shared/BitFoundation" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = localPackages/BitFoundation;
+			relativePath = ../../shared/BitFoundation;
 		};
-		A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "localPackages/BitLogger" */ = {
+		A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "../../shared/BitLogger" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = localPackages/BitLogger;
+			relativePath = ../../shared/BitLogger;
 		};
 		A6E3EA7D2E7706720032EA8A /* XCLocalSwiftPackageReference "localPackages/Arti" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -1014,6 +1010,10 @@
 		AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = localPackages/FieldMesh;
+		};
+		AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../shared/SafeGuardianMesh;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -1064,7 +1064,7 @@
 		};
 		A6BCF9492F809550001CF9B9 /* BitFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "localPackages/BitFoundation" */;
+			package = A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "../../shared/BitFoundation" */;
 			productName = BitFoundation;
 		};
 		A6E3E56F2E77036A0032EA8A /* BitLogger */ = {
@@ -1106,6 +1106,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */;
 			productName = FieldMesh;
+		};
+		AA1100000000000000000031 /* SafeGuardianMesh */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */;
+			productName = SafeGuardianMesh;
 		};
 		B1D9136AA0083366353BFA2F /* P256K */ = {
 			isa = XCSwiftPackageProductDependency;

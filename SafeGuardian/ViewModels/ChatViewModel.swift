@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // ChatViewModel.swift
 // SafeGuardian
@@ -427,7 +428,11 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         idBridge: NostrIdentityBridge,
         identityManager: SecureIdentityStateManagerProtocol
     ) {
-        let bleService = BLEService(keychain: keychain, idBridge: idBridge, identityManager: identityManager)
+        let bleService = BLEService(
+            keychain: keychain,
+            nostrNpubProvider: { try? idBridge.getCurrentNostrIdentity()?.npub },
+            identityManager: identityManager
+        )
         let reticulumIdentity = (try? ReticulumIdentity.loadOrCreate(keychain: keychain)) ??
             ReticulumIdentity.makeEphemeral()
         let reticulumTransport = ReticulumTransport(identity: reticulumIdentity, keychain: keychain)
@@ -1356,13 +1361,6 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
 
 
-    // MARK: - Media Transfers
-
-    private enum MediaSendError: Error {
-        case encodingFailed
-        case tooLarge
-        case copyFailed
-    }
 
 
 

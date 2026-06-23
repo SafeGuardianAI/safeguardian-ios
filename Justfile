@@ -10,7 +10,7 @@ SCHEME_IOS   := "SafeGuardian (iOS)"
 ARCHIVE_PATH := "/tmp/SafeGuardian.xcarchive"
 EXPORT_PATH  := "/tmp/SafeGuardian-ipa"
 TEAM_ID      := "V9KH637N7P"
-DEVICE_ID    := "49850A95-19B2-5706-A37F-C0E37A5FDF60"
+DEVICE_ID    := "0504D6F9-9C7C-4BFC-93AD-F2867724C27C"
 
 default:
     @echo "SafeGuardian Build Commands:"
@@ -73,7 +73,7 @@ install TEAM="V9KH637N7P":
     @echo "Installing SafeGuardian onto device {{DEVICE_ID}}..."
     @xcodebuild -project SafeGuardian.xcodeproj \
         -scheme "{{SCHEME_IOS}}" \
-        -destination "id:{{DEVICE_ID}}" \
+        -destination "id={{DEVICE_ID}}" \
         -configuration Debug \
         CODE_SIGN_STYLE=Automatic \
         DEVELOPMENT_TEAM={{TEAM}} \

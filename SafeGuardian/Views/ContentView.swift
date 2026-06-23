@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // ContentView.swift
 // SafeGuardian
@@ -879,7 +880,11 @@ struct ContentView: View {
             if let thread = AgentThreadStore.shared.thread(for: privatePeerID),
                let agent = viewModel.agents.first(where: { $0.agentID == thread.agentID }) {
                 let threads = AgentThreadStore.shared.threads(for: agent.agentID)
-                return threads.count > 1 ? "\(agent.displayName) · \(thread.title)" : agent.displayName
+                if threads.count > 1 && thread.title.caseInsensitiveCompare(agent.displayName) != .orderedSame {
+                    return "\(agent.displayName) · \(thread.title)"
+                } else {
+                    return agent.displayName
+                }
             }
             if privatePeerID.isGeoDM, case .location(let ch) = locationManager.selectedChannel {
                 let disp = viewModel.geohashDisplayName(for: privatePeerID)

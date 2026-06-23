@@ -8,3 +8,7 @@
 COMPILER_INDEX_STORE_ENABLE = NO
 // Explicit singlefile matches the Xcode default but overrides any parent xcconfig that sets wholemodule.
 SWIFT_COMPILATION_MODE = singlefile
+
+// SafeGuardianMesh types are internal; disable-access-control lets the app target cross the module
+// boundary without requiring public on every type. Matches the Package.swift unsafeFlags setting.
+OTHER_SWIFT_FLAGS = -Xfrontend -disable-access-control

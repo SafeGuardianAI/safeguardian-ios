@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitFoundation
 import Combine
 import Foundation
@@ -18,7 +19,9 @@ final class SGEntityManager {
     var allEntities: [SGEntity] { subject.value }
 
     func entity(id: String) -> SGEntity? {
-        lock.withLock { store[id] }
+        lock.lock()
+        defer { lock.unlock() }
+        return store[id]
     }
 
     func receive(_ payload: Data, from peerID: PeerID) {

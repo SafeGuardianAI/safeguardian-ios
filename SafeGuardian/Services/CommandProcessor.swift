@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // CommandProcessor.swift
 // SafeGuardian

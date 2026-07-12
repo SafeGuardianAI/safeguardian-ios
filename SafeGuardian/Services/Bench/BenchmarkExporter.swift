@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 /// Writes benchmark records as newline-delimited JSON to a dated file in the app's

@@ -1,5 +1,6 @@
+import SafeGuardianMesh
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolRegistry {
     /// Builds the standard tool registry for a given agent and context.

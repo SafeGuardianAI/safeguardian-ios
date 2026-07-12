@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 /// Top-level session record written as the first line of a bench output file.

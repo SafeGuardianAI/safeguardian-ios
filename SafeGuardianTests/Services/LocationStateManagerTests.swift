@@ -3,6 +3,7 @@ import MapKit
 import XCTest
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @MainActor
 final class LocationStateManagerTests: XCTestCase {

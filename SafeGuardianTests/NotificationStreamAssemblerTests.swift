@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct NotificationStreamAssemblerTests {
     private func makePacket(timestamp: UInt64 = 0x0102030405) -> SafeGuardianPacket {

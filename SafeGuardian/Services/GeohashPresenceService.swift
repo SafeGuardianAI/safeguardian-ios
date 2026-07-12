@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // GeohashPresenceService.swift
 // SafeGuardian

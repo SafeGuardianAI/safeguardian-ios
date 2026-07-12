@@ -18,7 +18,7 @@ let package = Package(
         .target(
             name: "whisper_cpp",
             path: "Sources/whisper_cpp",
-            exclude: [],
+            exclude: ["_partial_backup", "_real_headers_backup"],
             publicHeadersPath: "include",
             cSettings: [
                 .define("GGML_USE_METAL"),

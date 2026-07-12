@@ -10,6 +10,7 @@ import Foundation
 import CryptoKit
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct ReticulumIdentityTests {
 
@@ -43,14 +44,15 @@ struct ReticulumIdentityTests {
         let announce = try ReticulumAnnounce.build(identity: identity, appData: appData)
         let encoded = announce.encode()
         
-        guard let decoded = ReticulumAnnounce.decode(encoded) else {
+        guard let decoded = ReticulumAnnounce.decode(encoded, destinationHash: identity.destinationHash) else {
             Issue.record("Failed to decode ReticulumAnnounce")
             return
         }
-        
+
         #expect(decoded.destinationHash == identity.destinationHash)
-        #expect(decoded.signingPublicKey == identity.signingPrivateKey.publicKey.rawRepresentation)
         #expect(decoded.encryptionPublicKey == identity.encryptionPrivateKey.publicKey.rawRepresentation)
+        #expect(decoded.signingPublicKey == identity.signingPrivateKey.publicKey.rawRepresentation)
+        #expect(decoded.nameHash == identity.nameHash)
         #expect(decoded.appData == appData)
         #expect(decoded.randomHash.count == ReticulumAnnounce.randomHashLength)
         #expect(decoded.signature.count == ReticulumAnnounce.signatureLength)
@@ -72,6 +74,7 @@ struct ReticulumIdentityTests {
         #expect(decoded.destinationHash == Data(repeating: 0, count: 16))
         #expect(decoded.payload == payload)
         #expect(decoded.header.packetType == .data)
-        #expect(decoded.header.propagation == .broadcast)
+        // transportType 0 = broadcast propagation in the packed header byte.
+        #expect(decoded.header.transportType == 0)
     }
 }

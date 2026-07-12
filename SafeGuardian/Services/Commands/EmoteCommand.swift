@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 /// Handles /hug and /slap — parametric emote commands that follow the same pattern.

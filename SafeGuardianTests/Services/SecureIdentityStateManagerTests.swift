@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class SecureIdentityStateManagerTests: XCTestCase {
     func test_upsertCryptographicIdentity_withoutClaimedNicknameDoesNotCreateSocialIdentity() async {

@@ -3,6 +3,7 @@ import Testing
 
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct LocationChannelTests {
     @Test

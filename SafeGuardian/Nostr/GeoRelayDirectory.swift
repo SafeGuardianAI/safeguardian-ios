@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitLogger
 import Foundation
 import Tor
@@ -52,9 +53,12 @@ private extension GeoRelayDirectoryDependencies {
             retryMaxSeconds: TransportConfig.geoRelayRetryMaxSeconds,
             awaitTorReady: { await TorManager.shared.awaitReady() },
             makeFetchData: {
-                let session = TorURLSession.shared.session
+                // Resolve the session per request: TorURLSession.rebuild()
+                // invalidates old sessions when Tor readiness or proxy mode
+                // changes, and dispatching on an invalidated session raises an
+                // uncatchable ObjC exception that kills the process.
                 return { request in
-                    let (data, _) = try await session.data(for: request)
+                    let (data, _) = try await TorURLSession.shared.session.data(for: request)
                     return data
                 }
             },

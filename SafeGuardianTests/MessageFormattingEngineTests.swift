@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct MessageFormattingEngineTests {
     // MARK: - Formatting Behavior Tests

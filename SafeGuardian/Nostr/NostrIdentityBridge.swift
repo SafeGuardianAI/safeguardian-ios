@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
 import CryptoKit
@@ -64,21 +65,38 @@ final class NostrIdentityBridge {
             kSecReturnAttributes as String: true
         ]
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecSuccess, let items = result as? [[String: Any]] {
-            for item in items {
-                var deleteQuery: [String: Any] = [
-                    kSecClass as String: kSecClassGenericPassword,
-                    kSecAttrService as String: keychainService
-                ]
-                if let account = item[kSecAttrAccount as String] as? String {
-                    deleteQuery[kSecAttrAccount as String] = account
+        // On macOS, items saved via KeychainManager live in the
+        // data-protection keychain (see KeychainManager's platform routing
+        // note), which is a separate store from the legacy login keychain
+        // this raw query targets. Enumerate and delete from both so panic
+        // wipe / reset cannot leave stale associations behind.
+        var queries = [query]
+        #if os(macOS)
+        var dpQuery = query
+        dpQuery[kSecUseDataProtectionKeychain as String] = true
+        queries.append(dpQuery)
+        #endif
+
+        for activeQuery in queries {
+            var result: AnyObject?
+            let status = SecItemCopyMatching(activeQuery as CFDictionary, &result)
+            if status == errSecSuccess, let items = result as? [[String: Any]] {
+                for item in items {
+                    var deleteQuery: [String: Any] = [
+                        kSecClass as String: kSecClassGenericPassword,
+                        kSecAttrService as String: keychainService
+                    ]
+                    if let account = item[kSecAttrAccount as String] as? String {
+                        deleteQuery[kSecAttrAccount as String] = account
+                    }
+                    #if os(macOS)
+                    if activeQuery[kSecUseDataProtectionKeychain as String] != nil {
+                        deleteQuery[kSecUseDataProtectionKeychain as String] = true
+                    }
+                    #endif
+                    SecItemDelete(deleteQuery as CFDictionary)
                 }
-                SecItemDelete(deleteQuery as CFDictionary)
             }
-        } else if status == errSecItemNotFound {
-            // nothing persisted; no action needed
         }
 
         deviceSeedCache = nil

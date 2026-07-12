@@ -4,7 +4,7 @@
 #   -jobs 4           cap parallel Swift compiler instances
 #   COMPILER_INDEX_STORE_ENABLE=NO  skip index (not needed outside Xcode IDE)
 # These are additive to the Debug.xcconfig settings (singlefile + no index store).
-BUILD_FLAGS := "-jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"
+BUILD_FLAGS := "-jobs 4 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO -skipMacroValidation -skipPackagePluginValidation"
 SCHEME_MACOS := "SafeGuardian (macOS)"
 SCHEME_IOS   := "SafeGuardian (iOS)"
 ARCHIVE_PATH := "/tmp/SafeGuardian.xcarchive"
@@ -53,6 +53,22 @@ build:
         {{BUILD_FLAGS}} \
         build
 
+# Build and run macOS app with code signing so Bluetooth TCC permission works.
+# Required for iOS↔macOS BLE mesh — unsigned builds get no Bluetooth authorization.
+run-signed:
+    @echo "Building SafeGuardian (macOS, signed)..."
+    @xcodebuild -project SafeGuardian.xcodeproj \
+        -scheme "{{SCHEME_MACOS}}" \
+        -configuration Debug \
+        -jobs 4 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+        -skipMacroValidation -skipPackagePluginValidation \
+        CODE_SIGN_STYLE=Automatic \
+        DEVELOPMENT_TEAM={{TEAM_ID}} \
+        -allowProvisioningUpdates \
+        build
+    @ls -td ~/Library/Developer/Xcode/DerivedData/SafeGuardian-*/Build/Products/Debug/SafeGuardian.app 2>/dev/null \
+        | head -1 | xargs open
+
 run: build
     @ls -td ~/Library/Developer/Xcode/DerivedData/SafeGuardian-*/Build/Products/Debug/SafeGuardian.app 2>/dev/null \
         | head -1 | xargs open
@@ -80,6 +96,7 @@ install TEAM="V9KH637N7P":
         -allowProvisioningUpdates \
         -jobs 4 \
         COMPILER_INDEX_STORE_ENABLE=NO \
+        -skipMacroValidation -skipPackagePluginValidation \
         build
 
 # Archive a Release .xcarchive — prerequisite for export-testflight.
@@ -96,6 +113,7 @@ archive:
         -allowProvisioningUpdates \
         -jobs 4 \
         COMPILER_INDEX_STORE_ENABLE=NO \
+        -skipMacroValidation -skipPackagePluginValidation \
         archive
     @echo "Archive written to {{ARCHIVE_PATH}}"
 

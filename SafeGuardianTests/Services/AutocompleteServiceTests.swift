@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @Suite("AutocompleteService Tests")
 struct AutocompleteServiceTests {

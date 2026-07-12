@@ -1,6 +1,7 @@
 import Testing
 import struct Foundation.Data
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct GCSFilterTests {
     @Test func buildFilterWithDuplicateIdsProducesStableEncoding() {

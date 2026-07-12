@@ -10,6 +10,7 @@ import AppKit
 #endif
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @MainActor
 private func makeSmokeViewModel() -> (viewModel: ChatViewModel, transport: MockTransport, identityManager: MockIdentityManager) {

@@ -44,7 +44,6 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: ChatViewModel
     @StateObject private var voiceRecordingVM = VoiceRecordingViewModel()
     @ObservedObject private var locationManager = LocationChannelManager.shared
-    @ObservedObject private var novaEngine = AgentConversationEngine.shared
     @ObservedObject private var bookmarks = GeohashBookmarksStore.shared
     @State private var messageText = ""
     @FocusState private var isTextFieldFocused: Bool
@@ -132,7 +131,13 @@ struct ContentView: View {
         VStack(spacing: 0) {
             mainHeaderView
                 .onAppear {
-                    viewModel.currentColorScheme = colorScheme
+                    // Defer published writes: onAppear runs inside the view
+                    // update transaction, and publishing there is undefined
+                    // behavior ("Publishing changes from within view updates").
+                    let scheme = colorScheme
+                    Task { @MainActor in
+                        viewModel.currentColorScheme = scheme
+                    }
                     #if os(macOS)
                     // Focus message input on macOS launch, not nickname field
                     DispatchQueue.main.async {
@@ -142,7 +147,9 @@ struct ContentView: View {
                     #endif
                 }
                 .onChange(of: colorScheme) { _, newValue in
-                    viewModel.currentColorScheme = newValue
+                    Task { @MainActor in
+                        viewModel.currentColorScheme = newValue
+                    }
                 }
 
             Divider()
@@ -200,8 +207,8 @@ struct ContentView: View {
         .sheet(isPresented: $showAppInfo) {
             AppInfoView()
                 .environmentObject(viewModel)
-                .onAppear { viewModel.isAppInfoPresented = true }
-                .onDisappear { viewModel.isAppInfoPresented = false }
+                .onAppear { Task { @MainActor in viewModel.isAppInfoPresented = true } }
+                .onDisappear { Task { @MainActor in viewModel.isAppInfoPresented = false } }
         }
         .sheet(isPresented: Binding(
             get: { viewModel.showingFingerprintFor != nil && !showSidebar && viewModel.selectedPrivateChatPeer == nil },
@@ -224,11 +231,7 @@ struct ContentView: View {
         )) {
             ImagePickerView(sourceType: imagePickerSourceType) { image in
                 showImagePicker = false
-                if viewModel.isInAgentDM {
-                    viewModel.pendingAgentImage = image
-                } else {
-                    viewModel.processThenSendImage(image)
-                }
+                viewModel.processThenSendImage(image)
             }
             .environmentObject(viewModel)
             .ignoresSafeArea()
@@ -329,41 +332,6 @@ struct ContentView: View {
                 recordingIndicator
             }
 
-            #if os(iOS)
-            if let img = viewModel.pendingAgentImage {
-                HStack(alignment: .center, spacing: 8) {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    Button {
-                        viewModel.pendingAgentImage = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(secondaryTextColor)
-                            .font(.system(size: 18))
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-            }
-            #endif
-
-            if viewModel.isInAgentDM && novaEngine.isRunning {
-                HStack(spacing: 6) {
-                    ProgressView().scaleEffect(0.7)
-                    Text("Nova is thinking...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-            }
-
             HStack(alignment: .center, spacing: 4) {
                 TextField(
                     "",
@@ -419,12 +387,7 @@ struct ContentView: View {
     // MARK: - Actions
     
     private func sendMessage() {
-        #if os(iOS)
-        let hasPendingImage = viewModel.pendingAgentImage != nil && viewModel.isInAgentDM
-        guard messageText.trimmedOrNilIfEmpty != nil || hasPendingImage else { return }
-        #else
         guard messageText.trimmedOrNilIfEmpty != nil else { return }
-        #endif
         let trimmed = messageText.trimmingCharacters(in: .whitespaces)
         messageText = ""
         DispatchQueue.main.async {
@@ -432,39 +395,6 @@ struct ContentView: View {
         }
     }
 
-    #if os(iOS)
-    // Transcribes a completed voice recording via Whisper and sends the result
-    // to the active agent as a text prompt, bypassing the BLE mesh send path.
-    private func transcribeAndSendToAgent(at url: URL) {
-        Task {
-            defer { try? FileManager.default.removeItem(at: url) }
-            do {
-                let file = try AVAudioFile(forReading: url)
-                let format = file.processingFormat
-                let frameCount = AVAudioFrameCount(file.length)
-                guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
-                      let channelData = buffer.floatChannelData else { return }
-                try file.read(into: buffer)
-                let samples = Array(
-                    UnsafeBufferPointer(start: channelData[0], count: Int(buffer.frameLength))
-                )
-                let resampled = SpeechInferenceCoordinator.downsample(samples, from: format.sampleRate)
-                guard let transcript = await SpeechInferenceCoordinator.shared.transcribe(
-                    audioSamples: resampled
-                ) else { return }
-                let trimmed = transcript.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty else { return }
-                await MainActor.run {
-                    messageText = trimmed
-                    sendMessage()
-                }
-            } catch {
-                SecureLogger.error("agent voice transcription failed: \(error)", category: .session)
-            }
-        }
-    }
-    #endif
-    
     // MARK: - Sheet Content
     
     private var peopleSheetView: some View {
@@ -507,11 +437,7 @@ struct ContentView: View {
         )) {
             ImagePickerView(sourceType: imagePickerSourceType) { image in
                 showImagePicker = false
-                if viewModel.isInAgentDM {
-                    viewModel.pendingAgentImage = image
-                } else {
-                    viewModel.processThenSendImage(image)
-                }
+                viewModel.processThenSendImage(image)
             }
             .environmentObject(viewModel)
             .ignoresSafeArea()
@@ -625,56 +551,28 @@ struct ContentView: View {
                     }
                     let threadStore = AgentThreadStore.shared
                     Divider().padding(.horizontal, 16).padding(.top, 4)
+                    // Agent conversations live in the dedicated Nova tab; this row
+                    // switches there instead of opening the peer-to-peer chat view.
                     ForEach(viewModel.agents, id: \.agentID) { agent in
-                        let agentThreads = threadStore.threads(for: agent.agentID)
-                        let activeThread = threadStore.activeThread(for: agent.agentID)
-                        // Agent header row with + button to start a new thread.
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                                .foregroundColor(textColor)
-                            Text(agent.displayName)
-                                .font(.safeguardianSystem(size: 14))
-                                .foregroundColor(textColor)
-                            Spacer()
-                            Button {
-                                let t = threadStore.newThread(for: agent.agentID)
-                                viewModel.startPrivateChat(with: t.peerID)
-                                showSidebar = true
-                            } label: {
-                                Image(systemName: "plus")
-                                    .foregroundColor(textColor.opacity(0.6))
-                                    .font(.system(size: 12, weight: .medium))
+                        Button {
+                            if let t = threadStore.activeThread(for: agent.agentID) {
+                                viewModel.openAgentThread(t.peerID)
                             }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 6)
-                        // Thread list — always show at least the active thread.
-                        ForEach(agentThreads, id: \.id) { thread in
-                            let isActive = thread.id == activeThread?.id
-                            let hasMessages = !(viewModel.privateChats[thread.peerID]?.isEmpty ?? true)
-                            if hasMessages || isActive {
-                                Button {
-                                    threadStore.switchToThread(thread.id, agentID: agent.agentID)
-                                    viewModel.startPrivateChat(with: thread.peerID)
-                                    showSidebar = true
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: isActive ? "bubble.left.fill" : "bubble.left")
-                                            .foregroundColor(isActive ? textColor : textColor.opacity(0.5))
-                                            .font(.system(size: 11))
-                                        Text(thread.title)
-                                            .font(.safeguardianSystem(size: 12))
-                                            .foregroundColor(isActive ? textColor : textColor.opacity(0.6))
-                                            .lineLimit(1)
-                                        Spacer()
-                                    }
-                                    .padding(.leading, 32)
-                                    .padding(.trailing, 16)
-                                    .padding(.vertical, 4)
-                                }
+                            showSidebar = false
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(textColor)
+                                Text(agent.displayName)
+                                    .font(.safeguardianSystem(size: 14))
+                                    .foregroundColor(textColor)
+                                Spacer()
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.top, 4)
@@ -1128,8 +1026,8 @@ struct ContentView: View {
         .sheet(isPresented: $showLocationChannelsSheet) {
             LocationChannelsSheet(isPresented: $showLocationChannelsSheet)
                 .environmentObject(viewModel)
-                .onAppear { viewModel.isLocationChannelsSheetPresented = true }
-                .onDisappear { viewModel.isLocationChannelsSheetPresented = false }
+                .onAppear { Task { @MainActor in viewModel.isLocationChannelsSheetPresented = true } }
+                .onDisappear { Task { @MainActor in viewModel.isLocationChannelsSheetPresented = false } }
         }
         .sheet(isPresented: $showLocationNotes, onDismiss: {
             notesGeohash = nil
@@ -1315,12 +1213,7 @@ private extension ContentView {
 
     @ViewBuilder
     var sendOrMicButton: some View {
-        let hasText = !messageText.trimmed.isEmpty
-        #if os(iOS)
-        let canSend = hasText || (viewModel.pendingAgentImage != nil && viewModel.isInAgentDM)
-        #else
-        let canSend = hasText
-        #endif
+        let canSend = !messageText.trimmed.isEmpty
         if shouldShowVoiceControl {
             ZStack {
                 micButtonView
@@ -1350,15 +1243,7 @@ private extension ContentView {
                         DragGesture(minimumDistance: 0)
                             .onChanged { _ in voiceRecordingVM.start(shouldShow: shouldShowVoiceControl) }
                             .onEnded { _ in
-                                #if os(iOS)
-                                if viewModel.isInAgentDM {
-                                    voiceRecordingVM.finish(completion: transcribeAndSendToAgent)
-                                } else {
-                                    voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
-                                }
-                                #else
                                 voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
-                                #endif
                             }
                     )
             )

@@ -9,6 +9,7 @@
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class MockBLEBus {
     private var registry: [PeerID: MockBLEService] = [:]

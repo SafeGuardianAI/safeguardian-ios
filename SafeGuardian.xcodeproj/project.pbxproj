@@ -20,17 +20,11 @@
 		AA1100000000000000000005 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000003 /* AgentInfra */; };
 		AA1100000000000000000010 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000012 /* WhisperInfra */; };
 		AA1100000000000000000011 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000013 /* WhisperInfra */; };
-		AA1100000000000000000020 /* FieldMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000021 /* FieldMesh */; };
 		AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000031 /* SafeGuardianMesh */; };
-		BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A02 /* MLXLLM */; };
-		BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A03 /* MLXLMCommon */; };
-		BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A04 /* MLXHuggingFace */; };
-		BAEC911A2FCC139D00F1DA8D /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111B02 /* Transformers */; };
+		AA1100000000000000000033 /* SafeGuardianMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000034 /* SafeGuardianMesh */; };
+		AA1100000000000000000043 /* AnyLanguageModelKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000041 /* AnyLanguageModelKit */; };
+		AA1100000000000000000044 /* AnyLanguageModelKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000042 /* AnyLanguageModelKit */; };
 		BAEC911B2FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C02 /* HuggingFace */; };
-		BAEC911C2FCC139D00F1DA8D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A05 /* MLXLLM */; };
-		BAEC911D2FCC139D00F1DA8D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A06 /* MLXLMCommon */; };
-		BAEC911E2FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = CC1111111111111111111A07 /* MLXHuggingFace */; };
-		BAEC911F2FCC139D00F1DA8D /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111B03 /* Transformers */; };
 		BAEC91202FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C03 /* HuggingFace */; };
 		E0A1B2C3D4E5F6012345678D /* relays/online_relays_gps.csv in Resources */ = {isa = PBXBuildFile; fileRef = E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */; };
 		E0A1B2C3D4E5F6012345678E /* relays/online_relays_gps.csv in Resources */ = {isa = PBXBuildFile; fileRef = E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */; };
@@ -164,34 +158,28 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				BAEC91202FCC139D00F1DA8D /* HuggingFace in Frameworks */,
-				BAEC911F2FCC139D00F1DA8D /* Transformers in Frameworks */,
-				BAEC911E2FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */,
-				BAEC911D2FCC139D00F1DA8D /* MLXLMCommon in Frameworks */,
-				BAEC911C2FCC139D00F1DA8D /* MLXLLM in Frameworks */,
 				A6E3E5722E7703760032EA8A /* BitLogger in Frameworks */,
 				3EE336D150427F736F32B56C /* P256K in Frameworks */,
 				A6E3EA812E7706A80032EA8A /* Tor in Frameworks */,
 				A6BCF94A2F809550001CF9B9 /* BitFoundation in Frameworks */,
 				AA1100000000000000000005 /* AgentInfra in Frameworks */,
 				AA1100000000000000000011 /* WhisperInfra in Frameworks */,
+				AA1100000000000000000033 /* SafeGuardianMesh in Frameworks */,
+				AA1100000000000000000044 /* AnyLanguageModelKit in Frameworks */,
 			);
 		};
 		B5A5CC493FFB3D8966548140 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				BAEC911B2FCC139D00F1DA8D /* HuggingFace in Frameworks */,
-				BAEC911A2FCC139D00F1DA8D /* Transformers in Frameworks */,
-				BAEC91192FCC139D00F1DA8D /* MLXHuggingFace in Frameworks */,
-				BAEC91182FCC139D00F1DA8D /* MLXLMCommon in Frameworks */,
-				BAEC91172FCC139D00F1DA8D /* MLXLLM in Frameworks */,
 				A6E3E5702E77036A0032EA8A /* BitLogger in Frameworks */,
 				885BBED78092484A5B069461 /* P256K in Frameworks */,
 				A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */,
 				A6BCF9482F80953E001CF9B9 /* BitFoundation in Frameworks */,
 				AA1100000000000000000004 /* AgentInfra in Frameworks */,
 				AA1100000000000000000010 /* WhisperInfra in Frameworks */,
-				AA1100000000000000000020 /* FieldMesh in Frameworks */,
 				AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */,
+				AA1100000000000000000043 /* AnyLanguageModelKit in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -254,10 +242,8 @@
 				A6BCF9492F809550001CF9B9 /* BitFoundation */,
 				AA1100000000000000000003 /* AgentInfra */,
 				AA1100000000000000000013 /* WhisperInfra */,
-				CC1111111111111111111A05 /* MLXLLM */,
-				CC1111111111111111111A06 /* MLXLMCommon */,
-				CC1111111111111111111A07 /* MLXHuggingFace */,
-				DD1111111111111111111B03 /* Transformers */,
+				AA1100000000000000000034 /* SafeGuardianMesh */,
+				AA1100000000000000000042 /* AnyLanguageModelKit */,
 				DD1111111111111111111C03 /* HuggingFace */,
 			);
 			productName = SafeGuardian_macOS;
@@ -342,12 +328,8 @@
 				A6BCF9472F80953E001CF9B9 /* BitFoundation */,
 				AA1100000000000000000002 /* AgentInfra */,
 				AA1100000000000000000012 /* WhisperInfra */,
-				AA1100000000000000000021 /* FieldMesh */,
 				AA1100000000000000000031 /* SafeGuardianMesh */,
-				CC1111111111111111111A02 /* MLXLLM */,
-				CC1111111111111111111A03 /* MLXLMCommon */,
-				CC1111111111111111111A04 /* MLXHuggingFace */,
-				DD1111111111111111111B02 /* Transformers */,
+				AA1100000000000000000041 /* AnyLanguageModelKit */,
 				DD1111111111111111111C02 /* HuggingFace */,
 			);
 			productName = SafeGuardian_iOS;
@@ -387,8 +369,6 @@
 			mainGroup = 18198ED912AAF495D8AF7763;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
-				DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 				DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 				B8C407587481BBB190741C93 /* XCRemoteSwiftPackageReference "swift-secp256k1" */,
 				A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "../../shared/BitLogger" */,
@@ -396,8 +376,10 @@
 				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "../../shared/BitFoundation" */,
 				AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */,
 				AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */,
-				AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */,
 				AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */,
+				AA1100000000000000000040 /* XCLocalSwiftPackageReference "localPackages/AnyLanguageModelKit" */,
+				CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			preferredProjectObjectVersion = 90;
 			projectDirPath = "";
@@ -493,7 +475,7 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGNING_REQUIRED = YES;
 				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				INFOPLIST_FILE = SafeGuardianTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = "$(IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -570,7 +552,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = SafeGuardianShareExtension/SafeGuardianShareExtension.entitlements;
 				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				INFOPLIST_FILE = SafeGuardianShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SafeGuardian;
 				IPHONEOS_DEPLOYMENT_TARGET = "$(IPHONEOS_DEPLOYMENT_TARGET)";
@@ -601,9 +583,10 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGNING_REQUIRED = YES;
 				CODE_SIGN_ENTITLEMENTS = SafeGuardian/SafeGuardian.entitlements;
-				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = SafeGuardian/_PreviewHelpers;
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = NO;
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = YES;
@@ -618,6 +601,7 @@
 				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = SafeGuardian;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -639,7 +623,7 @@
 				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				INFOPLIST_FILE = SafeGuardianTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -664,9 +648,10 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGNING_REQUIRED = YES;
 				CODE_SIGN_ENTITLEMENTS = SafeGuardian/SafeGuardian.entitlements;
-				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = SafeGuardian/_PreviewHelpers;
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_BLUETOOTH = YES;
@@ -681,6 +666,7 @@
 				MARKETING_VERSION = 1.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = SafeGuardian;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -806,7 +792,7 @@
 				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_PICTURE_FOLDER = readonly;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -912,7 +898,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = SafeGuardianShareExtension/SafeGuardianShareExtension.entitlements;
 				CODE_SIGN_STYLE = "$(CODE_SIGN_STYLE)";
-				DEVELOPMENT_TEAM = NS65QR578M;
+				DEVELOPMENT_TEAM = V9KH637N7P;
 				INFOPLIST_FILE = SafeGuardianShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = SafeGuardian;
 				IPHONEOS_DEPLOYMENT_TARGET = "$(IPHONEOS_DEPLOYMENT_TARGET)";
@@ -1007,13 +993,13 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = localPackages/WhisperInfra;
 		};
-		AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = localPackages/FieldMesh;
-		};
 		AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../shared/SafeGuardianMesh;
+		};
+		AA1100000000000000000040 /* XCLocalSwiftPackageReference "localPackages/AnyLanguageModelKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = localPackages/AnyLanguageModelKit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -1031,7 +1017,7 @@
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.31.3;
+				minimumVersion = 3.0.0;
 			};
 		};
 		DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
@@ -1039,7 +1025,7 @@
 			repositoryURL = "https://github.com/huggingface/swift-transformers";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.0;
+				minimumVersion = 1.0.0;
 			};
 		};
 		DD1111111111111111111C01 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
@@ -1102,60 +1088,30 @@
 			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
 			productName = WhisperInfra;
 		};
-		AA1100000000000000000021 /* FieldMesh */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA1100000000000000000022 /* XCLocalSwiftPackageReference "localPackages/FieldMesh" */;
-			productName = FieldMesh;
-		};
 		AA1100000000000000000031 /* SafeGuardianMesh */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */;
 			productName = SafeGuardianMesh;
 		};
+		AA1100000000000000000034 /* SafeGuardianMesh */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */;
+			productName = SafeGuardianMesh;
+		};
+		AA1100000000000000000041 /* AnyLanguageModelKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000040 /* XCLocalSwiftPackageReference "localPackages/AnyLanguageModelKit" */;
+			productName = AnyLanguageModelKit;
+		};
+		AA1100000000000000000042 /* AnyLanguageModelKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1100000000000000000040 /* XCLocalSwiftPackageReference "localPackages/AnyLanguageModelKit" */;
+			productName = AnyLanguageModelKit;
+		};
 		B1D9136AA0083366353BFA2F /* P256K */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B8C407587481BBB190741C93 /* XCRemoteSwiftPackageReference "swift-secp256k1" */;
 			productName = P256K;
-		};
-		CC1111111111111111111A02 /* MLXLLM */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLLM;
-		};
-		CC1111111111111111111A03 /* MLXLMCommon */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLMCommon;
-		};
-		CC1111111111111111111A04 /* MLXHuggingFace */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXHuggingFace;
-		};
-		CC1111111111111111111A05 /* MLXLLM */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLLM;
-		};
-		CC1111111111111111111A06 /* MLXLMCommon */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLMCommon;
-		};
-		CC1111111111111111111A07 /* MLXHuggingFace */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXHuggingFace;
-		};
-		DD1111111111111111111B02 /* Transformers */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Transformers;
-		};
-		DD1111111111111111111B03 /* Transformers */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DD1111111111111111111B01 /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Transformers;
 		};
 		DD1111111111111111111C02 /* HuggingFace */ = {
 			isa = XCSwiftPackageProductDependency;

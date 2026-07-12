@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentThreadStore.swift
 // SafeGuardian
 //

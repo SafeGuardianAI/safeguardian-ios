@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import AgentInfra
 import Foundation
 import BitFoundation
@@ -144,6 +145,7 @@ protocol AgentContext {
     var broadcastTTL: UInt8 { get }
     func setTickInterval(_ seconds: TimeInterval)
     func setMessageTTL(_ ttl: UInt8)
+    func setMedicalStatus(_ status: AgentStateTick.MedicalStatus)
     @discardableResult
     func publishCurrentStateTick() -> Bool
 

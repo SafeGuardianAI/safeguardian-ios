@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // PaymentChipView.swift
 // SafeGuardian

@@ -1,6 +1,7 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 // Tracks incidents claimed by this device's Nova agent for the current session.
 // Claims are soft locks: other devices see the broadcast and prefer unclaimed

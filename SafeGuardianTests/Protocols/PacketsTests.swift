@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct PacketsTests {
     @Test

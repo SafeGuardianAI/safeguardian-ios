@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 #if os(macOS)
 import BitFoundation
 import Combine

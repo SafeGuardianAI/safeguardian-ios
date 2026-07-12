@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitLogger
 import Foundation
 import Network
@@ -153,7 +154,6 @@ final class LANGatewayTransport {
             let ping = SGEnvelope.build(
                 priority: .routine,
                 payloadType: .agentMsg,
-                sourceId: Data(repeating: 0, count: 8),
                 payload: Data("ping".utf8)
             )
             self.send(ping)

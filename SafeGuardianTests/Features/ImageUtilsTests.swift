@@ -6,6 +6,7 @@ import UIKit
 import AppKit
 #endif
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 private func makeTemporaryFileURL(_ name: String) -> URL {
     FileManager.default.temporaryDirectory.appendingPathComponent(name)

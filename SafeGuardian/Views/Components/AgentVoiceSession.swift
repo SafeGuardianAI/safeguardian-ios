@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentVoiceSession.swift
 // SafeGuardian
 //
@@ -36,7 +37,7 @@ final class AgentVoiceSession {
         guard granted else { return }
 
         let coord = SpeechInferenceCoordinator.shared
-        if await !coord.isReady { try await coord.load() }
+        if !coord.isReady { try await coord.load() }
 
         let engine = AVAudioEngine()
         let input = engine.inputNode

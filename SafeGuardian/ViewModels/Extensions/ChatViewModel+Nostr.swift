@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // ChatViewModel+Nostr.swift
 // SafeGuardian

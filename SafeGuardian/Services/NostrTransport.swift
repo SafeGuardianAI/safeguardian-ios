@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitLogger
 import BitFoundation
 import Foundation
@@ -141,7 +142,7 @@ final class NostrTransport: Transport, @unchecked Sendable {
     func getPeersWithAgent(_ agentID: String) -> [PeerID] { [] }
 
     func getFingerprint(for peerID: PeerID) -> String? { nil }
-    func getNoiseSessionState(for peerID: PeerID) -> LazyHandshakeState { .none }
+    func getNoiseSessionState(for peerID: PeerID) -> LazyHandshakeState { LazyHandshakeState.none }
     func triggerHandshake(with peerID: PeerID) { /* no-op */ }
     
     // Nostr does not use Noise sessions here; return a cached placeholder to avoid reallocation

@@ -10,6 +10,7 @@ import Foundation
 import CryptoKit
 @testable import BitFoundation // to avoid unnecessary public's
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class TestNetworkHelper {
     // Public, read-only views for tests; mutation only through methods

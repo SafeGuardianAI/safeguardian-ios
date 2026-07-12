@@ -3,6 +3,7 @@ import Foundation
 import AgentInfra
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // Minimal stub satisfying AgentLanguageProvider without touching Metal or MLX.
 // Used by any test that exercises the agent routing layer without needing real inference.

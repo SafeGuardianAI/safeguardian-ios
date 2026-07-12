@@ -11,6 +11,7 @@ import Foundation
 import Testing
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // MARK: - Test Vector Support
 

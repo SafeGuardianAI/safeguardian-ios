@@ -2,6 +2,7 @@ import XCTest
 import UserNotifications
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class NotificationServiceTests: XCTestCase {
     func test_requestAuthorization_skipsWhenRunningTests() {

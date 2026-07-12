@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // GeohashParticipantTracker.swift
 // SafeGuardian

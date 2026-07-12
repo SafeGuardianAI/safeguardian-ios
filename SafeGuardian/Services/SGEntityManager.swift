@@ -47,7 +47,7 @@ final class SGEntityManager {
     }
 
     // Build and return a publish-ready SGEnvelope for a given entity.
-    func envelope(for entity: SGEntity, sourceId: Data) -> SGEnvelope {
+    func envelope(for entity: SGEntity, tenantHash: Data = SGEnvelope.defaultTenantHash) -> SGEnvelope {
         let payload = SGEntityPayload(
             id: entity.id,
             entityType: entity.entityType,
@@ -61,8 +61,8 @@ final class SGEntityManager {
         return SGEnvelope.build(
             priority: entity.priority,
             payloadType: .entity,
-            sourceId: sourceId,
-            payload: payloadData
+            payload: payloadData,
+            tenantHash: tenantHash
         )
     }
 }

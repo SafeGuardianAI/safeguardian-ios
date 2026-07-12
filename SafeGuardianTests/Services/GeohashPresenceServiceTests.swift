@@ -2,6 +2,7 @@ import Combine
 import XCTest
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @MainActor
 final class GeohashPresenceServiceTests: XCTestCase {

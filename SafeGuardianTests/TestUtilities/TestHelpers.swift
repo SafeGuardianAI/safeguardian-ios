@@ -10,6 +10,7 @@ import Foundation
 import CryptoKit
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class TestHelpers {
     
@@ -132,6 +133,22 @@ final class TestHelpers {
             return result
         }
     }
+}
+
+@MainActor
+func makeTestableViewModel() -> (viewModel: ChatViewModel, transport: MockTransport) {
+    let keychain = MockKeychain()
+    let keychainHelper = MockKeychainHelper()
+    let idBridge = NostrIdentityBridge(keychain: keychainHelper)
+    let identityManager = MockIdentityManager(keychain)
+    let transport = MockTransport()
+    let viewModel = ChatViewModel(
+        keychain: keychain,
+        idBridge: idBridge,
+        identityManager: identityManager,
+        transport: transport
+    )
+    return (viewModel, transport)
 }
 
 enum TestError: Error {

@@ -1,21 +1,18 @@
 import SafeGuardianMesh
 import SwiftUI
-#if os(iOS)
-import FieldMesh
-#endif
 
 struct AppInfoView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var viewModel: ChatViewModel
     @State private var novaResetConfirm = false
     @State private var mlxService = MLXInferenceService.shared
     @State private var remoteService = RemoteInferenceService.shared
     @State private var registry = AgentProviderRegistry.shared
     @State private var personalizationStore = NovaPersonalizationStore.shared
     @State private var personalizationDraft = ""
-    #if os(iOS)
     @State private var reticulumAddress: String? = nil
-    #endif
+    @AppStorage(ReticulumTransport.nodeEnabledKey) private var reticulumNodeEnabled = true
     
     private var backgroundColor: Color {
         colorScheme == .dark ? Color.black : Color.white
@@ -28,7 +25,31 @@ struct AppInfoView: View {
     private var secondaryTextColor: Color {
         colorScheme == .dark ? Color.green.opacity(0.8) : Color(red: 0, green: 0.5, blue: 0).opacity(0.8)
     }
-    
+
+    private var modelShortName: String {
+        mlxService.activeModelID.split(separator: "/").last.map(String.init) ?? mlxService.activeModelID
+    }
+
+    private var modelStatusText: String {
+        if mlxService.isLoading {
+            return "loading \(modelShortName): \(Int(mlxService.downloadProgress * 100))%"
+        }
+        if mlxService.isModelLoaded {
+            return "\(modelShortName) loaded"
+        }
+        if ModelDownloadManager.shared.localSnapshotURL(modelID: mlxService.activeModelID) != nil {
+            return "\(modelShortName) on disk, not loaded"
+        }
+        return "\(modelShortName) not downloaded"
+    }
+
+    private var modelStatusColor: Color {
+        if mlxService.isLoading { return .orange }
+        if mlxService.isModelLoaded { return .green }
+        if ModelDownloadManager.shared.localSnapshotURL(modelID: mlxService.activeModelID) != nil { return textColor }
+        return secondaryTextColor.opacity(0.5)
+    }
+
     // MARK: - Constants
     private enum Strings {
         static let appName: LocalizedStringKey = "app_info.app_name"
@@ -291,13 +312,20 @@ struct AppInfoView: View {
                                 .foregroundColor(secondaryTextColor)
                                 .fixedSize(horizontal: false, vertical: true)
 
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(modelStatusColor)
+                                    .frame(width: 6, height: 6)
+                                Text(modelStatusText)
+                                    .font(.safeguardianSystem(size: 11, design: .monospaced))
+                                    .foregroundColor(secondaryTextColor)
+                            }
+                            .padding(.top, 2)
+
                             if mlxService.isLoading {
                                 ProgressView(value: mlxService.downloadProgress)
                                     .accentColor(textColor)
                                     .padding(.top, 4)
-                                Text("downloading model: \(Int(mlxService.downloadProgress * 100))%")
-                                    .font(.safeguardianSystem(size: 10, design: .monospaced))
-                                    .foregroundColor(secondaryTextColor)
                             }
                         }
                         Spacer()
@@ -341,18 +369,45 @@ struct AppInfoView: View {
                     }
                 }
             }
-            #if DEBUG && os(iOS)
+            DeploymentSettingsSection()
+            #if DEBUG
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader("mesh transport")
 
-                // LXMF address row — readable only while the Reticulum node is running.
+                // Reticulum BLE node toggle — each device acts as a Reticulum endpoint
+                // when enabled. Persisted in UserDefaults; takes effect immediately.
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.safeguardianSystem(size: 20))
+                        .foregroundColor(textColor)
+                        .frame(width: 30)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("reticulum ble node")
+                            .font(.safeguardianSystem(size: 11, design: .monospaced))
+                            .foregroundColor(secondaryTextColor)
+                        Text("act as a mesh endpoint over bluetooth low energy")
+                            .font(.safeguardianSystem(size: 11, design: .monospaced))
+                            .foregroundColor(secondaryTextColor.opacity(0.7))
+                    }
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { reticulumNodeEnabled },
+                        set: { on in
+                            reticulumNodeEnabled = on
+                            viewModel.setReticulumNodeEnabled(on)
+                        }
+                    ))
+                    .labelsHidden()
+                }
+
+                // LXMF destination hash — readable only while the Reticulum node is active.
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "point.3.connected.trianglepath.dotted")
                         .font(.safeguardianSystem(size: 20))
                         .foregroundColor(textColor)
                         .frame(width: 30)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("lxmf address")
+                        Text("mesh destination hash")
                             .font(.safeguardianSystem(size: 11, design: .monospaced))
                             .foregroundColor(secondaryTextColor)
                         if let addr = reticulumAddress {
@@ -361,38 +416,25 @@ struct AppInfoView: View {
                                 .foregroundColor(textColor)
                                 .contextMenu {
                                     Button("copy") {
+                                        #if os(iOS)
                                         UIPasteboard.general.string = addr
+                                        #else
+                                        NSPasteboard.general.clearContents()
+                                        NSPasteboard.general.setString(addr, forType: .string)
+                                        #endif
                                     }
                                 }
                         } else {
-                            Text("node offline — open reticulum console to start")
+                            Text("mesh identity not yet derived")
                                 .font(.safeguardianSystem(size: 12, design: .monospaced))
                                 .foregroundColor(secondaryTextColor.opacity(0.6))
                         }
                     }
                 }
                 .task {
-                    if let s = await ReticulumService.shared.status() {
-                        reticulumAddress = s.lxmfDestinationHex
-                    }
+                    let id = try? ReticulumIdentity.loadOrCreate(keychain: KeychainManager())
+                    reticulumAddress = id?.destinationHash.hexEncodedString()
                 }
-
-                NavigationLink(destination: ReticulumTestView()) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.safeguardianSystem(size: 20))
-                            .foregroundColor(textColor)
-                            .frame(width: 30)
-                        Text("reticulum console")
-                            .font(.safeguardianSystem(size: 14, design: .monospaced))
-                            .foregroundColor(textColor)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.safeguardianSystem(size: 12))
-                            .foregroundColor(secondaryTextColor)
-                    }
-                }
-                .buttonStyle(.plain)
             }
             #endif
         }

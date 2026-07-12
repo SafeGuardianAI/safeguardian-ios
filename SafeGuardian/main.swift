@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // Entry point. Handles the --daemon flag before SwiftUI takes over.
 // On macOS with --daemon: runs headless (no window, no dock icon).
 // All other invocations defer to the normal SwiftUI app lifecycle.

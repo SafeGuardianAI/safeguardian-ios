@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import SwiftUI
 import BitFoundation
 
@@ -87,6 +88,27 @@ struct MeshPeerList: View {
                                     .foregroundColor(suffixColor)
                             }
                         }
+                        if !isMe {
+                            // Client stack tag: sg = SafeGuardian, bc = stock bitchat,
+                            // rns = Reticulum peer (Sideband, NomadNet, RNode-bridged)
+                            let kindTag: String = {
+                                switch peer.clientKind {
+                                case .safeguardian: return "sg"
+                                case .bitchat: return "bc"
+                                case .reticulum: return "rns"
+                                }
+                            }()
+                            Text(kindTag)
+                                .font(.safeguardianSystem(size: 9, design: .monospaced))
+                                .foregroundColor(secondaryTextColor.opacity(0.7))
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 1)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .stroke(secondaryTextColor.opacity(0.35), lineWidth: 0.5)
+                                )
+                        }
+
                         if isRecentlySeen {
                             let age = Int(Date().timeIntervalSince(peer.lastSeen))
                             let ageText = age < 3600 ? "\(max(1, age / 60))m" : "\(age / 3600)h"

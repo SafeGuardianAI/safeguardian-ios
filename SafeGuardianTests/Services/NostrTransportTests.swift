@@ -10,6 +10,7 @@ import Foundation
 import Testing
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @Suite("NostrTransport Tests")
 struct NostrTransportTests {

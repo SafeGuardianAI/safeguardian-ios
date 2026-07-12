@@ -11,24 +11,22 @@ import Foundation
 import CoreBluetooth
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct FragmentationTests {
     
     private let mockKeychain: MockKeychain
     private let mockIdentityManager: MockIdentityManager
-    private let idBridge: NostrIdentityBridge
-    
+
     init() {
         mockKeychain = MockKeychain()
         mockIdentityManager = MockIdentityManager(mockKeychain)
-        idBridge = NostrIdentityBridge(keychain: MockKeychainHelper())
     }
     
     @Test("Reassembly from fragments delivers a public message")
     func reassemblyFromFragmentsDeliversPublicMessage() async throws {
         let ble = BLEService(
             keychain: mockKeychain,
-            idBridge: idBridge,
             identityManager: mockIdentityManager,
             initializeBluetoothManagers: false
         )
@@ -64,7 +62,6 @@ struct FragmentationTests {
     func duplicateFragmentDoesNotBreakReassembly() async throws {
         let ble = BLEService(
             keychain: mockKeychain,
-            idBridge: idBridge,
             identityManager: mockIdentityManager,
             initializeBluetoothManagers: false
         )
@@ -99,7 +96,6 @@ struct FragmentationTests {
     func maxSizedFileTransferSurvivesReassembly() async throws {
         let ble = BLEService(
             keychain: mockKeychain,
-            idBridge: idBridge,
             identityManager: mockIdentityManager,
             initializeBluetoothManagers: false
         )
@@ -156,7 +152,6 @@ struct FragmentationTests {
     func invalidFragmentHeaderIsIgnored() async throws {
         let ble = BLEService(
             keychain: mockKeychain,
-            idBridge: idBridge,
             identityManager: mockIdentityManager,
             initializeBluetoothManagers: false
         )

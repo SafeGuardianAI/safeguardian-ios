@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import AgentInfra
 import BitFoundation
 import Combine
@@ -23,8 +24,13 @@ final class SGClient {
     let triageEngine: SGTriageEngine
     let envelopeHandler = SGEnvelopeHandler()
 
-    private weak var transport: MultiTransportManager?
+    weak var transport: MultiTransportManager?
+    private var lanGateway: LANGatewayTransport?
     private var cancellables = Set<AnyCancellable>()
+
+    // Envelopes arriving from the LAN gateway have no mesh peer; they carry
+    // this sentinel so downstream consumers can distinguish the source.
+    static let gatewayPeerID = PeerID(str: "lan-gateway")
 
     // MARK: - Init
 
@@ -32,6 +38,30 @@ final class SGClient {
         self.transport = transport
         self.triageEngine = SGTriageEngine(profile: triageProfile)
         wireEnvelopeHandler()
+        reloadGatewayFromDefaults()
+    }
+
+    // MARK: - LAN Gateway
+
+    // (Re)starts the UDP gateway link from persisted config. Called at init and
+    // again whenever the operator changes the gateway host in settings.
+    func reloadGatewayFromDefaults() {
+        lanGateway?.stop()
+        lanGateway = nil
+        guard let config = LANGatewayTransport.Config.fromUserDefaults() else { return }
+        let gateway = LANGatewayTransport(config: config)
+        gateway.onEnvelopeReceived = { [weak self] envelope in
+            self?.envelopeHandler.handle(envelope, from: Self.gatewayPeerID)
+        }
+        gateway.start()
+        lanGateway = gateway
+    }
+
+    // Every outbound envelope fans out to the mesh and, when provisioned, to the
+    // APEX UDP gateway so the ops store sees field state without a bridge hop.
+    private func send(_ envelope: SGEnvelope) {
+        transport?.sendSGEnvelope(envelope)
+        lanGateway?.send(envelope)
     }
 
     private func wireEnvelopeHandler() {
@@ -53,23 +83,21 @@ final class SGClient {
     }
 
     func publishEntity(_ entity: SGEntity) {
-        guard let sourceId = sourceIdData() else { return }
-        let envelope = entityManager.envelope(for: entity, sourceId: sourceId)
-        transport?.sendSGEnvelope(envelope)
+        let envelope = entityManager.envelope(for: entity, tenantHash: TenantIdentity.tenantHash)
+        send(envelope)
     }
 
     // MARK: - Agent State API
 
     func publishStateTick(_ tick: AgentStateTick) {
-        guard let sourceId = sourceIdData(),
-              let payload = encodeStateTick(tick) else { return }
+        guard let payload = encodeStateTick(tick) else { return }
         let envelope = SGEnvelope.build(
             priority: priority(for: tick),
             payloadType: .stateTick,
-            sourceId: sourceId,
-            payload: payload
+            payload: payload,
+            tenantHash: TenantIdentity.tenantHash
         )
-        transport?.sendSGEnvelope(envelope)
+        send(envelope)
     }
 
     // MARK: - Triage API
@@ -86,42 +114,7 @@ final class SGClient {
         triageEngine.setProfile(profile)
     }
 
-    // MARK: - Transport introspection
-
-    func availableTransportLinks() -> [SGTransportLink] {
-        guard let transport else { return [] }
-        return transport.currentPeerSnapshots()
-            .reduce(into: [LinkType: SGTransportLink]()) { acc, snap in
-                if acc[snap.linkType] == nil {
-                    acc[snap.linkType] = SGTransportLink(
-                        linkType: snap.linkType,
-                        estimatedBandwidthBps: snap.estimatedBandwidthBps,
-                        peerCount: 1
-                    )
-                } else {
-                    acc[snap.linkType]?.peerCount += 1
-                }
-            }
-            .values
-            .sorted { $0.estimatedBandwidthBps > $1.estimatedBandwidthBps }
-    }
-
     // MARK: - Private
-
-    private func sourceIdData() -> Data? {
-        guard let transport else { return nil }
-        let hex = transport.myPeerID.id
-        var data = Data(capacity: 8)
-        var idx = hex.startIndex
-        for _ in 0..<8 {
-            let next = hex.index(idx, offsetBy: 2, limitedBy: hex.endIndex) ?? hex.endIndex
-            let byte = UInt8(hex[idx..<next], radix: 16) ?? 0
-            data.append(byte)
-            idx = next
-            if idx >= hex.endIndex { break }
-        }
-        return data.count == 8 ? data : Data(repeating: 0, count: 8)
-    }
 
     private func encodeStateTick(_ tick: AgentStateTick) -> Data? {
         let encoder = JSONEncoder()
@@ -137,12 +130,4 @@ final class SGClient {
         case .uninjured, .unknown: return .routine
         }
     }
-}
-
-// MARK: - SGTransportLink
-
-struct SGTransportLink {
-    let linkType: LinkType
-    let estimatedBandwidthBps: Int
-    var peerCount: Int
 }

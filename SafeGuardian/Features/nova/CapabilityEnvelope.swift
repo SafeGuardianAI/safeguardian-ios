@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // CapabilityEnvelope.swift
 // SafeGuardian
 //

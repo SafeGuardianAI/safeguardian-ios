@@ -1,5 +1,6 @@
+import SafeGuardianMesh
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     // Publishes the latest StateTick immediately, then briefly requests the

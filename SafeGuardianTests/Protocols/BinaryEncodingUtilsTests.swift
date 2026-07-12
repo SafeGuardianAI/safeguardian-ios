@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import BitFoundation // to avoid unnecessary public's
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class BinaryEncodingUtilsTests: XCTestCase {
     func test_appendAndReadPrimitiveValues_roundTrip() throws {

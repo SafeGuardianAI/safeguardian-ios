@@ -10,6 +10,7 @@ import Foundation
 import CoreBluetooth
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct BLEServiceCoreTests {
 
@@ -97,10 +98,8 @@ struct BLEServiceCoreTests {
 private func makeService() -> BLEService {
     let keychain = MockKeychain()
     let identityManager = MockIdentityManager(keychain)
-    let idBridge = NostrIdentityBridge(keychain: MockKeychainHelper())
     return BLEService(
         keychain: keychain,
-        idBridge: idBridge,
         identityManager: identityManager,
         initializeBluetoothManagers: false
     )

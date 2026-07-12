@@ -9,6 +9,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // MARK: - LRU Deduplication Cache Tests
 

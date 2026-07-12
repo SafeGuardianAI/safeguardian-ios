@@ -15,26 +15,7 @@ import AppKit
 #endif
 import BitFoundation
 @testable import SafeGuardian
-
-// MARK: - Test Helpers
-
-@MainActor
-private func makeTestableViewModel() -> (viewModel: ChatViewModel, transport: MockTransport) {
-    let keychain = MockKeychain()
-    let keychainHelper = MockKeychainHelper()
-    let idBridge = NostrIdentityBridge(keychain: keychainHelper)
-    let identityManager = MockIdentityManager(keychain)
-    let transport = MockTransport()
-
-    let viewModel = ChatViewModel(
-        keychain: keychain,
-        idBridge: idBridge,
-        identityManager: identityManager,
-        transport: transport
-    )
-
-    return (viewModel, transport)
-}
+@testable import SafeGuardianMesh
 
 // MARK: - Private Chat Extension Tests
 
@@ -904,7 +885,7 @@ struct ChatViewModelMediaTransferTests {
     func sendImage_privateChatProcessesAndTransfersImage() async throws {
         let (viewModel, transport) = makeTestableViewModel()
         let peerID = PeerID(str: "4444444444444444444444444444444444444444444444444444444444444444")
-        let sourceURL = try makeTemporaryImageURL()
+        let sourceURL = try makeTemporaryImageURLForTransfer()
         defer { try? FileManager.default.removeItem(at: sourceURL) }
 
         viewModel.selectedPrivateChatPeer = peerID
@@ -1107,7 +1088,7 @@ private func mediaFileURL(subdirectory: String, fileName: String) throws -> URL 
     return directory.appendingPathComponent(fileName)
 }
 
-private func makeTemporaryImageURL() throws -> URL {
+private func makeTemporaryImageURLForTransfer() throws -> URL {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("image-\(UUID().uuidString).png")
     let data = try makeImageData()
     try data.write(to: url, options: .atomic)

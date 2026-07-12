@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import AgentInfra
 import BitFoundation
 import Foundation
@@ -19,6 +20,10 @@ extension ChatViewModel: AgentContext {
 
     func setMessageTTL(_ ttl: UInt8) {
         NovaBroadcaster.shared?.broadcaster.setPreferredTTL(ttl)
+    }
+
+    func setMedicalStatus(_ status: AgentStateTick.MedicalStatus) {
+        NovaBroadcaster.shared?.medicalStatus = status
     }
 
     @discardableResult

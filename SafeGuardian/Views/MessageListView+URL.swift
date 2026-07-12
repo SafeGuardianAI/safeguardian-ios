@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 //  MessageListView+URL.swift
 //  SafeGuardian

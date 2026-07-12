@@ -11,6 +11,7 @@ import Foundation
 import Combine
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // MARK: - NostrProtocol Presence Event Tests
 

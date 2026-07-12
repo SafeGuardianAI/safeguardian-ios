@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 /// Per-agent broadcast configuration. Defines the initial timing policy and

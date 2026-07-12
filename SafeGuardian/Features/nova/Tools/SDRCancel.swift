@@ -1,5 +1,6 @@
+import SafeGuardianMesh
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     static func sdrCancel() -> AgentToolEntry {

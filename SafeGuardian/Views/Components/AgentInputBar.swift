@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentInputBar.swift
 // SafeGuardian
 //
@@ -16,9 +17,16 @@ import AppKit
 /// agent is generating a response.
 struct AgentInputBar: View {
     @Binding var text: String
+    var focused: FocusState<Bool>.Binding
     let onSend: () -> Void
+    #if os(iOS)
+    @Binding var pendingImage: UIImage?
+    #else
+    @Binding var pendingImage: NSImage?
+    #endif
+    var onAttachTapped: () -> Void
 
-    @ObservedObject private var engine = AgentConversationEngine.shared
+    @State private var engine = AgentConversationEngine.shared
 
     @State private var session: AgentVoiceSession? = nil
     @State private var isRecording = false
@@ -31,7 +39,7 @@ struct AgentInputBar: View {
             if engine.isRunning {
                 HStack(spacing: 6) {
                     ProgressView().scaleEffect(0.7)
-                    Text("Nova is thinking...")
+                    Text(engine.modelLoadPhase == .waking ? "Waking Nova..." : "Thinking...")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -40,8 +48,37 @@ struct AgentInputBar: View {
                 .padding(.vertical, 4)
             }
 
+            if let pendingImage {
+                HStack(spacing: 6) {
+                    #if os(iOS)
+                    Image(uiImage: pendingImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    #else
+                    Image(nsImage: pendingImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    #endif
+                    Button {
+                        self.pendingImage = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+
             HStack(alignment: .center, spacing: 8) {
                 micButton
+                attachButton
 
                 ZStack(alignment: .leading) {
                     TextField("Message Nova...", text: $text, axis: .vertical)
@@ -49,6 +86,7 @@ struct AgentInputBar: View {
                         .font(.system(size: 15, design: .monospaced))
                         .lineLimit(1...4)
                         .submitLabel(.send)
+                        .focused(focused)
                         .onSubmit { sendIfReady() }
                         .opacity(isRecording ? 0 : 1)
                     if isRecording {
@@ -69,6 +107,20 @@ struct AgentInputBar: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
         }
+    }
+
+    private var attachButton: some View {
+        Button(action: onAttachTapped) {
+            ZStack {
+                Circle()
+                    .fill(Color.sgSecondarySystemBackground)
+                    .frame(width: 36, height: 36)
+                Image(systemName: "photo.on.rectangle")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+            }
+        }
+        .disabled(engine.isRunning)
     }
 
     private var micButton: some View {
@@ -99,7 +151,7 @@ struct AgentInputBar: View {
     }
 
     private var sendButton: some View {
-        let ready = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !engine.isRunning
+        let ready = (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || pendingImage != nil) && !engine.isRunning
         return Button(action: sendIfReady) {
             Image(systemName: "arrow.up.circle.fill")
                 .font(.system(size: 28))
@@ -109,7 +161,7 @@ struct AgentInputBar: View {
     }
 
     private func sendIfReady() {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !engine.isRunning else { return }
+        guard (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || pendingImage != nil), !engine.isRunning else { return }
         stopRecording()
         onSend()
     }

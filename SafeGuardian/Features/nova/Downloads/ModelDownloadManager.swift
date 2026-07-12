@@ -1,6 +1,6 @@
+import SafeGuardianMesh
 import Foundation
 import HuggingFace
-import MLXLMCommon
 
 /// Manages the on-device HuggingFace model cache.
 ///
@@ -9,7 +9,10 @@ import MLXLMCommon
 /// It does not initiate downloads directly — trigger those through MLXInferenceService.selectModel.
 ///
 /// Cache location (sandboxed): Library/Caches/huggingface/hub/models--{org}--{name}/
-@MainActor
+///
+/// Not actor-isolated: every method is a stateless FileManager operation over an
+/// immutable hubCacheDir, so callers can run cache scans and evictions off the
+/// main thread. Do not add mutable instance state without revisiting this.
 final class ModelDownloadManager {
     static let shared = ModelDownloadManager()
 
@@ -49,7 +52,7 @@ final class ModelDownloadManager {
 
     // MARK: - Eviction
 
-    /// Removes a model from the HuggingFace cache. MLXModelLoader state is NOT cleared here —
+    /// Removes a model from the HuggingFace cache. In-memory session state is NOT cleared here —
     /// call MLXInferenceService.dropSession() first if the model is currently loaded.
     func evict(modelID: String) throws {
         let dir = hubCacheDir.appendingPathComponent(Self.modelIDToDirectoryName(modelID))
@@ -111,7 +114,7 @@ final class ModelDownloadManager {
     // MARK: - Local snapshot
 
     /// Returns the snapshot directory URL for a cached model, or nil if not present.
-    /// Used by MLXModelLoader to load directly from disk, bypassing the hub downloader.
+    /// Used by the UI to report whether the active model is already on disk.
     func localSnapshotURL(modelID: String) -> URL? {
         let snapshotsDir = hubCacheDir
             .appendingPathComponent(Self.modelIDToDirectoryName(modelID))

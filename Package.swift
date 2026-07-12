@@ -16,33 +16,34 @@ let package = Package(
         ),
     ],
     dependencies: [
+        .package(path: "../../shared/SafeGuardianMesh"),
         .package(path: "localPackages/Arti"),
-        .package(path: "localPackages/BitFoundation"),
-        .package(path: "localPackages/BitLogger"),
+        .package(path: "../../shared/BitFoundation"),
+        .package(path: "../../shared/BitLogger"),
         .package(path: "localPackages/AgentInfra"),
         .package(path: "localPackages/WhisperInfra"),
+        .package(path: "localPackages/AnyLanguageModelKit"),
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1",       exact: "0.21.1"),
-        .package(url: "https://github.com/ml-explore/mlx-swift",             exact: "0.31.3"),
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm",          exact: "3.31.3"),
-        .package(url: "https://github.com/huggingface/swift-transformers",   exact: "0.1.24"),
         .package(url: "https://github.com/huggingface/swift-huggingface",    exact: "0.9.0"),
+        // Direct declarations for AnyLanguageModel's MLX-trait conditional deps:
+        // SwiftPM's trait resolution fails at the root manifest without them
+        // (same workaround AnyLanguageModelKit's own manifest documents).
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm",          from: "3.0.0"),
+        .package(url: "https://github.com/huggingface/swift-transformers",   from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
             name: "SafeGuardian",
             dependencies: [
+                .product(name: "SafeGuardianMesh", package: "SafeGuardianMesh"),
                 .product(name: "P256K",         package: "swift-secp256k1"),
                 .product(name: "BitFoundation", package: "BitFoundation"),
                 .product(name: "BitLogger",     package: "BitLogger"),
                 .product(name: "Tor",           package: "Arti"),
                 .product(name: "AgentInfra",    package: "AgentInfra"),
                 .product(name: "WhisperInfra",  package: "WhisperInfra"),
-                .product(name: "MLX",           package: "mlx-swift"),
-                .product(name: "MLXLMCommon",   package: "mlx-swift-lm"),
-                .product(name: "MLXLLM",        package: "mlx-swift-lm"),
-                .product(name: "MLXHuggingFace",package: "mlx-swift-lm"),
+                .product(name: "AnyLanguageModelKit", package: "AnyLanguageModelKit"),
                 .product(name: "HuggingFace",   package: "swift-huggingface"),
-                .product(name: "Transformers",  package: "swift-transformers"),
             ],
             path: "SafeGuardian",
             exclude: [
@@ -56,6 +57,9 @@ let package = Package(
             ],
             resources: [
                 .process("Localizable.xcstrings")
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-disable-access-control"])
             ]
         ),
         .testTarget(

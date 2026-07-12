@@ -1,6 +1,7 @@
 import Combine
 import XCTest
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @MainActor
 final class NostrRelayManagerTests: XCTestCase {

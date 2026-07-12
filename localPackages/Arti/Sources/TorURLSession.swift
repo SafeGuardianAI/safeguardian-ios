@@ -22,6 +22,8 @@ public final class TorURLSession {
 
     // Recreate sessions so new clients bind to the fresh SOCKS/control ports after a Tor restart.
     public func rebuild() {
+        defaultSession.invalidateAndCancel()
+        torSession.invalidateAndCancel()
         defaultSession = TorURLSession.makeDefaultSession()
         torSession = TorURLSession.makeTorSession()
     }

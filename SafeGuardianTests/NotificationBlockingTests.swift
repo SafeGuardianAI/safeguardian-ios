@@ -10,6 +10,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct NotificationBlockingTests {
 

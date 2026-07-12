@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // MinimalDistancePalette.swift
 // SafeGuardian

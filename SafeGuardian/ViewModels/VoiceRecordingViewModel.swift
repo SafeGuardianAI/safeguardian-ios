@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // VoiceRecordingViewModel.swift
 // SafeGuardian

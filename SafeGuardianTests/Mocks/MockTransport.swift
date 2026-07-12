@@ -11,6 +11,7 @@ import Combine
 import CoreBluetooth
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 /// Mock Transport implementation for testing ChatViewModel in isolation.
 /// Records all method calls and allows test code to verify interactions.

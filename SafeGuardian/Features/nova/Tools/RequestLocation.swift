@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // RequestLocation.swift
 // SafeGuardian
 //
@@ -5,7 +6,7 @@
 
 import BitFoundation
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     /// Sends a structured location request to a specific peer and suspends until

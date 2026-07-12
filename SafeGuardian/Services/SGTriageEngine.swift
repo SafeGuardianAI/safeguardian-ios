@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 // SGTriageEngine translates system-specific triage labels (T1, RED, L1, P1, urgent…)

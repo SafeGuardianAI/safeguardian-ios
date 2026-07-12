@@ -9,6 +9,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct MeshTopologyTrackerTests {
     private func hex(_ value: String) throws -> Data {

@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
 
@@ -15,7 +16,7 @@ final class BenchmarkCoordinator {
     /// Override before calling `runSession` to configure a specific experiment or test.
     var config = BenchmarkConfig()
 
-    private var transport: (any Transport)?
+    private var transport: (any NoiseTransport)?
     private var exporter: BenchmarkExporter?
     private var activeSessions: [String: ActiveSession] = [:]
     private var listenMode = false
@@ -50,7 +51,7 @@ final class BenchmarkCoordinator {
         var pendingSendNs: Int64 = 0
     }
 
-    func configure(transport: any Transport) {
+    func configure(transport: any NoiseTransport) {
         self.transport = transport
     }
 
@@ -105,7 +106,7 @@ final class BenchmarkCoordinator {
         )
         exp.append(session)
         let distLabel = distM.map { " @ \(Int($0))m" } ?? ""
-        await progress("bench \(sessionId.prefix(8)) → \(peerNickname)\(distLabel), \(payloadBytes / 1024) KB × \(trials) trials")
+        progress("bench \(sessionId.prefix(8)) → \(peerNickname)\(distLabel), \(payloadBytes / 1024) KB × \(trials) trials")
 
         activeSessions[sessionId] = ActiveSession(id: sessionId, peerID: peer, payloadBytes: payloadBytes, expectedTrials: trials)
         stopRequested = false
@@ -118,7 +119,7 @@ final class BenchmarkCoordinator {
 
         for i in 0..<trials {
             if stopRequested { break }
-            await progress("trial \(i + 1)/\(trials)…")
+            progress("trial \(i + 1)/\(trials)…")
             let sendNs = Int64(DispatchTime.now().uptimeNanoseconds)
             activeSessions[sessionId]?.pendingTrialIndex = i
             activeSessions[sessionId]?.pendingSendNs = sendNs
@@ -161,9 +162,9 @@ final class BenchmarkCoordinator {
             activeSessions[sessionId]?.completedTrials.append(trial)
             exp.append(trial)
             if trial.dropped {
-                await progress("  → dropped")
+                progress("  → dropped")
             } else {
-                await progress("  → \(String(format: "%.1f", trial.throughputKBps)) KB/s, \(trial.elapsedMs) ms")
+                progress("  → \(String(format: "%.1f", trial.throughputKBps)) KB/s, \(trial.elapsedMs) ms")
             }
         }
 

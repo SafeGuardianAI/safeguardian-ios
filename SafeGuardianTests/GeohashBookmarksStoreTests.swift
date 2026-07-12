@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct GeohashBookmarksStoreTests {
     private let storeKey = "locationChannel.bookmarks"

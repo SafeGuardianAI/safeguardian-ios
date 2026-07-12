@@ -10,6 +10,7 @@ import Testing
 import CoreBluetooth
 @testable import BitFoundation // to avoid unnecessary public's
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct BLEServiceTests {
     private let service: MockBLEService

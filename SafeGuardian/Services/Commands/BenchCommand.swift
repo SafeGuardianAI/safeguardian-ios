@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
 
@@ -15,7 +16,7 @@ struct BenchCommand: Command {
     let usage = "/bench <peer|listen|stop> [kb=10] [trials=100] [dist=<metres>]"
 
     func execute(args: String, context: CommandContext) -> CommandResult {
-        guard let transport = context.transport else {
+        guard let transport = context.transport as? (any NoiseTransport) else {
             return .error(message: "bench: no transport available")
         }
         BenchmarkCoordinator.shared.configure(transport: transport)

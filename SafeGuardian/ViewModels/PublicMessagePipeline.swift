@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // PublicMessagePipeline.swift
 // SafeGuardian

@@ -1,5 +1,6 @@
+import SafeGuardianMesh
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     /// Composite: device state + peers + storage + memory. Use before recommending a model download.

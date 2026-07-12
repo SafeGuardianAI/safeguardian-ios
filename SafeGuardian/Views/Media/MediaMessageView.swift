@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 //  MediaMessageView.swift
 //  bitchat

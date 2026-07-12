@@ -9,6 +9,7 @@
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class MockIdentityManager: SecureIdentityStateManagerProtocol {
     private let keychain: KeychainManagerProtocol

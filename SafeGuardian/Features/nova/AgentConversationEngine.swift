@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentConversationEngine.swift
 // SafeGuardian
 //
@@ -6,18 +7,20 @@
 import AgentInfra
 import BitFoundation
 import Foundation
-import MLXLMCommon
 
 /// Owns the generic mechanics of every agent conversation: gate evaluation,
 /// history assembly, AgentPromptInput construction, stream event processing,
 /// mesh reply routing, and conversation logging. Agents supply an
 /// AgentConversationConfig that expresses only what is specific to them.
-@MainActor
-final class AgentConversationEngine: ObservableObject {
+@Observable @MainActor
+final class AgentConversationEngine {
     static let shared = AgentConversationEngine()
     private init() {}
 
-    @Published private(set) var isRunning = false
+    private(set) var isRunning = false
+
+    enum ModelLoadPhase { case idle, waking, thinking }
+    private(set) var modelLoadPhase: ModelLoadPhase = .idle
 
     func handle(
         prompt: String,
@@ -61,15 +64,7 @@ final class AgentConversationEngine: ObservableObject {
         let currentCount = context.privateChats[effectivePeerID]?.count ?? 0
         let historyBoundary = isMeshQuery ? currentCount : max(0, currentCount - 1)
 
-        // For local queries only: show loading state and insert a response placeholder
-        // that streams tokens into the chat. Mesh queries run inference silently —
-        // the reply goes back to the requester; nothing appears in the local thread.
-        if !isMeshQuery && !provider.isModelLoaded {
-            context.addAgentLocalMessage(
-                provider.isLoading ? "downloading model..." : "initializing...",
-                to: effectivePeerID
-            )
-        }
+        if !isMeshQuery { modelLoadPhase = provider.isModelLoaded ? .thinking : .waking }
 
         let response: SafeGuardianMessage
         if isMeshQuery {
@@ -78,7 +73,7 @@ final class AgentConversationEngine: ObservableObject {
             )
         } else {
             response = context.addResponse(
-                sender: config.displayName, content: "[thinking...]", privatePeerID: effectivePeerID
+                sender: config.displayName, content: "...", privatePeerID: effectivePeerID
             )
             context.notifyChange()
         }
@@ -107,7 +102,7 @@ final class AgentConversationEngine: ObservableObject {
 
         if !isMeshQuery { isRunning = true }
         Task { @MainActor in
-            defer { if !isMeshQuery { self.isRunning = false } }
+            defer { if !isMeshQuery { self.isRunning = false; self.modelLoadPhase = .idle } }
             let baseSystemPrompt = config.systemPrompt()
             // Append tool names when tools are active so the model knows its vocabulary
             // regardless of how the chat template formats the injected schemas.
@@ -132,12 +127,12 @@ final class AgentConversationEngine: ObservableObject {
             #if os(macOS)
             let history: [ConversationTurn]
             if #available(macOS 26, *) {
-                history = await ContextCompressor.compressAsync(rawHistory, threshold: 2_000)
+                history = await ContextCompressor.compressAsync(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
             } else {
-                history = ContextCompressor.compactIfNeeded(rawHistory, threshold: 2_000)
+                history = ContextCompressor.compactIfNeeded(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
             }
             #else
-            let history = ContextCompressor.compactIfNeeded(rawHistory, threshold: 2_000)
+            let history = ContextCompressor.compactIfNeeded(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
             #endif
             var input = AgentPromptInput(
                 text: cleanPrompt,
@@ -153,16 +148,14 @@ final class AgentConversationEngine: ObservableObject {
 
             for await event in provider.generate(input: input) {
                 switch event {
-                case .status(let s):
-                    if !isMeshQuery {
-                        response.content = s
-                        context.notifyChange()
-                    }
+                case .status:
+                    break
 
                 case .stats(let s):
                     state.stats = s
 
                 case .token(let token):
+                    if !isMeshQuery && modelLoadPhase == .waking { modelLoadPhase = .thinking }
                     if hasThinking {
                         state.pending += token
                         let (visible, thinking, remaining) = Self.drain(

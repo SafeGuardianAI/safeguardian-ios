@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // SafeGuardianApp.swift
 // SafeGuardian
@@ -12,6 +13,12 @@ import BitFoundation
 import UserNotifications
 import WhisperInfra
 
+enum RootTab {
+    case mesh
+    case nova
+    case map
+}
+
 struct SafeGuardianApp: App {
     static let bundleID = Bundle.main.bundleIdentifier ?? "chat.safeguardian"
     static let groupID = "group.\(bundleID)"
@@ -24,12 +31,17 @@ struct SafeGuardianApp: App {
     // Skip the very first .active-triggered Tor restart on cold launch
     @State private var didHandleInitialActive: Bool = false
     @State private var didEnterBackground: Bool = false
+    @State private var showBootSplash: Bool = true
     #elseif os(macOS)
     @NSApplicationDelegateAdaptor(MacAppDelegate.self) var appDelegate
     #endif
     
     private let idBridge = NostrIdentityBridge()
-    
+
+    // First-run model onboarding: offer the on-device AI download once.
+    @AppStorage("nova.modelOnboardingShown") private var modelOnboardingShown = false
+    @State private var showModelOnboarding = false
+
     init() {
         let keychain = KeychainManager()
         let idBridge = self.idBridge
@@ -54,14 +66,53 @@ struct SafeGuardianApp: App {
         #endif
     }
     
+    @ViewBuilder
+    private var rootView: some View {
+        #if os(iOS)
+        TabView(selection: $chatViewModel.selectedTab) {
+            ContentView()
+                .tabItem { Label("Mesh", systemImage: "bubble.left.and.bubble.right") }
+                .tag(RootTab.mesh)
+            NovaConversationView()
+                .tabItem { Label("Nova", systemImage: "sparkles") }
+                .tag(RootTab.nova)
+            MapTabView()
+                .tabItem { Label("Map", systemImage: "map") }
+                .tag(RootTab.map)
+        }
+        .tint(.blue)
+        #else
+        TabView(selection: $chatViewModel.selectedTab) {
+            ContentView()
+                .tabItem { Label("Mesh", systemImage: "bubble.left.and.bubble.right") }
+                .tag(RootTab.mesh)
+            NovaConversationView()
+                .tabItem { Label("Nova", systemImage: "sparkles") }
+                .tag(RootTab.nova)
+            MapTabView()
+                .tabItem { Label("Map", systemImage: "map") }
+                .tag(RootTab.map)
+        }
+        .tint(.blue)
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            rootView
                 .environmentObject(chatViewModel)
+                .sheet(isPresented: $showModelOnboarding, onDismiss: { modelOnboardingShown = true }) {
+                    ModelOnboardingView()
+                }
+                #if os(macOS)
+                .task { maybeShowModelOnboarding() }
+                #endif
                 .onAppear {
                     NotificationDelegate.shared.chatViewModel = chatViewModel
                     // Inject live Noise service into VerificationService to avoid creating new BLE instances
-                    VerificationService.shared.configure(with: chatViewModel.meshService.getNoiseService())
+                    if let noise = (chatViewModel.meshService as? MultiTransportManager)?.noiseTransport {
+                        VerificationService.shared.configure(with: noise.getNoiseService())
+                    }
                     // Prewarm Nostr identity and QR to make first VERIFY sheet fast
                     let nickname = chatViewModel.nickname
                     DispatchQueue.global(qos: .utility).async {
@@ -91,6 +142,8 @@ struct SafeGuardianApp: App {
                         // Always send Tor to dormant on background for a clean restart later.
                         TorManager.shared.setAppForeground(false)
                         TorManager.shared.goDormantOnBackground()
+                        // Unload Whisper model to free RAM
+                        SpeechInferenceCoordinator.shared.unload()
                         // Stop geohash sampling while backgrounded
                         Task { @MainActor in
                             chatViewModel.endGeohashSampling()
@@ -102,6 +155,10 @@ struct SafeGuardianApp: App {
                         // Restart services when becoming active
                         chatViewModel.meshService.startServices()
                         TorManager.shared.setAppForeground(true)
+                        // Reload Whisper model for voice input readiness
+                        Task.detached(priority: .utility) {
+                            try? await SpeechInferenceCoordinator.shared.load()
+                        }
                         // On initial cold launch, Tor was just started in onAppear.
                         // Skip the deterministic restart the first time we become active.
                         if didHandleInitialActive && didEnterBackground {
@@ -139,6 +196,19 @@ struct SafeGuardianApp: App {
                     // App became active
                 }
                 #endif
+                #if os(iOS)
+                .overlay {
+                    if showBootSplash {
+                        BootSplashView {
+                            withAnimation(.easeOut(duration: 0.35)) {
+                                showBootSplash = false
+                            }
+                            maybeShowModelOnboarding()
+                        }
+                        .transition(.opacity)
+                    }
+                }
+                #endif
         }
         #if os(macOS)
         .windowStyle(.hiddenTitleBar)
@@ -146,6 +216,17 @@ struct SafeGuardianApp: App {
         #endif
     }
     
+    /// First launch only: offer the on-device model download. Installs that
+    /// already have the model cached (upgrades) are marked shown without a prompt.
+    private func maybeShowModelOnboarding() {
+        guard !modelOnboardingShown else { return }
+        if MLXInferenceService.shared.isActiveModelCached {
+            modelOnboardingShown = true
+        } else {
+            showModelOnboarding = true
+        }
+    }
+
     private func handleURL(_ url: URL) {
         if url.scheme == "safeguardian" && url.host == "share" {
             // Handle shared content
@@ -237,8 +318,13 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         if identifier.hasPrefix("private-") {
             // Get peer ID from userInfo
             if let peerID = userInfo["peerID"] as? String {
+                let peer = PeerID(str: peerID)
                 DispatchQueue.main.async {
-                    self.chatViewModel?.startPrivateChat(with: PeerID(str: peerID))
+                    if AgentThreadStore.shared.isThreadPeerID(peer) {
+                        self.chatViewModel?.openAgentThread(peer)
+                    } else {
+                        self.chatViewModel?.startPrivateChat(with: peer)
+                    }
                 }
             }
         }

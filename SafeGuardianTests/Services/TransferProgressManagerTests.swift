@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import Testing
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @Suite("TransferProgressManager Tests")
 struct TransferProgressManagerTests {

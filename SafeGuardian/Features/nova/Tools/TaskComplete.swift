@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // TaskComplete.swift
 // SafeGuardian
 //
@@ -7,7 +8,7 @@
 // in AgentToolRegistry.build and carried alongside the registry.
 
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 // MARK: - AgentTaskRecord
 

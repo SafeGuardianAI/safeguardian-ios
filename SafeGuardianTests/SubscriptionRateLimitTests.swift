@@ -9,6 +9,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 /// Tests for BCH-01-004 fix: Rate-limiting subscription-triggered announces
 /// to prevent device enumeration attacks

@@ -1,6 +1,7 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     // Temporarily raises TTL to maximum, broadcasts a life-safety alert to

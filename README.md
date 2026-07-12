@@ -1,117 +1,112 @@
 <img width="256" height="256" alt="icon_128x128@2x" src="https://github.com/user-attachments/assets/90133f83-b4f6-41c6-aab9-25d0859d2a47" />
 
-## SafeGuardian
+## SafeGuardian iOS — Nova
 
-A decentralized peer-to-peer messaging app with dual transport architecture: local Bluetooth mesh networks for offline communication and internet-based Nostr protocol for global reach. No accounts, no phone numbers, no central servers. It's the side-groupchat.
+A decentralized peer-to-peer messaging app with no accounts, no phone numbers, and no central servers, built as a fork of [permissionlesstech/bitchat](https://github.com/permissionlesstech/bitchat), rebranded and extended for the SafeGuardian platform. This app is one possible host for a Nova-tier mesh agent: the civilian-owner-bound, lowest-privilege tier in the SafeGuardian mesh protocol. Nova the tier is not defined by this app, by Swift, or by any specific inference runtime; it is defined by what the agent is bound to (the device owner) and what authority it holds on the mesh (observe and normalize, never issue or receive binding directives). See the monorepo root [CLAUDE.md](../../CLAUDE.md) for the full Nova/Trek/Apex tier ontology.
 
 [safeguardian.ai](https://github.com/SafeGuardianAI)
-
-📲 SafeGuardian iOS build
 
 ## License
 
 This project is released into the public domain. See the [LICENSE](LICENSE) file for details.
 
-## Features
+## Architecture: an agnostic mesh-agent design
 
-- **Dual Transport Architecture**: Bluetooth mesh for offline + Nostr protocol for internet-based messaging
-- **Location-Based Channels**: Geographic chat rooms using geohash coordinates over global Nostr relays
-- **Intelligent Message Routing**: Automatically chooses best transport (Bluetooth → Nostr fallback)
-- **Decentralized Mesh Network**: Automatic peer discovery and multi-hop message relay over Bluetooth LE
-- **Privacy First**: No accounts, no phone numbers, no persistent identifiers
-- **Private Message End-to-End Encryption**: [Noise Protocol](https://noiseprotocol.org) for mesh, NIP-17 for Nostr
-- **IRC-Style Commands**: Familiar `/slap`, `/msg`, `/who` style interface
-- **Universal App**: Native support for iOS and macOS
-- **Emergency Wipe**: Triple-tap to instantly clear all data
-- **Performance Optimizations**: LZ4 message compression, adaptive battery modes, and optimized networking
+Nova's identity cannot be tied to a device or an operating system; it is a cryptographic keypair, because a mesh has no central authority to vouch for who or what a participant is, and because that identity must survive a phone being replaced or a process restarting on an entirely different machine. A message cannot assume a live connection to its recipient; it is a self-contained, addressed, optionally encrypted envelope that can sit in a store on an intermediate node for an arbitrary length of time before being forwarded, because the physical links available in a mesh — Bluetooth LE, LoRa, Wi-Fi Direct, or an ordinary IP hop — are intermittent by nature rather than by failure.
 
-## [Technical Architecture](HIVE_ARCH.md)
+An autonomous agent occupies its own address on the mesh, with its own inbox and its own conversational history, distinct from the address of the human or organization it belongs to, because two agents need to hold a thread with each other independent of whatever their owners' own clients are doing at that moment. That agent address is nonetheless subordinate to an owner identity rather than merely associated with it by convention: the agent's authority to act is delegated, not self-granted, and the delegation has to be provable by anyone who receives a message from it. The owner identity is a root keypair, held by the human. The agent identity is a second, independently generated keypair addressed by its own destination hash, which becomes meaningful to the rest of the mesh only once the owner signs an attestation over it: a small signed statement binding the agent's public key to the owner's public key, together with whatever scope of capability the owner is willing to extend. A peer receiving an envelope from an agent's destination hash verifies this attestation before deciding how much autonomy to extend to that conversation. The owner can re-issue or withdraw an attestation, and by extension retire or rotate an agent's keypair, without touching the owner's own identity, which matters once a device is compromised, wiped, or reprovisioned.
 
-SafeGuardian uses a **hybrid messaging architecture** with two complementary transport layers:
+The component that decides what a received envelope means and what should be sent back sits behind an interface stable enough that the weights, the runtime, and the modality of input can all change without touching anything above that interface, since a capable on-device model takes image, audio, and location alongside text as ordinary input. Concretely in this app, that interface is `AnyLanguageModel` (see `localPackages/AnyLanguageModelKit`), an abstraction over MLX, a remote endpoint, or Apple Intelligence depending on device capability — that runtime choice is a property of the current host app, not of the Nova tier itself. No Core ML is used anywhere in this codebase.
 
-### Bluetooth Mesh Network (Offline)
+One functional role covers proximate, no-infrastructure delivery: local peer discovery and store-and-forward exchange over Bluetooth LE with no server in the loop — this is the bitchat-originated BLE mesh, still the app's core transport. A second role covers addressed, delivery-confirmed messaging across many hops and many transport types, including propagation nodes that hold messages for a destination not currently reachable — this is Reticulum/LXMF, riding on the same BLE radio alongside the native bitchat protocol via `MultiTransportManager` (`shared/SafeGuardianMesh`), which also handles at-most-once delivery when a message arrives redundantly over both. A third role covers addressed, global-reach messaging when no local mesh peer is available — this is the Nostr integration (`ChatViewModel+Nostr.swift`), using geohash-based location channels over public relays as an internet fallback, independent of the BLE/Reticulum local mesh. The transport protocol bridging all physical tiers going forward is Reticulum — no other addressing fabric should be introduced.
 
-- **Local Communication**: Direct peer-to-peer within Bluetooth range
-- **Multi-hop Relay**: Messages route through nearby devices (max 7 hops)
-- **No Internet Required**: Works completely offline in disaster scenarios
-- **Noise Protocol Encryption**: End-to-end encryption with forward secrecy
-- **Binary Protocol**: Compact packet format optimized for Bluetooth LE constraints
-- **Automatic Discovery**: Peer discovery and connection management
-- **Adaptive Power**: Battery-optimized duty cycling
+## Repo structure
 
-### Nostr Protocol (Internet)
+- `SafeGuardian/` — main app target (was `bitchat/` upstream)
+- `SafeGuardianTests/` — test suite
+- `SafeGuardianShareExtension/` — iOS share extension
+- `localPackages/BitFoundation/` — shared protocol types: SafeGuardianMessage, SafeGuardianPacket, and related models
+- `localPackages/BitLogger/` — SecureLogger wrapper around OSLog
+- `localPackages/AnyLanguageModelKit/` — model-runtime abstraction (MLX / remote / Apple Intelligence)
+- `localPackages/Arti/` — Tor integration via Rust/arti (pre-built xcframework)
+- `Configs/` — xcconfig files; copy `Local.xcconfig.example` to `Local.xcconfig` for local builds
+- `relays/` — Nostr relay CSV, updated weekly by CI from upstream
+- `../../shared/SafeGuardianMesh/` — Reticulum/LXMF transport, `MultiTransportManager`, shared with trek-ios
 
-- **Global Reach**: Connect with users worldwide via internet relays
-- **Location Channels**: Geographic chat rooms using geohash coordinates
-- **290+ Relay Network**: Distributed across the globe for reliability
-- **NIP-17 Encryption**: Gift-wrapped private messages for internet privacy
-- **Ephemeral Keys**: Fresh cryptographic identity per geohash area
+## Git remotes
 
-### Channel Types
+- `origin` → `SafeGuardianAI/safeguardian-ios` (our repo)
+- `upstream` → `permissionlesstech/bitchat` (source fork, fetch-only)
 
-#### `mesh #bluetooth`
+To pull upstream changes: `git fetch upstream` then cherry-pick or merge specific commits. Do not push to upstream.
 
-- **Transport**: Bluetooth Low Energy mesh network
-- **Scope**: Local devices within multi-hop range
-- **Internet**: Not required
-- **Use Case**: Offline communication, protests, disasters, remote areas
+## Bundle identity
 
-#### Location Channels (`block #dr5rsj7`, `neighborhood #dr5rs`, `country #dr`)
-
-- **Transport**: Nostr protocol over internet
-- **Scope**: Geographic areas defined by geohash precision
-  - `block` (7 chars): City block level
-  - `neighborhood` (6 chars): District/neighborhood
-  - `city` (5 chars): City level
-  - `province` (4 chars): State/province
-  - `region` (2 chars): Country/large region
-- **Internet**: Required (connects to Nostr relays)
-- **Use Case**: Location-based community chat, local events, regional discussions
-
-### Direct Message Routing
-
-Private messages use **intelligent transport selection**:
-
-1. **Bluetooth First** (preferred when available)
-
-   - Direct connection with established Noise session
-   - Fastest and most private option
-
-2. **Nostr Fallback** (when Bluetooth unavailable)
-
-   - Uses recipient's Nostr public key
-   - NIP-17 gift-wrapping for privacy
-   - Routes through global relay network
-
-3. **Smart Queuing** (when neither available)
-   - Messages queued until transport becomes available
-   - Automatic delivery when connection established
-
-For detailed protocol documentation, see the [Technical Whitepaper](WHITEPAPER.md).
+- Bundle ID: `chat.safeguardian`
+- App Group: `group.chat.safeguardian`
+- URL scheme: `safeguardian` (registered in Info.plist) — `safeguardian://user/` and `safeguardian://geohash/`
+- Xcode team: `V9KH637N7P`
 
 ## Setup
 
 ### Option 1: Using Xcode
 
-   ```bash
-   cd nova-ios
-   open SafeGuardian.xcodeproj
-   ```
+```bash
+cd nova-ios
+open SafeGuardian.xcodeproj
+```
 
-   To run on a device there're a few steps to prepare the code:
-   - Clone the local configs: `cp Configs/Local.xcconfig.example Configs/Local.xcconfig`
-   - Set a unique `PRODUCT_BUNDLE_IDENTIFIER` in the newly created `Configs/Local.xcconfig`
-   - If you enable signing locally, add `DEVELOPMENT_TEAM = <your_team_id>` to `Configs/Local.xcconfig`
-   - Keep `APP_GROUP_ID` aligned with the bundle identifier when enabling the share extension
+To run on a device there are a few steps to prepare the code:
+- Clone the local configs: `cp Configs/Local.xcconfig.example Configs/Local.xcconfig`
+- Set a unique `PRODUCT_BUNDLE_IDENTIFIER` in the newly created `Configs/Local.xcconfig`
+- If you enable signing locally, add `DEVELOPMENT_TEAM = V9KH637N7P` to `Configs/Local.xcconfig`
+- Keep `APP_GROUP_ID` aligned with the bundle identifier when enabling the share extension
+
+Or directly:
+
+```bash
+xcodebuild \
+  -project SafeGuardian.xcodeproj \
+  -scheme SafeGuardian_iOS \
+  -destination "generic/platform=iOS" \
+  -configuration Debug \
+  CODE_SIGN_STYLE=Automatic \
+  DEVELOPMENT_TEAM=V9KH637N7P \
+  -allowProvisioningUpdates \
+  build
+```
+
+For device deployment, Developer Mode must be enabled on the target iPhone (Settings → Privacy & Security → Developer Mode).
 
 ### Option 2: Using `just`
 
-   ```bash
-   brew install just
-   ```
+```bash
+brew install just
+```
 
-Want to try this on macos: `just run` will set it up and run from source.
-Run `just clean` afterwards to restore things to original state for mobile app building and development.
+Want to try this on macOS: `just run` will set it up and run from source. Run `just clean` afterwards to restore things to original state for mobile app building and development. macOS builds require `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES` because the Tor xcframework (`libarti_bitchat.a`) ships arm64 only — the Justfile `build` and `dev-run` recipes already include these flags.
+
+## Intentionally preserved upstream strings
+
+The following strings are from the wire protocol and must not be renamed, or interoperability with other bitchat mesh nodes breaks:
+
+- `bitchat1:` — prefix for Nostr-embedded mesh packets
+- `bitchat.nickname`, `bitchat.noiseIdentityKey`, `bitchat.messageRetentionKey` — UserDefaults keys persisted on device
+
+The KeychainManager migration arrays listing `"chat.bitchat.*"` service names are also intentional — they enumerate legacy keychain namespaces to delete during an account reset.
+
+## Type naming
+
+All Bitchat-prefixed types have been renamed to SafeGuardian-prefixed equivalents:
+
+| Old | New |
+|-----|-----|
+| BitchatApp | SafeGuardianApp |
+| BitchatMessage | SafeGuardianMessage |
+| BitchatPeer | SafeGuardianPeer |
+| BitchatPacket | SafeGuardianPacket |
+| BitchatFilePacket | SafeGuardianFilePacket |
+| BitchatDelegate | SafeGuardianDelegate |
 
 ## Localization
 
@@ -119,3 +114,7 @@ Run `just clean` afterwards to restore things to original state for mobile app b
 - Share extension strings are separate in `SafeGuardianShareExtension/Localization/Base.lproj/Localizable.strings`.
 - Prefer keys that describe intent (`app_info.features.offline.title`) and reuse existing ones where possible.
 - Run `xcodebuild -project SafeGuardian.xcodeproj -scheme "SafeGuardian (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO build` to compile-check any localization updates.
+
+## Diagnostics note
+
+SourceKit frequently emits "Internal SourceKit error: Loading the standard library failed" on files after edits in this project due to the xcframework and local package setup. These are spurious IDE diagnostics. The only reliable build signal is `xcodebuild ... build 2>&1 | grep "error:"`. Always verify with an actual build before concluding code is broken.

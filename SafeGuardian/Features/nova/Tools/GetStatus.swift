@@ -1,5 +1,6 @@
+import SafeGuardianMesh
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     /// Composite: device state + peer list. Saves a round-trip vs calling each separately.

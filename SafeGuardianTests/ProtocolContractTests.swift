@@ -4,6 +4,7 @@ import Combine
 import CoreBluetooth
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 private final class DefaultDelegateProbe: SafeGuardianDelegate {
     func didReceiveMessage(_ message: SafeGuardianMessage) {}
@@ -13,7 +14,7 @@ private final class DefaultDelegateProbe: SafeGuardianDelegate {
     func didUpdateBluetoothState(_ state: CBManagerState) {}
 }
 
-private final class DefaultTransportProbe: Transport {
+private final class DefaultTransportProbe: NoiseTransport {
     weak var delegate: SafeGuardianDelegate?
     weak var peerEventsDelegate: TransportPeerEventsDelegate?
 

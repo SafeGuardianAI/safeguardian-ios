@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentStuckGuard.swift
 // SafeGuardian
 //

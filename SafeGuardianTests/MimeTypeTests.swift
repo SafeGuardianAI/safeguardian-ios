@@ -9,6 +9,7 @@
 import Testing
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // MARK: - MimeType Mapping and Signature Tests
 

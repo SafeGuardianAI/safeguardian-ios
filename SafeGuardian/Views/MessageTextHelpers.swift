@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // MessageTextHelpers.swift
 // Shared text parsing helpers for message rendering.

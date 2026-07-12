@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import AgentInfra
 import CoreLocation
 import Foundation
@@ -16,6 +17,19 @@ final class NovaBroadcaster: ObservableObject {
 
     @Published private(set) var latestTick: AgentStateTick?
     var onTickEmit: ((AgentStateTick) -> Void)?
+
+    /// The owner's current condition as normalized by the agent from their own
+    /// reports. Feeds the emitted tick, the delta-emission threshold, and the
+    /// mesh priority of every state tick. Setting it triggers an immediate
+    /// delta emission so peers learn of a condition change without waiting
+    /// for the heartbeat.
+    var medicalStatus: AgentStateTick.MedicalStatus = .unknown {
+        didSet {
+            guard oldValue != medicalStatus else { return }
+            broadcaster.triggerIfChanged()
+        }
+    }
+    private var lastEmittedMedicalStatus: AgentStateTick.MedicalStatus = .unknown
 
     // Exposed so Nova tools can read/adjust broadcast parameters.
     let broadcaster: AgentBroadcaster
@@ -41,6 +55,7 @@ final class NovaBroadcaster: ObservableObject {
                                             sequence: ctx.sequence) else { return false }
             self.latestTick = tick
             self.lastEmittedCoordinate = (tick.lat, tick.lon)
+            self.lastEmittedMedicalStatus = tick.medicalStatus
             self.onTickEmit?(tick)
             return true
         }
@@ -57,8 +72,10 @@ final class NovaBroadcaster: ObservableObject {
                 guard let self else { return }
                 self.locationFixDate = location.timestamp
                 broadcaster.significantChange = { [weak self] in
-                    guard let self,
-                          let last = self.lastEmittedCoordinate else { return true }
+                    guard let self else { return true }
+                    // A condition change is significant regardless of displacement.
+                    if self.medicalStatus != self.lastEmittedMedicalStatus { return true }
+                    guard let last = self.lastEmittedCoordinate else { return true }
                     let dlat = location.coordinate.latitude  - last.lat
                     let dlon = location.coordinate.longitude - last.lon
                     let movedMeters = sqrt(dlat*dlat + dlon*dlon) * 111_320
@@ -89,7 +106,7 @@ final class NovaBroadcaster: ObservableObject {
     /// Battery conservation: low battery doubles the threshold; critically low battery
     /// quintuples it. A nearly dead node should not flood the mesh with position refinements.
     private func deltaThreshold(fix: CLLocation) -> Double? {
-        let medical = latestTick?.medicalStatus ?? .unknown
+        let medical = medicalStatus
 
         // Critical state: emit on every location event regardless of displacement.
         // minDeltaInterval in AgentBroadcaster (10s for Nova) is still the rate gate.
@@ -129,7 +146,7 @@ final class NovaBroadcaster: ObservableObject {
             lon: lon,
             locationConfidence: confidence,
             locationSource: source,
-            medicalStatus: .unknown,
+            medicalStatus: medicalStatus,
             structuralObservations: [],
             batteryPct: batteryPct,
             transportTier: .ble_coded,

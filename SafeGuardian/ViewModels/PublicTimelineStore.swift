@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // PublicTimelineStore.swift
 // SafeGuardian

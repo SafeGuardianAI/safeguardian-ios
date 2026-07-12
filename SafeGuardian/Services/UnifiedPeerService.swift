@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 //  UnifiedPeerService.swift
 //  bitchat
@@ -200,6 +201,8 @@ final class UnifiedPeerService: ObservableObject, TransportPeerEventsDelegate {
         )
         
         peer.agentIDs = peerInfo.agentIDs
+        peer.linkType = peerInfo.linkType
+        peer.appTag = peerInfo.appTag
 
         // Check for favorite status
         if let noiseKey = peerInfo.noisePublicKey,

@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import AgentInfra
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 // MARK: - AgentMeshRouting
 

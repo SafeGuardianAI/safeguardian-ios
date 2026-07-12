@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // TextMessageView.swift
 // SafeGuardian
@@ -58,6 +59,16 @@ struct TextMessageView: View {
                     }
                     .padding(.top, 6)
                     .padding(.leading, 2)
+                }
+                if !isSelf, let linkType = message.linkType {
+                    Text(linkType == .reticulum ? "reticulum" : "bluetooth mesh")
+                        .font(.safeguardianSystem(size: 9, design: .monospaced))
+                        .foregroundColor(
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.3)
+                                : Color.black.opacity(0.3)
+                        )
+                        .padding(.top, 2)
                 }
             }
             if !isSelf { Spacer(minLength: 0) }

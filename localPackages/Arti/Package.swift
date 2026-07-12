@@ -14,7 +14,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../BitLogger"),
+        .package(path: "../../../../shared/BitLogger"),
     ],
     targets: [
         // Main Swift target

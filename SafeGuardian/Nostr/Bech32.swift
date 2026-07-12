@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 /// Bech32 encoding for Nostr (minimal implementation)

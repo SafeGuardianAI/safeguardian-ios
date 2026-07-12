@@ -1,6 +1,7 @@
+import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import MLXLMCommon
+import AgentInfra
 
 extension AgentToolEntry {
     /// Closes a peer session and notifies the remote side.

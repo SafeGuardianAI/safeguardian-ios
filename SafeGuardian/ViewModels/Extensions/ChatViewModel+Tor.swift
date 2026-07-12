@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // ChatViewModel+Tor.swift
 // SafeGuardian

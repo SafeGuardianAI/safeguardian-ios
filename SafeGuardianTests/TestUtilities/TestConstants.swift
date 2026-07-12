@@ -8,6 +8,7 @@
 
 import Foundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct TestConstants {
     static let defaultTimeout: TimeInterval = 5.0

@@ -1,6 +1,7 @@
 import XCTest
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class NoiseRateLimiterTests: XCTestCase {
     func test_allowHandshake_blocksAfterPerPeerLimit() {

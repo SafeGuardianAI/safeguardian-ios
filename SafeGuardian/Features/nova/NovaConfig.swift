@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import AgentInfra
 import Foundation
 
@@ -54,6 +55,11 @@ enum NovaConfig {
     static let temperature: Float = 0.7
     static let generationTimeoutSeconds: UInt64 = 300
     static let historyWindowSize = 10
+    /// Estimated-token threshold at which conversation history gets compacted,
+    /// both for the initial seed AgentConversationEngine builds and for a
+    /// persistent-session provider's own live transcript (see ModelBackend/
+    /// MLXInferenceService.sessionFor and FoundationModelProvider.sessionFor).
+    static let contextCompactionThreshold = 2_000
     /// Maximum number of tool dispatch calls per generation session.
     /// When reached the dispatch returns a terminal error so the model stops looping.
     static let maxToolIterations = 8

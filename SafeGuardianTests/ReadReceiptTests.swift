@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 @Suite("ReadReceipt Tests")
 struct ReadReceiptTests {

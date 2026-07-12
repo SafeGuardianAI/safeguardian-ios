@@ -100,14 +100,19 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     typealias GeoOutgoingContext = (channel: GeohashChannel, event: NostrEvent, identity: NostrIdentity, teleported: Bool)
 
-    var isInAgentDM: Bool {
-        guard let peer = selectedPrivateChatPeer else { return false }
-        return AgentThreadStore.shared.isThreadPeerID(peer)
-    }
+    @Published var selectedTab: RootTab = .mesh
 
-    #if os(iOS)
-    @Published var pendingAgentImage: UIImage? = nil
-    #endif
+    /// Single entry point for opening a conversation with an agent: activates the
+    /// thread and switches to the Nova tab, rather than routing through the
+    /// generic peer-to-peer private chat view.
+    @MainActor
+    func openAgentThread(_ threadPeerID: PeerID) {
+        if let agentID = AgentThreadStore.shared.agentID(for: threadPeerID),
+           let thread = AgentThreadStore.shared.thread(for: threadPeerID) {
+            AgentThreadStore.shared.switchToThread(thread.id, agentID: agentID)
+        }
+        selectedTab = .nova
+    }
 
     @MainActor
     var canSendMediaInCurrentContext: Bool {
@@ -258,7 +263,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         if let mapped = shortIDToNoiseKey[shortPeerID] { return mapped }
         // Fallback: derive from active Noise session if available
         if shortPeerID.id.count == 16,
-           let key = meshService.getNoiseService().getPeerPublicKeyData(shortPeerID) {
+           let key = noiseMesh!.getNoiseService().getPeerPublicKeyData(shortPeerID) {
             let stable = PeerID(hexData: key)
             shortIDToNoiseKey[shortPeerID] = stable
             return stable
@@ -294,7 +299,17 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     
     // MARK: - Services and Storage
     
-    let meshService: Transport
+    let meshService: any SGTransport
+
+    // Direct reference to the Noise-capable transport for session management and
+    // fingerprint operations; nil only when injected with a non-Noise mock in tests.
+    var noiseMesh: (any NoiseTransport)? {
+        (meshService as? MultiTransportManager)?.noiseTransport ?? (meshService as? any NoiseTransport)
+    }
+
+    func setReticulumNodeEnabled(_ on: Bool) {
+        (meshService as? MultiTransportManager)?.setReticulumEnabled(on)
+    }
     let sgClient: SGClient?
     let idBridge: NostrIdentityBridge
     let identityManager: SecureIdentityStateManagerProtocol
@@ -318,6 +333,11 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     // Ensure we set up DM subscription only once per app session
     var nostrHandlersSetup: Bool = false
     var geoChannelCoordinator: GeoChannelCoordinator?
+#if os(iOS)
+    // Scene-phase bookkeeping; see ChatViewModel+Lifecycle.swift.
+    var didHandleInitialActive: Bool = false
+    var didEnterBackground: Bool = false
+#endif
     
     // MARK: - Caches
     
@@ -440,7 +460,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             keychain: keychain,
             idBridge: idBridge,
             identityManager: identityManager,
-            transport: MultiTransportManager(transports: [bleService, reticulumTransport])
+            transport: MultiTransportManager(transports: [bleService, reticulumTransport], noiseTransport: bleService)
         )
     }
 
@@ -451,7 +471,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         keychain: KeychainManagerProtocol,
         idBridge: NostrIdentityBridge,
         identityManager: SecureIdentityStateManagerProtocol,
-        transport: Transport
+        transport: any SGTransport
     ) {
         self.keychain = keychain
         self.idBridge = idBridge
@@ -459,7 +479,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         self.meshService = transport
         if let multiTransport = transport as? MultiTransportManager {
             let sgClient = SGClient(transport: multiTransport, triageProfile: TriageProfile.fromUserDefaults())
-            multiTransport.sgEnvelopeHandler = sgClient.envelopeHandler
+            multiTransport.onEnvelopeReceived = { [handler = sgClient.envelopeHandler] env, peerID in
+                handler.handle(env, from: peerID)
+            }
             self.sgClient = sgClient
         } else {
             self.sgClient = nil
@@ -1038,13 +1060,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     ///         Routes to private chat if one is selected, otherwise broadcasts
     @MainActor
     func sendMessage(_ content: String) {
-        // Allow image-only sends when a pending agent image is attached in an agent DM.
-        #if os(iOS)
-        let hasImageForAgent = pendingAgentImage != nil && isInAgentDM
-        guard let trimmed = content.trimmedOrNilIfEmpty ?? (hasImageForAgent ? "" : nil) else { return }
-        #else
         guard let trimmed = content.trimmedOrNilIfEmpty else { return }
-        #endif
 
         // Resolve pending inline confirmations before normal routing
         if pendingGPSShareConfirmation {
@@ -1058,37 +1074,20 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         }
             
         // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh.
-        // Also intercept plain messages sent while already inside an agent DM so follow-up turns
-        // don't fall through to BLE routing against a synthetic peer that doesn't exist.
+        // Follow-up turns without the prefix are handled by NovaConversationView.sendToNova
+        // in the Nova tab, not here — this composer only ever sees explicit mentions.
         let lower = trimmed.lowercased()
         let threadStore = AgentThreadStore.shared
         for agent in agents {
-            let triggeredByPrefix = agent.shouldHandle(lower)
-            let inAgentDM = selectedPrivateChatPeer.map {
-                threadStore.agentID(for: $0) == agent.agentID
-            } ?? false
-            guard triggeredByPrefix || inAgentDM else { continue }
+            guard agent.shouldHandle(lower) else { continue }
 
-            let stripped: String
-            if triggeredByPrefix {
-                let prefix = agent.triggerPrefix
-                stripped = lower == prefix ? "" : String(trimmed.dropFirst(prefix.count + 1)).trimmingCharacters(in: .whitespaces)
-            } else {
-                stripped = trimmed
-            }
+            let prefix = agent.triggerPrefix
+            let stripped = lower == prefix ? "" : String(trimmed.dropFirst(prefix.count + 1)).trimmingCharacters(in: .whitespaces)
 
-            #if os(iOS)
-            let capturedImage = pendingAgentImage
-            pendingAgentImage = nil
-            let imageData = capturedImage?.jpegData(compressionQuality: 0.8)
-            #else
-            let imageData: Data? = nil
-            #endif
-
-            if stripped.isEmpty && imageData == nil {
+            if stripped.isEmpty {
                 addLocalMessage("usage: \(agent.triggerPrefix) <message>")
             } else {
-                let displayContent = stripped.isEmpty ? "[image]" : stripped
+                let displayContent = stripped
                 let threadPeerID = threadStore.activePeerID(for: agent.agentID)
                 let userTurn = SafeGuardianMessage(sender: nickname, content: displayContent, timestamp: Date(), isRelay: false)
                 if privateChats[threadPeerID] == nil { privateChats[threadPeerID] = [] }
@@ -1097,8 +1096,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 if let t = threadStore.activeThread(for: agent.agentID), t.title == "New conversation" {
                     threadStore.updateTitle(displayContent, threadID: t.id, agentID: agent.agentID)
                 }
-                startPrivateChat(with: threadPeerID)
-                agent.handle(prompt: stripped, image: imageData, context: self, threadPeerID: threadPeerID, replyTo: nil)
+                openAgentThread(threadPeerID)
+                agent.handle(prompt: stripped, context: self, threadPeerID: threadPeerID, replyTo: nil)
             }
             return
         }
@@ -1599,11 +1598,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
         // Trigger handshake if needed (mesh peers only). Skip for Nostr geohash conv keys.
         if !peerID.isGeoDM && !peerID.isGeoChat {
-            let sessionState = meshService.getNoiseSessionState(for: peerID)
-            switch sessionState {
-            case .none, .failed:
-                meshService.triggerHandshake(with: peerID)
-            case .handshakeQueued, .handshaking, .established:
+            switch noiseMesh?.getNoiseSessionState(for: peerID) {
+            case nil, .some(.none), .some(.failed):
+                noiseMesh?.triggerHandshake(with: peerID)
+            case .some(.handshakeQueued), .some(.handshaking), .some(.established):
                 break
             }
         } else {
@@ -1777,13 +1775,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             if let peerNickname = meshService.peerNickname(peerID: peerID) {
                 // Only send screenshot notification if we have an established session
                 // This prevents triggering handshake requests for screenshot notifications
-                let sessionState = meshService.getNoiseSessionState(for: peerID)
-                switch sessionState {
-                case .established:
-                    // Send the message directly without going through sendPrivateMessage to avoid local echo
+                switch noiseMesh?.getNoiseSessionState(for: peerID) {
+                case .some(.established):
                     messageRouter.sendPrivate(screenshotMessage, to: peerID, recipientNickname: peerNickname, messageID: UUID().uuidString)
-                case  .none, .failed, .handshakeQueued, .handshaking:
-                    // Don't send screenshot notification if no session exists
+                default:
                     SecureLogger.debug("Skipping screenshot notification to \(peerID) - no established session", category: .security)
                 }
             }
@@ -2126,7 +2121,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Disconnect from all peers and clear persistent identity
         // This will force creation of a new identity (new fingerprint) on next launch
         meshService.emergencyDisconnectAll()
-        if let bleService = meshService as? BLEService {
+        if let bleService = noiseMesh as? BLEService {
             bleService.resetIdentityForPanic(currentNickname: nickname)
         }
         
@@ -2706,7 +2701,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     
     @MainActor
     private func updateEncryptionStatusForPeer(_ peerID: PeerID) {
-        let noiseService = meshService.getNoiseService()
+        let noiseService = noiseMesh!.getNoiseService()
         
         if noiseService.hasEstablishedSession(with: peerID) {
             peerEncryptionStatus[peerID] = encryptionStatus(for: peerID)
@@ -2737,41 +2732,17 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // Check if we've ever established a session by looking for a fingerprint
         let hasEverEstablishedSession = getFingerprint(for: peerID) != nil
         
-        let sessionState = meshService.getNoiseSessionState(for: peerID)
+        let sessionState = noiseMesh?.getNoiseSessionState(for: peerID)
         
         let status: EncryptionStatus
         
-        // Determine status based on session state
         switch sessionState {
-        case .established:
+        case .some(.established):
             status = encryptionStatus(for: peerID)
-        case .handshaking, .handshakeQueued:
-            // If we've ever established a session, show secured instead of handshaking
-            if hasEverEstablishedSession {
-                // Check if it was verified before
-                status = encryptionStatus(for: peerID)
-            } else {
-                // First time establishing - show handshaking
-                status = .noiseHandshaking
-            }
-        case .none:
-            // If we've ever established a session, show secured instead of no handshake
-            if hasEverEstablishedSession {
-                // Check if it was verified before
-                status = encryptionStatus(for: peerID)
-            } else {
-                // Never established - show no handshake
-                status = .noHandshake
-            }
-        case .failed:
-            // If we've ever established a session, show secured instead of failed
-            if hasEverEstablishedSession {
-                // Check if it was verified before
-                status = encryptionStatus(for: peerID)
-            } else {
-                // Never established - show failed
-                status = .none
-            }
+        case .some(.handshaking), .some(.handshakeQueued):
+            status = hasEverEstablishedSession ? encryptionStatus(for: peerID) : .noiseHandshaking
+        case .some(.none), .some(.failed), nil:
+            status = hasEverEstablishedSession ? encryptionStatus(for: peerID) : .noHandshake
         }
         
         // Cache the result
@@ -2988,7 +2959,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     // Update encryption status in appropriate places, not during view updates
     @MainActor
     private func updateEncryptionStatus(for peerID: PeerID) {
-        let noiseService = meshService.getNoiseService()
+        let noiseService = noiseMesh!.getNoiseService()
         
         if noiseService.hasEstablishedSession(with: peerID) {
             peerEncryptionStatus[peerID] = encryptionStatus(for: peerID)
@@ -3077,7 +3048,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     }
     
     func getMyFingerprint() -> String {
-        let fingerprint = meshService.getNoiseService().getIdentityFingerprint()
+        let fingerprint = noiseMesh!.getNoiseService().getIdentityFingerprint()
         return fingerprint
     }
     
@@ -3127,7 +3098,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     }
     
     private func setupNoiseCallbacks() {
-        let noiseService = meshService.getNoiseService()
+        guard let noiseMesh else { return }
+        let noiseService = noiseMesh.getNoiseService()
         
         // Set up authentication callback
         noiseService.onPeerAuthenticated = { [weak self] peerID, fingerprint in
@@ -3150,7 +3122,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
                 // Cache shortID -> full Noise key mapping as soon as session authenticates
                 if self.shortIDToNoiseKey[peerID] == nil,
-                   let keyData = self.meshService.getNoiseService().getPeerPublicKeyData(peerID) {
+                   let keyData = self.noiseMesh?.getNoiseService().getPeerPublicKeyData(peerID) {
                     let stable = PeerID(hexData: keyData)
                     self.shortIDToNoiseKey[peerID] = stable
  SecureLogger.debug(" Mapped short peerID to Noise key for header continuity: \(peerID) -> \(stable.id.prefix(8))…", category: .session)
@@ -3158,7 +3130,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
                 // If a QR verification is pending but not sent yet, send it now that session is authenticated
                 if var pending = self.pendingQRVerifications[peerID], pending.sent == false {
-                    self.meshService.sendVerifyChallenge(to: peerID, noiseKeyHex: pending.noiseKeyHex, nonceA: pending.nonceA)
+                    self.noiseMesh?.sendVerifyChallenge(to: peerID, noiseKeyHex: pending.noiseKeyHex, nonceA: pending.nonceA)
                     pending.sent = true
                     self.pendingQRVerifications[peerID] = pending
  SecureLogger.debug(" Sent deferred verify challenge to \(peerID) after handshake", category: .security)
@@ -3324,7 +3296,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 // Parse and respond
                 guard let tlv = VerificationService.shared.parseVerifyChallenge(payload) else { return }
                 // Ensure intended for our noise key
-                let myNoiseHex = meshService.getNoiseService().getStaticPublicKeyData().hexEncodedString().lowercased()
+                let myNoiseHex = noiseMesh!.getNoiseService().getStaticPublicKeyData().hexEncodedString().lowercased()
                 guard tlv.noiseKeyHex.lowercased() == myNoiseHex else { return }
                 // Deduplicate: ignore if we've already responded to this nonce for this peer
                 if let last = lastVerifyNonceByPeer[peerID], last == tlv.nonceA { return }
@@ -3347,7 +3319,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                         }
                     }
                 }
-                meshService.sendVerifyResponse(to: peerID, noiseKeyHex: tlv.noiseKeyHex, nonceA: tlv.nonceA)
+                noiseMesh?.sendVerifyResponse(to: peerID, noiseKeyHex: tlv.noiseKeyHex, nonceA: tlv.nonceA)
                 // Silent response: no toast needed on responder
             case .verifyResponse:
                 guard let resp = VerificationService.shared.parseVerifyResponse(payload) else { return }
@@ -3394,6 +3366,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         Task { @MainActor in
             let normalized = content.trimmed
             let publicMentions = parseMentions(from: normalized)
+            let peerLinkType = meshService.currentPeerSnapshots()
+                .first(where: { $0.peerID == peerID })
+                .map { snap -> MessageLinkType in snap.linkType == .reticulum ? .reticulum : .ble }
             let msg = SafeGuardianMessage(
                 id: messageID,
                 sender: nickname,
@@ -3404,7 +3379,8 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
                 isPrivate: false,
                 recipientNickname: nil,
                 senderPeerID: peerID,
-                mentions: publicMentions.isEmpty ? nil : publicMentions
+                mentions: publicMentions.isEmpty ? nil : publicMentions,
+                linkType: peerLinkType
             )
             handlePublicMessage(msg)
             checkForMentions(msg)
@@ -3435,13 +3411,13 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         var pending = PendingVerification(noiseKeyHex: qr.noiseKeyHex, signKeyHex: qr.signKeyHex, nonceA: nonce, startedAt: Date(), sent: false)
         pendingQRVerifications[peerID] = pending
         // If Noise session is established, send immediately; otherwise trigger handshake and send on auth
-        let noise = meshService.getNoiseService()
+        let noise = noiseMesh!.getNoiseService()
         if noise.hasEstablishedSession(with: peerID) {
-            meshService.sendVerifyChallenge(to: peerID, noiseKeyHex: qr.noiseKeyHex, nonceA: nonce)
+            noiseMesh?.sendVerifyChallenge(to: peerID, noiseKeyHex: qr.noiseKeyHex, nonceA: nonce)
             pending.sent = true
             pendingQRVerifications[peerID] = pending
         } else {
-            meshService.triggerHandshake(with: peerID)
+            noiseMesh?.triggerHandshake(with: peerID)
         }
         return true
     }
@@ -3493,7 +3469,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         // If the open PM is tied to this short peer ID, switch UI context to the full Noise key (offline favorite)
         var derivedStableKeyHex = shortIDToNoiseKey[peerID]
         if derivedStableKeyHex == nil,
-           let key = meshService.getNoiseService().getPeerPublicKeyData(peerID) {
+           let key = noiseMesh!.getNoiseService().getPeerPublicKeyData(peerID) {
             derivedStableKeyHex = PeerID(hexData: key)
             shortIDToNoiseKey[peerID] = derivedStableKeyHex
         }

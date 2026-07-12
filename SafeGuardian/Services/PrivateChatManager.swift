@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // PrivateChatManager.swift
 // SafeGuardian
@@ -228,6 +229,10 @@ final class PrivateChatManager: ObservableObject {
                 indexByID[msg.id] = deduped.count
                 deduped.append(msg)
             }
+        }
+
+        if deduped.count > privateChatCap {
+            deduped = Array(deduped.suffix(privateChatCap))
         }
 
         privateChats[peerID] = deduped

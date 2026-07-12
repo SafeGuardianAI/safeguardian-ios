@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 //  MessageRowView.swift
 //  SafeGuardian

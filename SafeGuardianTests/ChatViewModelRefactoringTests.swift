@@ -10,6 +10,7 @@ import Testing
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct ChatViewModelRefactoringTests {
 

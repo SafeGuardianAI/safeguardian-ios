@@ -10,6 +10,7 @@ import CryptoKit
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct NostrProtocolTests {
     

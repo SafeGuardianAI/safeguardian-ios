@@ -8,6 +8,7 @@
 
 import Testing
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 struct NoiseEncryptionTests {
     @Test func generatesNewIdentityWhenMissing() throws {

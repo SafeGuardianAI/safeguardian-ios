@@ -1,6 +1,7 @@
 import SwiftUI
 import XCTest
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class FontBitchatTests: XCTestCase {
 //    func testMonospacedMapping() {

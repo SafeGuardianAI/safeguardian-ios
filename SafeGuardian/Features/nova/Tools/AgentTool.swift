@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 // AgentTool.swift
 // SafeGuardian
 //
@@ -6,14 +7,13 @@
 import AgentInfra
 import BitFoundation
 import Foundation
-import MLXLMCommon
 
 // MARK: - DispatchGuard
 
 /// Counts tool dispatches within one generation session and signals when the
-/// iteration cap is reached. MLXLMCommon dispatches tool calls sequentially
-/// (each await completes before the next starts), so the counter increment is
-/// safe without a lock despite the @unchecked Sendable marker.
+/// iteration cap is reached. Tool calls dispatch sequentially (each await
+/// completes before the next starts), so the counter increment is safe
+/// without a lock despite the @unchecked Sendable marker.
 final class DispatchGuard: @unchecked Sendable {
     nonisolated(unsafe) private var count = 0
     let max: Int
@@ -61,6 +61,7 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _broadcastTTL: @MainActor () -> UInt8
     private let _setTickInterval: @MainActor (TimeInterval) -> Void
     private let _setMessageTTL: @MainActor (UInt8) -> Void
+    private let _setMedicalStatus: @MainActor (AgentStateTick.MedicalStatus) -> Void
     private let _publishCurrentStateTick: @MainActor () -> Bool
     private let _sendMesh: @MainActor (String, String, PeerID, String?) -> Void
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
@@ -80,6 +81,7 @@ final class AgentContextProxy: @unchecked Sendable {
         _broadcastTTL      = { context.broadcastTTL }
         _setTickInterval   = { context.setTickInterval($0) }
         _setMessageTTL     = { context.setMessageTTL($0) }
+        _setMedicalStatus  = { context.setMedicalStatus($0) }
         _publishCurrentStateTick = { context.publishCurrentStateTick() }
         _sendMesh = { toAgentID, content, peerID, requestID in
             context.sendMeshMessage(agentID: senderAgentID, content: content, to: peerID, requestID: requestID)
@@ -114,6 +116,7 @@ final class AgentContextProxy: @unchecked Sendable {
     func broadcastTTL() async -> UInt8 { await MainActor.run { _broadcastTTL() } }
     func setTickInterval(_ s: TimeInterval) async { await MainActor.run { _setTickInterval(s) } }
     func setMessageTTL(_ ttl: UInt8) async { await MainActor.run { _setMessageTTL(ttl) } }
+    func setMedicalStatus(_ s: AgentStateTick.MedicalStatus) async { await MainActor.run { _setMedicalStatus(s) } }
     func publishCurrentStateTick() async -> Bool { await MainActor.run { _publishCurrentStateTick() } }
 
     func sendMesh(toAgentID: String, content: String, peerID: PeerID) async {
@@ -271,9 +274,7 @@ struct AgentToolEntry: Sendable {
         parameters: [ToolParameter],
         handler: @escaping @Sendable ([String: JSONValue], AgentContextProxy) async throws -> String
     ) -> AgentToolEntry {
-        let tool = Tool<[String: String], String>(
-            name: name, description: description, parameters: parameters
-        ) { _ in "" }
-        return AgentToolEntry(name: name, spec: tool.schema, handler: handler)
+        let spec = makeToolSpec(name: name, description: description, parameters: parameters)
+        return AgentToolEntry(name: name, spec: spec, handler: handler)
     }
 }

@@ -9,6 +9,7 @@
 import Foundation
 import BitFoundation
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class MockKeychain: KeychainManagerProtocol {
     private var storage: [String: Data] = [:]

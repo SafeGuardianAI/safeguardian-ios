@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 #if os(macOS)
 import AppKit
 import BitFoundation
@@ -23,7 +24,9 @@ final class SafeGuardianDaemonDelegate: NSObject, NSApplicationDelegate {
         NotificationDelegate.shared.chatViewModel = cvm
         GeoRelayDirectory.shared.prefetchIfNeeded()
 
-        VerificationService.shared.configure(with: cvm.meshService.getNoiseService())
+        if let noise = (cvm.meshService as? MultiTransportManager)?.noiseTransport {
+            VerificationService.shared.configure(with: noise.getNoiseService())
+        }
 
         NetworkActivationService.shared.start()
         GeohashPresenceService.shared.start()

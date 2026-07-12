@@ -1,5 +1,6 @@
 import XCTest
 @testable import SafeGuardian
+@testable import SafeGuardianMesh
 
 final class VerificationServiceTests: XCTestCase {
     func test_buildMyQRString_roundTripsSuccessfully() throws {

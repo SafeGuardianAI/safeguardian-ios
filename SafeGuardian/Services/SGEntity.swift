@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 import Foundation
 
 // SGEntity is the canonical runtime representation of a FIM entity received

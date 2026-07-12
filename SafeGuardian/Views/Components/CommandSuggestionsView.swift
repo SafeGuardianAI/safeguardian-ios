@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 //  CommandSuggestionsView.swift
 //  bitchat

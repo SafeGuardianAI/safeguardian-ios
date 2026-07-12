@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // MessageFormattingEngine.swift
 // SafeGuardian

@@ -1,3 +1,4 @@
+import SafeGuardianMesh
 //
 // ChatViewModel+PrivateChat.swift
 // SafeGuardian
@@ -352,9 +353,9 @@ extension ChatViewModel {
                 await MainActor.run {
                     self.registerTransfer(transferId: transferId, messageID: messageID)
                     if let peerID = targetPeer {
-                        self.meshService.sendFilePrivate(packet, to: peerID, transferId: transferId)
+                        self.noiseMesh?.sendFilePrivate(packet, to: peerID, transferId: transferId)
                     } else {
-                        self.meshService.sendFileBroadcast(packet, transferId: transferId)
+                        self.noiseMesh?.sendFileBroadcast(packet, transferId: transferId)
                     }
                 }
             } catch {
@@ -435,9 +436,9 @@ extension ChatViewModel {
                     let transferId = self.makeTransferID(messageID: messageID)
                     self.registerTransfer(transferId: transferId, messageID: messageID)
                     if let peerID = targetPeer {
-                        self.meshService.sendFilePrivate(packet, to: peerID, transferId: transferId)
+                        self.noiseMesh?.sendFilePrivate(packet, to: peerID, transferId: transferId)
                     } else {
-                        self.meshService.sendFileBroadcast(packet, transferId: transferId)
+                        self.noiseMesh?.sendFileBroadcast(packet, transferId: transferId)
                     }
                 }
             } catch {
@@ -590,7 +591,7 @@ extension ChatViewModel {
         if let transferId = messageIDToTransferId[messageID],
            let active = transferIdToMessageIDs[transferId]?.first,
            active == messageID {
-            meshService.cancelTransfer(transferId)
+            noiseMesh?.cancelTransfer(transferId)
         }
         clearTransferMapping(for: messageID)
         removeMessage(withID: messageID, cleanupFile: true)

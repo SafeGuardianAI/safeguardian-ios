@@ -68,6 +68,9 @@ final class CommandProcessor {
         UnblockCommand(),
         FavCommand(add: true),
         FavCommand(add: false),
+        LocationShareCommand(mode: .request),
+        LocationShareCommand(mode: .revoke),
+        LocationShareCommand(mode: .status),
         ]
         cmds.append(BenchCommand())
         #if DEBUG

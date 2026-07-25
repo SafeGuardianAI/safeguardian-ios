@@ -12,9 +12,10 @@
 //  Source:  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/<filename>
 //
 //  Model architecture note: whisper.cpp supports multiple quantization levels
-//  (Q4_0, Q5_1, Q8_0, F16) and encoder variants (standard, CoreML). All share
-//  the same ModelDescriptor type; switching architectures means changing the
-//  filename and redownloading — no code changes required.
+//  (Q4_0, Q5_1, Q8_0, F16). All share the same ModelDescriptor type; switching
+//  quantization means changing the filename and redownloading — no code
+//  changes required. The CoreML encoder variant is not built by this package;
+//  only the standard whisper.cpp/Metal encoder path is linked.
 //
 
 import Foundation

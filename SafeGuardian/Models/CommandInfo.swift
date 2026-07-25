@@ -25,6 +25,9 @@ enum CommandInfo: String, Identifiable {
     case who
     case favorite
     case unfavorite
+    case shareloc
+    case unshareloc
+    case shares
 
     var id: String { rawValue }
 
@@ -34,11 +37,11 @@ enum CommandInfo: String, Identifiable {
         switch self {
         case .agent:
             return "<agent_id> <message>"
-        case .bench, .block, .hug, .message, .slap, .unblock, .favorite, .unfavorite:
+        case .bench, .block, .hug, .message, .slap, .unblock, .favorite, .unfavorite, .shareloc, .unshareloc:
             return "<" + String(localized: "content.input.nickname_placeholder") + ">"
         case .gps:
             return "[p]"
-        case .battery, .clear, .who:
+        case .battery, .clear, .who, .shares:
             return nil
         }
     }
@@ -58,11 +61,14 @@ enum CommandInfo: String, Identifiable {
         case .who:          String(localized: "content.commands.who")
         case .favorite:     String(localized: "content.commands.favorite")
         case .unfavorite:   String(localized: "content.commands.unfavorite")
+        case .shareloc:     String(localized: "content.commands.shareloc")
+        case .unshareloc:   String(localized: "content.commands.unshareloc")
+        case .shares:       String(localized: "content.commands.shares")
         }
     }
 
     static func all(isGeoPublic: Bool, isGeoDM: Bool) -> [CommandInfo] {
-        let baseCommands: [CommandInfo] = [.agent, .battery, .block, .unblock, .clear, .gps, .hug, .message, .slap, .who]
+        let baseCommands: [CommandInfo] = [.agent, .battery, .block, .unblock, .clear, .gps, .hug, .message, .slap, .who, .shareloc, .unshareloc, .shares]
         if isGeoPublic || isGeoDM {
             return baseCommands + [.favorite, .unfavorite]
         }

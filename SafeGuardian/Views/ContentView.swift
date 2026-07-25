@@ -182,6 +182,7 @@ struct ContentView: View {
         }
         .background(backgroundColor)
         .foregroundColor(textColor)
+        .background(LocationShareConsentHost(service: viewModel.locationShareService))
         #if os(macOS)
         .frame(minWidth: 600, minHeight: 400)
         #endif

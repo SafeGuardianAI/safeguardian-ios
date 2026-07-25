@@ -380,7 +380,10 @@
         }
       }
     },
-    "act as a mesh endpoint over bluetooth low energy" : {
+    "%@ wants to share their location with you" : {
+
+    },
+    "Accept" : {
 
     },
     "any openai-compatible endpoint — ollama, lm studio, vllm, openai, etc." : {
@@ -14780,6 +14783,28 @@
         }
       }
     },
+    "content.commands.shareloc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "offer your live location to a mesh peer"
+          }
+        }
+      }
+    },
+    "content.commands.shares" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "list active location shares"
+          }
+        }
+      }
+    },
     "content.commands.slap" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -15313,6 +15338,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移出收藏"
+          }
+        }
+      }
+    },
+    "content.commands.unshareloc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "stop sharing location with a peer"
           }
         }
       }
@@ -19254,6 +19290,12 @@
           }
         }
       }
+    },
+    "Continue" : {
+
+    },
+    "Decline" : {
+
     },
     "Download Now" : {
 
@@ -31140,12 +31182,6 @@
         }
       }
     },
-    "mesh destination hash" : {
-
-    },
-    "mesh identity not yet derived" : {
-
-    },
     "mesh_peers.tooltip.new_messages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31548,7 +31584,7 @@
     "reset nova session" : {
 
     },
-    "reticulum ble node" : {
+    "SafeGuardian meshes directly with nearby devices over Bluetooth, so you can stay in contact even without internet or cell service." : {
 
     },
     "save" : {
@@ -36389,6 +36425,12 @@
           }
         }
       }
+    },
+    "Welcome to SafeGuardian" : {
+
+    },
+    "You will see their position as it changes. They will not see yours unless you share back. You can stop at any time with /unshareloc." : {
+
     }
   },
   "version" : "1.1"

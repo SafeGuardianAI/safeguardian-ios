@@ -72,15 +72,6 @@ for mh in ggml-metal.h; do
     done
 done
 
-# CoreML encoder stubs (improves iOS inference speed via ANE, optional)
-if [ -d "$TMP/bindings/ios/CoreML" ]; then
-    mkdir -p "$DEST/coreml"
-    cp -r "$TMP/bindings/ios/CoreML/"* "$DEST/coreml/"
-elif [ -d "$TMP/coreml" ]; then
-    mkdir -p "$DEST/coreml"
-    cp -r "$TMP/coreml/"* "$DEST/coreml/"
-fi
-
 rm -rf "$TMP"
 
 echo ""

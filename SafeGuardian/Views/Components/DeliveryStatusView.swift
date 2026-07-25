@@ -72,7 +72,13 @@ struct DeliveryStatusView: View {
             Image(systemName: "checkmark")
                 .font(.safeguardianSystem(size: 10))
                 .foregroundColor(secondaryTextColor.opacity(0.6))
-            
+
+        case .carried:
+            Image(systemName: "figure.walk")
+                .font(.safeguardianSystem(size: 10))
+                .foregroundColor(secondaryTextColor.opacity(0.6))
+                .help(status.displayText)
+
         case .delivered(let nickname, _):
             HStack(spacing: -2) {
                 Image(systemName: "checkmark")

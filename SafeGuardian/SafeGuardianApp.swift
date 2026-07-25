@@ -38,6 +38,10 @@ struct SafeGuardianApp: App {
     
     private let idBridge = NostrIdentityBridge()
 
+    // First-run welcome: gives context for the Bluetooth/notification prompts once.
+    @AppStorage("sg.welcomeShown") private var welcomeShown = false
+    @State private var showWelcome = false
+
     // First-run model onboarding: offer the on-device AI download once.
     @AppStorage("nova.modelOnboardingShown") private var modelOnboardingShown = false
     @State private var showModelOnboarding = false
@@ -101,11 +105,22 @@ struct SafeGuardianApp: App {
         WindowGroup {
             rootView
                 .environmentObject(chatViewModel)
+                // Notification authorization is requested here rather than eagerly at
+                // launch, so it only fires once the user has seen why; interactive
+                // dismissal is disabled since Continue is the only way through.
+                .sheet(isPresented: $showWelcome, onDismiss: {
+                    welcomeShown = true
+                    NotificationService.shared.requestAuthorization()
+                    maybeShowModelOnboarding()
+                }) {
+                    WelcomeView()
+                        .interactiveDismissDisabled()
+                }
                 .sheet(isPresented: $showModelOnboarding, onDismiss: { modelOnboardingShown = true }) {
                     ModelOnboardingView()
                 }
                 #if os(macOS)
-                .task { maybeShowModelOnboarding() }
+                .task { proceedToFirstRunFlow() }
                 #endif
                 .onAppear {
                     NotificationDelegate.shared.chatViewModel = chatViewModel
@@ -203,7 +218,7 @@ struct SafeGuardianApp: App {
                             withAnimation(.easeOut(duration: 0.35)) {
                                 showBootSplash = false
                             }
-                            maybeShowModelOnboarding()
+                            proceedToFirstRunFlow()
                         }
                         .transition(.opacity)
                     }
@@ -216,6 +231,16 @@ struct SafeGuardianApp: App {
         #endif
     }
     
+    /// First launch only: show the welcome/permissions screen before anything else in
+    /// the first-run sequence. Later steps (model onboarding) run from its onDismiss.
+    private func proceedToFirstRunFlow() {
+        if welcomeShown {
+            maybeShowModelOnboarding()
+        } else {
+            showWelcome = true
+        }
+    }
+
     /// First launch only: offer the on-device model download. Installs that
     /// already have the model cached (upgrades) are marked shown without a prompt.
     private func maybeShowModelOnboarding() {

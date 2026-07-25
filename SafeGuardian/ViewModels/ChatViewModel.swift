@@ -193,6 +193,11 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     // MARK: - Service Delegates
 
+    /// Consent-gated location sharing over the Reticulum transport, when present.
+    var locationShareService: LocationShareService? {
+        (meshService as? MultiTransportManager)?.reticulumTransport?.locationShare
+    }
+
     let commandProcessor: CommandProcessor
     let messageRouter: MessageRouter
     let privateChatManager: PrivateChatManager
@@ -679,10 +684,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             }
             .store(in: &cancellables)
         
-        // Request notification permission (guards test environment internally)
-        NotificationService.shared.requestAuthorization()
-        
-        
+        // Notification permission is requested from WelcomeView on first run, not here,
+        // so it doesn't fire silently before the user has seen any app UI.
+
         // Listen for favorite status changes
         NotificationCenter.default.addObserver(
             self,
@@ -2002,9 +2006,10 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             case .failed: return 1
             case .sending: return 2
             case .sent: return 3
-            case .partiallyDelivered: return 4
-            case .delivered: return 5
-            case .read: return 6
+            case .carried: return 4
+            case .partiallyDelivered: return 5
+            case .delivered: return 6
+            case .read: return 7
             }
         }
 

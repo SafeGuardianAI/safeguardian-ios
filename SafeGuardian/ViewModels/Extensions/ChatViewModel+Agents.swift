@@ -1,5 +1,5 @@
 import SafeGuardianMesh
-import AgentInfra
+import AgentRuntime
 import BitFoundation
 import Foundation
 
@@ -49,14 +49,20 @@ extension ChatViewModel: AgentContext {
         pendingAgentReplies[requestID] = continuation
     }
 
+    /// Surfaces a real approval card in the transcript the tool call came from
+    /// and suspends until the user taps Allow or Deny in it (ApprovalMessageView,
+    /// rendered by NovaBubble via the ApprovalRequestMessage sentinel). The
+    /// continuation is owned by PendingApprovals, resumed from
+    /// PendingApprovals.shared.resolve(_:approved:) when the card's buttons are tapped.
     @MainActor
-    func registerToolApprovalContinuation(_ token: String, _ continuation: CheckedContinuation<Bool, Never>) {
-        pendingToolApprovals[token] = continuation
-        // Auto-approve until UI approval is wired up. To add interactive approval:
-        // 1. Remove this line and store the continuation in pendingToolApprovals
-        // 2. Surface an alert/sheet keyed on token
-        // 3. On user action: pendingToolApprovals.removeValue(forKey: token)?.resume(returning: decision)
-        pendingToolApprovals.removeValue(forKey: token)?.resume(returning: true)
+    func registerToolApprovalContinuation(
+        _ toolName: String, _ argumentSummary: String, _ token: String, _ peerID: PeerID,
+        _ continuation: CheckedContinuation<Bool, Never>
+    ) {
+        PendingApprovals.shared.register(
+            token: token, toolName: toolName, argumentSummary: argumentSummary, continuation: continuation
+        )
+        addResponse(sender: "Nova", content: ApprovalRequestMessage.content(for: token), privatePeerID: peerID)
     }
 
     @MainActor

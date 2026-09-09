@@ -6,7 +6,7 @@ import SafeGuardianMesh
 
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     /// Sends a structured location request to a specific peer and suspends until

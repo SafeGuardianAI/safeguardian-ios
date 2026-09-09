@@ -11,11 +11,10 @@ import Tor
 import SwiftUI
 import BitFoundation
 import UserNotifications
-import WhisperInfra
+import AgentRuntime
 
 enum RootTab {
     case mesh
-    case nova
     case map
 }
 
@@ -77,9 +76,6 @@ struct SafeGuardianApp: App {
             ContentView()
                 .tabItem { Label("Mesh", systemImage: "bubble.left.and.bubble.right") }
                 .tag(RootTab.mesh)
-            NovaConversationView()
-                .tabItem { Label("Nova", systemImage: "sparkles") }
-                .tag(RootTab.nova)
             MapTabView()
                 .tabItem { Label("Map", systemImage: "map") }
                 .tag(RootTab.map)
@@ -90,9 +86,6 @@ struct SafeGuardianApp: App {
             ContentView()
                 .tabItem { Label("Mesh", systemImage: "bubble.left.and.bubble.right") }
                 .tag(RootTab.mesh)
-            NovaConversationView()
-                .tabItem { Label("Nova", systemImage: "sparkles") }
-                .tag(RootTab.nova)
             MapTabView()
                 .tabItem { Label("Map", systemImage: "map") }
                 .tag(RootTab.map)
@@ -325,8 +318,16 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         chatViewModel?.applicationWillTerminate()
     }
     
+    // SafeGuardian is a persistent mesh node on macOS — the Reticulum/BLE relay and
+    // Nova's loaded model should keep running with no window open, the same way they
+    // do when an iOS build is backgrounded. Closing the chat window must not quit the
+    // process; that was silently unloading the model on every window close.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return true
+        false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        true
     }
 }
 #endif

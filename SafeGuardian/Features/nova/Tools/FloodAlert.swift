@@ -1,7 +1,7 @@
 import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     // Temporarily raises TTL to maximum, broadcasts a life-safety alert to
@@ -21,7 +21,8 @@ extension AgentToolEntry {
                           description: "Alert text. Keep under 200 chars. Include location if known."),
                 .required("alert_type", type: .string,
                           description: "evacuation | structural_collapse | mass_casualty | hazmat | other_lifesafety"),
-            ]
+            ],
+            requiresConfirmation: true
         ) { args, proxy in
             guard case .string(let message)   = args["message"],
                   case .string(let alertType) = args["alert_type"] else {

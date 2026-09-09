@@ -16,14 +16,14 @@
 		A6E3E5722E7703760032EA8A /* BitLogger in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3E5712E7703760032EA8A /* BitLogger */; };
 		A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA7E2E7706720032EA8A /* Tor */; };
 		A6E3EA812E7706A80032EA8A /* Tor in Frameworks */ = {isa = PBXBuildFile; productRef = A6E3EA802E7706A80032EA8A /* Tor */; };
-		AA1100000000000000000004 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000002 /* AgentInfra */; };
-		AA1100000000000000000005 /* AgentInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000003 /* AgentInfra */; };
-		AA1100000000000000000010 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000012 /* WhisperInfra */; };
-		AA1100000000000000000011 /* WhisperInfra in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000013 /* WhisperInfra */; };
+		AA1100000000000000000004 /* AgentRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000002 /* AgentRuntime */; };
+		AA1100000000000000000005 /* AgentRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000003 /* AgentRuntime */; };
 		AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000031 /* SafeGuardianMesh */; };
 		AA1100000000000000000033 /* SafeGuardianMesh in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000034 /* SafeGuardianMesh */; };
 		AA1100000000000000000043 /* AnyLanguageModelKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000041 /* AnyLanguageModelKit */; };
 		AA1100000000000000000044 /* AnyLanguageModelKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA1100000000000000000042 /* AnyLanguageModelKit */; };
+		AA2200000000000000000002 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000001 /* Models */; };
+		AA2200000000000000000003 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = AA2200000000000000000001 /* Models */; };
 		BAEC911B2FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C02 /* HuggingFace */; };
 		BAEC91202FCC139D00F1DA8D /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DD1111111111111111111C03 /* HuggingFace */; };
 		E0A1B2C3D4E5F6012345678D /* relays/online_relays_gps.csv in Resources */ = {isa = PBXBuildFile; fileRef = E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */; };
@@ -72,6 +72,7 @@
 		8F3A7C058C2C8E1A06C8CF8B /* SafeGuardian.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SafeGuardian.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		96D0D41CA19EE5A772AA8434 /* SafeGuardian.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SafeGuardian.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6F183FC2E948783006A9046 /* tor-nolzma.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "tor-nolzma.xcframework"; path = "localPackages/Tor/Frameworks/tor-nolzma.xcframework"; sourceTree = "<group>"; };
+		AA2200000000000000000001 /* Models */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Models; sourceTree = "<group>"; };
 		C0DB1DE27F0AAB5092663E8E /* SafeGuardianTests_iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafeGuardianTests_iOS.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = relays/online_relays_gps.csv; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -162,8 +163,7 @@
 				3EE336D150427F736F32B56C /* P256K in Frameworks */,
 				A6E3EA812E7706A80032EA8A /* Tor in Frameworks */,
 				A6BCF94A2F809550001CF9B9 /* BitFoundation in Frameworks */,
-				AA1100000000000000000005 /* AgentInfra in Frameworks */,
-				AA1100000000000000000011 /* WhisperInfra in Frameworks */,
+				AA1100000000000000000005 /* AgentRuntime in Frameworks */,
 				AA1100000000000000000033 /* SafeGuardianMesh in Frameworks */,
 				AA1100000000000000000044 /* AnyLanguageModelKit in Frameworks */,
 			);
@@ -176,8 +176,7 @@
 				885BBED78092484A5B069461 /* P256K in Frameworks */,
 				A6E3EA7F2E7706720032EA8A /* Tor in Frameworks */,
 				A6BCF9482F80953E001CF9B9 /* BitFoundation in Frameworks */,
-				AA1100000000000000000004 /* AgentInfra in Frameworks */,
-				AA1100000000000000000010 /* WhisperInfra in Frameworks */,
+				AA1100000000000000000004 /* AgentRuntime in Frameworks */,
 				AA1100000000000000000032 /* SafeGuardianMesh in Frameworks */,
 				AA1100000000000000000043 /* AnyLanguageModelKit in Frameworks */,
 			);
@@ -190,6 +189,7 @@
 			children = (
 				A6E32C972E762EA70032EA8A /* SafeGuardian */,
 				E0A1B2C3D4E5F6012345678A /* relays/online_relays_gps.csv */,
+				AA2200000000000000000001 /* Models */,
 				A6E32D212E762EAB0032EA8A /* SafeGuardianShareExtension */,
 				A6E32D412E762EAE0032EA8A /* SafeGuardianTests */,
 				A6E367C92E76469E0032EA8A /* Configs */,
@@ -240,8 +240,7 @@
 				A6E3E5712E7703760032EA8A /* BitLogger */,
 				A6E3EA802E7706A80032EA8A /* Tor */,
 				A6BCF9492F809550001CF9B9 /* BitFoundation */,
-				AA1100000000000000000003 /* AgentInfra */,
-				AA1100000000000000000013 /* WhisperInfra */,
+				AA1100000000000000000003 /* AgentRuntime */,
 				AA1100000000000000000034 /* SafeGuardianMesh */,
 				AA1100000000000000000042 /* AnyLanguageModelKit */,
 				DD1111111111111111111C03 /* HuggingFace */,
@@ -326,8 +325,7 @@
 				A6E3E56F2E77036A0032EA8A /* BitLogger */,
 				A6E3EA7E2E7706720032EA8A /* Tor */,
 				A6BCF9472F80953E001CF9B9 /* BitFoundation */,
-				AA1100000000000000000002 /* AgentInfra */,
-				AA1100000000000000000012 /* WhisperInfra */,
+				AA1100000000000000000002 /* AgentRuntime */,
 				AA1100000000000000000031 /* SafeGuardianMesh */,
 				AA1100000000000000000041 /* AnyLanguageModelKit */,
 				DD1111111111111111111C02 /* HuggingFace */,
@@ -343,7 +341,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2660;
 			};
 			buildConfigurationList = 3EA424CBD51200895D361189 /* Build configuration list for PBXProject "SafeGuardian" */;
 			developmentRegion = en;
@@ -374,8 +372,7 @@
 				A6E3E56E2E77036A0032EA8A /* XCLocalSwiftPackageReference "../../shared/BitLogger" */,
 				A6E3EA7D2E7706720032EA8A /* XCLocalSwiftPackageReference "localPackages/Arti" */,
 				A6BCF9462F80953E001CF9B9 /* XCLocalSwiftPackageReference "../../shared/BitFoundation" */,
-				AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */,
-				AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */,
+				AA1100000000000000000001 /* XCLocalSwiftPackageReference "../../shared/AgentRuntime" */,
 				AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */,
 				AA1100000000000000000040 /* XCLocalSwiftPackageReference "localPackages/AnyLanguageModelKit" */,
 				CC1111111111111111111A01 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
@@ -399,6 +396,7 @@
 			isa = PBXResourcesBuildPhase;
 			files = (
 				E0A1B2C3D4E5F6012345678D /* relays/online_relays_gps.csv in Resources */,
+				AA2200000000000000000002 /* Models in Resources */,
 			);
 		};
 		C5E027A42ECCDFD700BD6012 /* Resources */ = {
@@ -415,6 +413,7 @@
 			isa = PBXResourcesBuildPhase;
 			files = (
 				E0A1B2C3D4E5F6012345678E /* relays/online_relays_gps.csv in Resources */,
+				AA2200000000000000000003 /* Models in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -773,6 +772,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = "$(SWIFT_VERSION)";
@@ -882,6 +882,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = "$(SWIFT_VERSION)";
@@ -985,13 +986,9 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = localPackages/Arti;
 		};
-		AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */ = {
+		AA1100000000000000000001 /* XCLocalSwiftPackageReference "../../shared/AgentRuntime" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = localPackages/AgentInfra;
-		};
-		AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = localPackages/WhisperInfra;
+			relativePath = ../../shared/AgentRuntime;
 		};
 		AA1100000000000000000030 /* XCLocalSwiftPackageReference "../../shared/SafeGuardianMesh" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -1069,24 +1066,14 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Tor;
 		};
-		AA1100000000000000000002 /* AgentInfra */ = {
+		AA1100000000000000000002 /* AgentRuntime */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AgentInfra;
+			productName = AgentRuntime;
 		};
-		AA1100000000000000000003 /* AgentInfra */ = {
+		AA1100000000000000000003 /* AgentRuntime */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AA1100000000000000000001 /* XCLocalSwiftPackageReference "localPackages/AgentInfra" */;
-			productName = AgentInfra;
-		};
-		AA1100000000000000000012 /* WhisperInfra */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
-			productName = WhisperInfra;
-		};
-		AA1100000000000000000013 /* WhisperInfra */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA1100000000000000000014 /* XCLocalSwiftPackageReference "localPackages/WhisperInfra" */;
-			productName = WhisperInfra;
+			package = AA1100000000000000000001 /* XCLocalSwiftPackageReference "../../shared/AgentRuntime" */;
+			productName = AgentRuntime;
 		};
 		AA1100000000000000000031 /* SafeGuardianMesh */ = {
 			isa = XCSwiftPackageProductDependency;

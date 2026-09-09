@@ -1,4 +1,4 @@
-import AgentInfra
+import AgentRuntime
 import AnyLanguageModelKit
 import Foundation
 
@@ -22,21 +22,45 @@ final class MLXInferenceService: AgentLanguageProvider {
     // Models always present in the saved list regardless of UserDefaults state.
     // Order determines the order they appear in the picker on first install.
     private static let builtinModelIDs: [String] = [
+        NovaConfig.bundledModelID,
         "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
         "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
     ]
+
+    /// Resolves the bundled model's snapshot directory under Resources/Models,
+    /// mirroring MLXVLMBackend.bundledModelDirectories() — one subdirectory
+    /// containing a config.json, shipped in the app bundle so no download is
+    /// ever required for this model.
+    static func bundledModelDirectory() -> URL? {
+        guard let root = Bundle.main.resourceURL?.appendingPathComponent("Models"),
+              let entries = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
+        else { return nil }
+        return entries.first {
+            FileManager.default.fileExists(atPath: $0.appendingPathComponent("config.json").path)
+        }
+    }
 
     private(set) var isLoading = false
     private(set) var downloadProgress: Double = 0
     // Per-thread LanguageModelSession cache; see MLXInferenceService+Generate.swift.
     var sessions: [String: LanguageModelSession] = [:]
+    // The wrapping Task around the current streamResponse call — there is exactly one
+    // on-device model, so only one of these is ever meaningful at a time. cancel() stops
+    // this; AgentConversationEngine awaits its own copy of the equivalent task before
+    // starting a new turn, so a stop is never racing a fresh generate() call.
+    private var activeGenerationTask: Task<Void, Never>?
 
     var isModelLoaded: Bool {
         if case .available = model.availability { return true }
         return false
     }
 
-    var model: MLXLanguageModel { MLXLanguageModel(modelId: activeModelID) }
+    var model: MLXLanguageModel {
+        if activeModelID == NovaConfig.bundledModelID, let dir = Self.bundledModelDirectory() {
+            return MLXLanguageModel(modelId: activeModelID, directory: dir)
+        }
+        return MLXLanguageModel(modelId: activeModelID)
+    }
 
     private(set) var savedModelIDs: [String] {
         didSet { UserDefaults.standard.set(savedModelIDs, forKey: Self.savedModelsKey) }
@@ -58,13 +82,22 @@ final class MLXInferenceService: AgentLanguageProvider {
         activeModelID = merged.contains(active) ? active : Self.defaultModelID
     }
 
-    func cancel() {}
+    /// Cancels the in-flight generation, if any. AgentProviderStreaming.drain() checks
+    /// Task.checkCancellation() on every token and finishes the stream silently rather
+    /// than throwing, so AgentConversationEngine's for-await loop over generate() simply
+    /// ends — no .complete, no .failure — which is how it tells a stop apart from a
+    /// normal finish or a real error.
+    func cancel() {
+        activeGenerationTask?.cancel()
+    }
 
     // MARK: - Prefetch (first-run onboarding)
 
-    /// True when the active model's files are already on disk.
+    /// True when the active model's files are already on disk. The bundled model
+    /// ships inside the app itself, so it's always considered present.
     var isActiveModelCached: Bool {
-        ModelDownloadManager.shared.localSnapshotURL(modelID: activeModelID) != nil
+        if activeModelID == NovaConfig.bundledModelID { return Self.bundledModelDirectory() != nil }
+        return ModelDownloadManager.shared.localSnapshotURL(modelID: activeModelID) != nil
     }
 
     /// Downloads the active model without keeping a session around, using a throwaway
@@ -108,17 +141,34 @@ final class MLXInferenceService: AgentLanguageProvider {
         let tools = (input.toolRegistry as? AgentToolRegistry)?.asLanguageModelTools() ?? []
         let session = sessionFor(threadID: input.threadID, systemPrompt: input.systemPrompt, history: input.history, tools: tools)
         let text = input.decorated(modelID: activeModelID)
+        let options = generationOptions(for: activeModelID)
         isLoading = true
         return AsyncStream { continuation in
             let task = Task { @MainActor in
                 await AgentProviderStreaming.drain(
-                    session.streamResponse(to: text), into: continuation,
+                    session.streamResponse(to: text, options: options), into: continuation,
                     onFirstToken: { [weak self] in Task { @MainActor in self?.isLoading = false } }
                 )
                 continuation.finish()
             }
+            activeGenerationTask = task
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// Builds real sampling options from GenerationSettingsStore instead of letting every
+    /// call fall through to the library's own unconfigured defaults. maximumResponseTokens
+    /// is only set when the user has explicitly dialed it down; the model's own context
+    /// window (contextWindowSize, from its real config.json) is the ceiling that dial
+    /// clamps against, never something this app raises past what the model file supports.
+    private func generationOptions(for modelID: String) -> GenerationOptions {
+        let contextWindow = ModelDownloadManager.shared.contextWindowSize(modelID: modelID)
+        return GenerationOptions(
+            temperature: GenerationSettingsStore.shared.temperature(for: modelID),
+            maximumResponseTokens: GenerationSettingsStore.shared.maxResponseTokens(
+                for: modelID, contextWindow: contextWindow
+            )
+        )
     }
 
     /// Returns the cached session for a thread, seeding a fresh one from `history`
@@ -130,10 +180,13 @@ final class MLXInferenceService: AgentLanguageProvider {
     ) -> LanguageModelSession {
         if let existing = sessions[threadID] {
             let turns = existing.transcript.conversationTurns
-            guard ContextCompressor.shouldCompact(turns, threshold: NovaConfig.contextCompactionThreshold) else {
+            let bytesPerToken = PromptBudgetService.bytesPerToken(modelID: activeModelID) ?? ContextCompressor.defaultBytesPerToken
+            guard ContextCompressor.shouldCompact(turns, threshold: NovaConfig.contextCompactionThreshold, bytesPerToken: bytesPerToken) else {
                 return existing
             }
-            let compacted = ContextCompressor.compactIfNeeded(turns, threshold: NovaConfig.contextCompactionThreshold)
+            let compacted = ContextCompressor.compactIfNeeded(
+                turns, threshold: NovaConfig.contextCompactionThreshold, bytesPerToken: bytesPerToken
+            )
             let session = LanguageModelSession(
                 model: model, tools: tools,
                 transcript: .seeded(systemPrompt: systemPrompt, history: compacted)

@@ -1,6 +1,6 @@
 import SafeGuardianMesh
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     static func sdrScan() -> AgentToolEntry {

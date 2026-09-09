@@ -11,7 +11,7 @@ import SwiftUI
 #if os(iOS)
 import UIKit
 import AVFoundation
-import WhisperInfra
+import AgentRuntime
 #endif
 #if os(macOS)
 import AppKit
@@ -52,6 +52,10 @@ struct ContentView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var showSidebar = false
     @State private var showAppInfo = false
+    @State private var showingAgentSettings = false
+    @State private var showingAgentThreads = false
+    @State private var agentVoiceSession: AgentVoiceSession?
+    @State private var isAgentDictating = false
     @State private var selectedMessageSender: String?
     @State private var selectedMessageSenderID: PeerID?
     @FocusState private var isNicknameFieldFocused: Bool
@@ -123,6 +127,7 @@ struct ContentView: View {
         let peer: SafeGuardianPeer?
         let displayName: String
         let isNostrAvailable: Bool
+        let isAgentConversation: Bool
     }
 
 // MARK: - Body
@@ -331,6 +336,10 @@ struct ContentView: View {
 
             if voiceRecordingVM.state.isActive {
                 recordingIndicator
+            }
+
+            if isAgentConversationActive && AgentConversationEngine.shared.isRunning {
+                agentThinkingIndicator
             }
 
             HStack(alignment: .center, spacing: 4) {
@@ -552,8 +561,9 @@ struct ContentView: View {
                     }
                     let threadStore = AgentThreadStore.shared
                     Divider().padding(.horizontal, 16).padding(.top, 4)
-                    // Agent conversations live in the dedicated Nova tab; this row
-                    // switches there instead of opening the peer-to-peer chat view.
+                    // Agent conversations open through the same private-chat view as
+                    // any peer DM (openAgentThread sets selectedPrivateChatPeer); the
+                    // header distinguishes them via PrivateHeaderContext.isAgentConversation.
                     ForEach(viewModel.agents, id: \.agentID) { agent in
                         Button {
                             if let t = threadStore.activeThread(for: agent.agentID) {
@@ -612,7 +622,17 @@ struct ContentView: View {
                         privateHeaderInfo(context: headerContext, privatePeerID: privatePeerID)
                         let isFavorite = viewModel.isFavorite(peerID: headerContext.headerPeerID)
 
-                        if !privatePeerID.isGeoDM {
+                        if headerContext.isAgentConversation {
+                            Button(action: { showingAgentThreads = true }) {
+                                Image(systemName: "bubble.left.and.bubble.right")
+                                    .font(.safeguardianSystem(size: 14))
+                                    .foregroundColor(textColor)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                String(localized: "content.accessibility.agent_conversations", defaultValue: "Conversations", comment: "Accessibility label for switching agent conversation threads")
+                            )
+                        } else if !privatePeerID.isGeoDM {
                             Button(action: {
                                 viewModel.toggleFavorite(peerID: headerContext.headerPeerID)
                             }) {
@@ -626,6 +646,13 @@ struct ContentView: View {
                                 ? String(localized: "content.accessibility.remove_favorite", comment: "Accessibility label to remove a favorite")
                                 : String(localized: "content.accessibility.add_favorite", comment: "Accessibility label to add a favorite")
                             )
+                        }
+                    }
+                    .sheet(isPresented: $showingAgentThreads) {
+                        if let agentID = AgentThreadStore.shared.agentID(for: privatePeerID) {
+                            NovaThreadListView(agentID: agentID) { peerID in
+                                viewModel.openAgentThread(peerID)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -690,10 +717,19 @@ struct ContentView: View {
 
     private func privateHeaderInfo(context: PrivateHeaderContext, privatePeerID: PeerID) -> some View {
         Button(action: {
-            viewModel.showFingerprint(for: context.headerPeerID)
+            if context.isAgentConversation {
+                showingAgentSettings = true
+            } else {
+                viewModel.showFingerprint(for: context.headerPeerID)
+            }
         }) {
             HStack(spacing: 6) {
-                if let connectionState = context.peer?.connectionState {
+                if context.isAgentConversation {
+                    Image(systemName: "sparkles")
+                        .font(.safeguardianSystem(size: 14))
+                        .foregroundColor(textColor)
+                        .accessibilityLabel(String(localized: "content.accessibility.agent_conversation", defaultValue: "Agent chat", comment: "Accessibility label for the agent chat indicator"))
+                } else if let connectionState = context.peer?.connectionState {
                     switch connectionState {
                     case .bluetoothConnected:
                         Image(systemName: "dot.radiowaves.left.and.right")
@@ -736,8 +772,7 @@ struct ContentView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                let isAgentThread = AgentThreadStore.shared.thread(for: privatePeerID) != nil
-                if !privatePeerID.isGeoDM && !isAgentThread {
+                if !privatePeerID.isGeoDM && !context.isAgentConversation {
                     let statusPeerID = viewModel.getShortIDForNoiseKey(privatePeerID)
                     let encryptionStatus = viewModel.getEncryptionStatus(for: statusPeerID)
                     if let icon = encryptionStatus.icon {
@@ -766,9 +801,15 @@ struct ContentView: View {
             )
         )
         .accessibilityHint(
-            String(localized: "content.accessibility.view_fingerprint_hint", comment: "Accessibility hint for viewing encryption fingerprint")
+            context.isAgentConversation
+            ? String(localized: "content.accessibility.agent_settings_hint", defaultValue: "Opens agent settings", comment: "Accessibility hint for opening agent settings")
+            : String(localized: "content.accessibility.view_fingerprint_hint", comment: "Accessibility hint for viewing encryption fingerprint")
         )
         .frame(height: headerHeight)
+        .sheet(isPresented: $showingAgentSettings) {
+            AppInfoView()
+                .environmentObject(viewModel)
+        }
     }
 
     private func makePrivateHeaderContext(for privatePeerID: PeerID) -> PrivateHeaderContext {
@@ -826,7 +867,8 @@ struct ContentView: View {
             headerPeerID: headerPeerID,
             peer: peer,
             displayName: displayName,
-            isNostrAvailable: isNostrAvailable
+            isNostrAvailable: isNostrAvailable,
+            isAgentConversation: AgentThreadStore.shared.thread(for: privatePeerID) != nil
         )
     }
 
@@ -1154,6 +1196,18 @@ private extension ContentView {
         )
     }
 
+    private var agentThinkingIndicator: some View {
+        HStack(spacing: 8) {
+            ProgressView().scaleEffect(0.7)
+            Text(AgentConversationEngine.shared.modelLoadPhase == .waking ? "Waking Nova..." : "Thinking...")
+                .font(.safeguardianSystem(size: 12, design: .monospaced))
+                .foregroundColor(secondaryTextColor)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+
     private var shouldShowMediaControls: Bool {
         if let peer = viewModel.selectedPrivateChatPeer, !(peer.isGeoDM || peer.isGeoChat) {
             return true
@@ -1215,7 +1269,14 @@ private extension ContentView {
     @ViewBuilder
     var sendOrMicButton: some View {
         let canSend = !messageText.trimmed.isEmpty
-        if shouldShowVoiceControl {
+        if isAgentConversationActive && AgentConversationEngine.shared.isRunning {
+            // Sending a new message already interrupts Nova's current turn on its own
+            // (see AgentConversationEngine.handle), so this is a direct way to do the
+            // same thing without typing anything — not a separate "cancel and lose the
+            // draft" action.
+            stopButtonView
+                .frame(width: 36, height: 36)
+        } else if shouldShowVoiceControl {
             ZStack {
                 micButtonView
                     .opacity(canSend ? 0 : 1)
@@ -1231,24 +1292,87 @@ private extension ContentView {
         }
     }
 
+    private var isAgentConversationActive: Bool {
+        guard let peer = viewModel.selectedPrivateChatPeer else { return false }
+        return AgentThreadStore.shared.agentID(for: peer) != nil
+    }
+
     private var micButtonView: some View {
-        Image(systemName: "mic.circle.fill")
-            .font(.safeguardianSystem(size: 24))
-            .foregroundColor(voiceRecordingVM.state.isActive ? Color.red : composerAccentColor)
-            .frame(width: 36, height: 36)
-            .contentShape(Circle())
-            .overlay(
-                Color.clear
+        Group {
+            if isAgentConversationActive {
+                agentDictationButton
+            } else {
+                Image(systemName: "mic.circle.fill")
+                    .font(.safeguardianSystem(size: 24))
+                    .foregroundColor(voiceRecordingVM.state.isActive ? Color.red : composerAccentColor)
+                    .frame(width: 36, height: 36)
                     .contentShape(Circle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { _ in voiceRecordingVM.start(shouldShow: shouldShowVoiceControl) }
-                            .onEnded { _ in
-                                voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
-                            }
+                    .overlay(
+                        Color.clear
+                            .contentShape(Circle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { _ in voiceRecordingVM.start(shouldShow: shouldShowVoiceControl) }
+                                    .onEnded { _ in
+                                        voiceRecordingVM.finish(completion: viewModel.sendVoiceNote)
+                                    }
+                            )
                     )
-            )
-            .accessibilityLabel("Hold to record a voice note")
+                    .accessibilityLabel("Hold to record a voice note")
+            }
+        }
+    }
+
+    /// Tap-to-toggle live dictation into messageText, using the same
+    /// AgentVoiceSession/Whisper pipeline the retired AgentInputBar used —
+    /// distinct from the hold-to-record voice-note gesture above, which
+    /// sends an audio clip and is meaningless for an on-device agent thread.
+    private var agentDictationButton: some View {
+        Button(action: toggleAgentDictation) {
+            Image(systemName: isAgentDictating ? "stop.circle.fill" : "mic.circle.fill")
+                .font(.safeguardianSystem(size: 24))
+                .foregroundColor(isAgentDictating ? Color.red : composerAccentColor)
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isAgentDictating ? "Stop dictation" : "Dictate a message to Nova")
+    }
+
+    private func toggleAgentDictation() {
+        if isAgentDictating {
+            agentVoiceSession?.stop()
+            agentVoiceSession = nil
+            isAgentDictating = false
+            return
+        }
+        let session = AgentVoiceSession(
+            onTranscription: { transcript in
+                if !messageText.isEmpty { messageText += " " }
+                messageText += transcript
+            }
+        )
+        agentVoiceSession = session
+        isAgentDictating = true
+        Task {
+            do {
+                try await session.start()
+            } catch {
+                isAgentDictating = false
+                agentVoiceSession = nil
+            }
+        }
+    }
+
+    private var stopButtonView: some View {
+        Button(action: { AgentConversationEngine.shared.stopGeneration() }) {
+            Image(systemName: "stop.circle.fill")
+                .font(.safeguardianSystem(size: 24))
+                .foregroundColor(composerAccentColor)
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Stop")
+        .accessibilityHint("Stops Nova's current response")
     }
 
     private func sendButtonView(enabled: Bool) -> some View {

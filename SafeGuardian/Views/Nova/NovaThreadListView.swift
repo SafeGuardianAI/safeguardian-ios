@@ -3,8 +3,7 @@ import SafeGuardianMesh
 import SwiftUI
 
 /// Thread management for an agent conversation — new/switch/rename/delete.
-/// Ports the functionality that used to live only in ContentView's sidebar
-/// agent section into the dedicated Nova tab, which had no thread UI at all.
+/// Presented from the private-chat header when isAgentConversation is true.
 struct NovaThreadListView: View {
     @Environment(\.dismiss) private var dismiss
     let agentID: String

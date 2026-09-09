@@ -1,7 +1,7 @@
 import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     /// Closes a peer session and notifies the remote side.

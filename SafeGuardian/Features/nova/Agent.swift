@@ -27,13 +27,11 @@ extension Agent {
                     ? nil : NovaPersonalizationStore.shared.blurb
             )
         },
-        toolRegistry: { context, onStatus, approvalCheck in
+        toolRegistry: { context, onStatus, peerID in
             AgentToolRegistry.standard(
-                agentID: "nova", context: context,
-                onStatus: onStatus, approvalCheck: approvalCheck
+                agentID: "nova", context: context, peerID: peerID, onStatus: onStatus
             )
         },
-        approvalRequired: nil,
         shouldSendResponse: nil
     ))
 }

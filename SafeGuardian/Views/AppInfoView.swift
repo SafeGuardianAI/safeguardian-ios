@@ -7,8 +7,6 @@ struct AppInfoView: View {
     @EnvironmentObject var viewModel: ChatViewModel
     @State private var novaResetConfirm = false
     @State private var mlxService = MLXInferenceService.shared
-    @State private var remoteService = RemoteInferenceService.shared
-    @State private var registry = AgentProviderRegistry.shared
     @State private var personalizationStore = NovaPersonalizationStore.shared
     @State private var personalizationDraft = ""
     @State private var reticulumAddress: String? = nil
@@ -37,7 +35,7 @@ struct AppInfoView: View {
         if mlxService.isModelLoaded {
             return "\(modelShortName) loaded"
         }
-        if ModelDownloadManager.shared.localSnapshotURL(modelID: mlxService.activeModelID) != nil {
+        if mlxService.isActiveModelCached {
             return "\(modelShortName) on disk, not loaded"
         }
         return "\(modelShortName) not downloaded"
@@ -46,7 +44,7 @@ struct AppInfoView: View {
     private var modelStatusColor: Color {
         if mlxService.isLoading { return .orange }
         if mlxService.isModelLoaded { return .green }
-        if ModelDownloadManager.shared.localSnapshotURL(modelID: mlxService.activeModelID) != nil { return textColor }
+        if mlxService.isActiveModelCached { return textColor }
         return secondaryTextColor.opacity(0.5)
     }
 
@@ -227,76 +225,9 @@ struct AppInfoView: View {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader("ai assistant")
 
-                // Provider selector
+                // On-device only — SafeGuardian's premise is working without internet
+                // infrastructure, so there is no remote-provider option here.
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "cpu")
-                        .font(.safeguardianSystem(size: 20))
-                        .foregroundColor(textColor)
-                        .frame(width: 30)
-
-                    Picker("provider", selection: Binding(
-                        get: { registry.activeProvider.id },
-                        set: { id in
-                            if id == "remote" {
-                                registry.setActiveProvider(RemoteInferenceService.shared)
-                            } else {
-                                registry.setActiveProvider(MLXInferenceService.shared)
-                            }
-                        }
-                    )) {
-                        Text("on-device").tag("mlx")
-                        Text("remote").tag("remote")
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: .infinity)
-                }
-
-                if registry.activeProvider.id == "remote" {
-                    // Remote provider configuration
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "network")
-                            .font(.safeguardianSystem(size: 20))
-                            .foregroundColor(textColor)
-                            .frame(width: 30)
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            TextField("http://localhost:11434", text: $remoteService.baseURL)
-                                .font(.safeguardianSystem(size: 13, design: .monospaced))
-                                .foregroundColor(textColor)
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.URL)
-                                .disableAutocorrection(true)
-                                #endif
-
-                            TextField("model identifier", text: $remoteService.modelID)
-                                .font(.safeguardianSystem(size: 13, design: .monospaced))
-                                .foregroundColor(textColor)
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                .disableAutocorrection(true)
-                                #endif
-
-                            SecureField("api key (optional)", text: $remoteService.apiKey)
-                                .font(.safeguardianSystem(size: 13, design: .monospaced))
-                                .foregroundColor(textColor)
-
-                            Text("any openai-compatible endpoint — ollama, lm studio, vllm, openai, etc.")
-                                .font(.safeguardianSystem(size: 11, design: .monospaced))
-                                .foregroundColor(secondaryTextColor)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Toggle(isOn: $remoteService.toolsEnabled) {
-                                Text("tool calling")
-                                    .font(.safeguardianSystem(size: 13, design: .monospaced))
-                                    .foregroundColor(textColor)
-                            }
-                            .tint(textColor)
-                        }
-                    }
-                } else {
-                    // On-device inference
-                    HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "memorychip")
                             .font(.safeguardianSystem(size: 20))
                             .foregroundColor(textColor)
@@ -330,6 +261,9 @@ struct AppInfoView: View {
                         }
                         Spacer()
                     }
+
+                    NovaModelPickerView()
+                    NovaToolTogglesView()
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("personalization (\(personalizationStore.blurb.count)/\(NovaPersonalizationStore.maxLength))")
@@ -367,7 +301,7 @@ struct AppInfoView: View {
                     } message: {
                         Text("clears the downloaded model and conversation history. nova will re-download on next use.")
                     }
-                }
+                NovaGenerationSettingsView()
             }
             DeploymentSettingsSection()
             #if DEBUG

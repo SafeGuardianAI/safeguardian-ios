@@ -1,4 +1,4 @@
-import AgentInfra
+import AgentRuntime
 import AnyLanguageModelKit
 import Foundation
 
@@ -67,9 +67,9 @@ extension AgentToolRegistry {
     }
 
     /// Parses a tool call's raw JSON arguments into our provider-agnostic JSONValue map.
-    private static func jsonValues(from content: GeneratedContent) -> [String: AgentInfra.JSONValue] {
+    private static func jsonValues(from content: GeneratedContent) -> [String: AgentRuntime.JSONValue] {
         guard let data = content.jsonString.data(using: .utf8),
-              let values = try? JSONDecoder().decode([String: AgentInfra.JSONValue].self, from: data)
+              let values = try? JSONDecoder().decode([String: AgentRuntime.JSONValue].self, from: data)
         else { return [:] }
         return values
     }

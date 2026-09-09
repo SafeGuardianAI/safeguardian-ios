@@ -8,7 +8,7 @@ import SafeGuardianMesh
 // in AgentToolRegistry.build and carried alongside the registry.
 
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 // MARK: - AgentTaskRecord
 

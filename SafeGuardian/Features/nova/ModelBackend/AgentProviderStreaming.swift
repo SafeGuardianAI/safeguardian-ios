@@ -3,7 +3,7 @@
 //
 // This is free and unencumbered software released into the public domain.
 
-import AgentInfra
+import AgentRuntime
 import AnyLanguageModelKit
 import Foundation
 

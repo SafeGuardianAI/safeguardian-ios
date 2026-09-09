@@ -1,7 +1,7 @@
 import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     // Queries every direct peer for its own peer count, building a one-hop graph.

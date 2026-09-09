@@ -4,7 +4,7 @@ import SafeGuardianMesh
 //
 // This is free and unencumbered software released into the public domain.
 
-import AgentInfra
+import AgentRuntime
 import BitFoundation
 import Foundation
 
@@ -18,9 +18,22 @@ final class AgentConversationEngine {
     private init() {}
 
     private(set) var isRunning = false
+    // The in-flight local generation, if any — kept so a new message can wait for the
+    // previous turn's teardown to actually finish after cancelling it, rather than
+    // racing a second streamResponse call onto the same session (LanguageModelSession
+    // rejects that as concurrentRequests; see stopGeneration below).
+    private var activeTask: Task<Void, Never>?
 
     enum ModelLoadPhase { case idle, waking, thinking }
     private(set) var modelLoadPhase: ModelLoadPhase = .idle
+
+    /// Cancels the in-progress local generation, if any. The composer's send button
+    /// becomes this while Nova is responding (see ContentView.sendButtonView); sending
+    /// a new message calls this automatically first rather than rejecting the new
+    /// message or silently queuing it, matching a normal chat app's stop/interrupt.
+    func stopGeneration() {
+        AgentProviderRegistry.shared.activeProvider.cancel()
+    }
 
     func handle(
         prompt: String,
@@ -33,6 +46,17 @@ final class AgentConversationEngine {
     ) {
         let cleanPrompt = prompt.trimmingCharacters(in: .whitespaces)
         let provider = AgentProviderRegistry.shared.activeProvider
+
+        // There is exactly one on-device model; it can only run one generation at a
+        // time regardless of which thread asks. A new local message interrupts the
+        // previous turn rather than being rejected or silently queued — cancel it now,
+        // then have the new turn (below) await its actual teardown before calling
+        // generate() again, so the two never race onto the same session.
+        let previousTask: Task<Void, Never>? = replyTo == nil ? activeTask : nil
+        if replyTo == nil, isRunning {
+            provider.cancel()
+        }
+
         let gateCtx = AgentGateContext(
             prompt: cleanPrompt,
             tick: context.deviceTick,
@@ -88,7 +112,7 @@ final class AgentConversationEngine {
 
         let toolRegistry: AgentToolRegistry? =
             provider.capabilities.modelCapabilities?.supportsToolCalling == true
-                ? config.toolRegistry?(context, statusCallback ?? StatusCallback { _ in }, config.approvalRequired)
+                ? config.toolRegistry?(context, statusCallback ?? StatusCallback { _ in }, effectivePeerID)
                 : nil
 
         // Capture names and task record now (on MainActor); used inside the Task.
@@ -101,8 +125,13 @@ final class AgentConversationEngine {
         #endif
 
         if !isMeshQuery { isRunning = true }
-        Task { @MainActor in
+        let task = Task { @MainActor in
             defer { if !isMeshQuery { self.isRunning = false; self.modelLoadPhase = .idle } }
+            // Wait for the interrupted turn's own teardown (its defer above) to actually
+            // run before touching the shared session — cancellation is cooperative, not
+            // instantaneous, and starting this turn's generate() before that finishes
+            // would race a second streamResponse call onto the same LanguageModelSession.
+            if let previousTask { _ = await previousTask.value }
             let baseSystemPrompt = config.systemPrompt()
             // Append tool names when tools are active so the model knows its vocabulary
             // regardless of how the chat template formats the injected schemas.
@@ -124,16 +153,10 @@ final class AgentConversationEngine {
                 agentDisplayName: config.displayName,
                 maxTurns: maxTurns
             )
-            #if os(macOS)
-            let history: [ConversationTurn]
-            if #available(macOS 26, *) {
-                history = await ContextCompressor.compressAsync(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
-            } else {
-                history = ContextCompressor.compactIfNeeded(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
-            }
-            #else
-            let history = ContextCompressor.compactIfNeeded(rawHistory, threshold: NovaConfig.contextCompactionThreshold)
-            #endif
+            let bytesPerToken = PromptBudgetService.bytesPerToken(modelID: modelID) ?? ContextCompressor.defaultBytesPerToken
+            let history = ContextCompressor.compactIfNeeded(
+                rawHistory, threshold: NovaConfig.contextCompactionThreshold, bytesPerToken: bytesPerToken
+            )
             var input = AgentPromptInput(
                 text: cleanPrompt,
                 tick: context.deviceTick,
@@ -184,6 +207,7 @@ final class AgentConversationEngine {
                     }
 
                 case .complete:
+                    state.reachedTerminal = true
                     if hasThinking, !state.inThink { state.visible += state.pending }
                     state.pending = ""
 
@@ -209,9 +233,11 @@ final class AgentConversationEngine {
                         )
                     }
                     if let stats = state.stats, stats.promptTokens > 0 {
+                        let promptByteLength = history.reduce(0) { $0 + $1.content.utf8.count }
                         await PromptBudgetService.shared.record(
                             modelID: modelID,
                             promptTokens: stats.promptTokens,
+                            promptByteLength: promptByteLength,
                             historyTurnCount: history.count
                         )
                     }
@@ -231,13 +257,23 @@ final class AgentConversationEngine {
                     #endif
 
                 case .failure(let err):
+                    state.reachedTerminal = true
                     if !isMeshQuery {
                         response.content = "[error: \(err)]"
                         context.notifyChange()
                     }
                 }
             }
+            // The loop ended without .complete or .failure only when this turn was
+            // itself interrupted by a newer message (stopGeneration/provider.cancel()) —
+            // AgentProviderStreaming.drain() finishes the stream silently on cancellation.
+            // Leaving the placeholder at "..." or mid-token forever would look broken.
+            if !state.reachedTerminal, !isMeshQuery {
+                response.content = "[stopped]"
+                context.notifyChange()
+            }
         }
+        if !isMeshQuery { activeTask = task }
     }
 
     // MARK: - History
@@ -301,5 +337,6 @@ final class AgentConversationEngine {
         var inThink: Bool = false
         var thinkTokens: Int = 0
         var stats: AgentGenerationStats? = nil
+        var reachedTerminal: Bool = false
     }
 }

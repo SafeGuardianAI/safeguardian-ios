@@ -1,7 +1,7 @@
 import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 // Tracks incidents claimed by this device's Nova agent for the current session.
 // Claims are soft locks: other devices see the broadcast and prefer unclaimed
@@ -36,7 +36,8 @@ extension AgentToolEntry {
                           description: "Incident identifier from the incident report or EIDO record."),
                 .required("agent_id",    type: .string,
                           description: "This agent's unique identifier, e.g. the nova callsign."),
-            ]
+            ],
+            requiresConfirmation: true
         ) { args, proxy in
             guard case .string(let incidentID) = args["incident_id"],
                   case .string(let agentID)    = args["agent_id"] else {

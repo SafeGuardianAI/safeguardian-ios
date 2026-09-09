@@ -6,7 +6,7 @@ import SafeGuardianMesh
 
 import AVFoundation
 import Foundation
-import WhisperInfra
+import AgentRuntime
 
 /// Manages AVAudioEngine capture and Whisper transcription for the agent input bar.
 /// Silence gap detection (1.5 s) auto-flushes utterances mid-session; `stop()` flushes

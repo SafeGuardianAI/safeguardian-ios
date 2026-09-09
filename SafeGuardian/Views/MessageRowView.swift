@@ -50,6 +50,9 @@ struct MessageRowView: View, Equatable {
         Group {
             if message.sender == "system" {
                 systemMessageRow(message)
+            } else if let token = ApprovalRequestMessage.token(in: message.content) {
+                ApprovalMessageView(token: token)
+                    .padding(.vertical, 4)
             } else if let media = message.mediaAttachment(for: viewModel.nickname) {
                 MediaMessageView(message: message, media: media, imagePreviewURL: $imagePreviewURL)
             } else {

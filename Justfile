@@ -10,7 +10,7 @@ SCHEME_IOS   := "SafeGuardian (iOS)"
 ARCHIVE_PATH := "/tmp/SafeGuardian.xcarchive"
 EXPORT_PATH  := "/tmp/SafeGuardian-ipa"
 TEAM_ID      := "V9KH637N7P"
-DEVICE_ID    := "0504D6F9-9C7C-4BFC-93AD-F2867724C27C"
+DEVICE_ID    := "49850A95-19B2-5706-A37F-C0E37A5FDF60"
 
 default:
     @echo "SafeGuardian Build Commands:"

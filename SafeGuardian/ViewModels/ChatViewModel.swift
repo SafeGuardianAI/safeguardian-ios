@@ -103,21 +103,23 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
     @Published var selectedTab: RootTab = .mesh
 
     /// Single entry point for opening a conversation with an agent: activates the
-    /// thread and switches to the Nova tab, rather than routing through the
-    /// generic peer-to-peer private chat view.
+    /// thread and routes through the same private-chat view used for peer DMs,
+    /// distinguished only by PrivateHeaderContext.isAgentConversation.
     @MainActor
     func openAgentThread(_ threadPeerID: PeerID) {
         if let agentID = AgentThreadStore.shared.agentID(for: threadPeerID),
            let thread = AgentThreadStore.shared.thread(for: threadPeerID) {
             AgentThreadStore.shared.switchToThread(thread.id, agentID: agentID)
         }
-        selectedTab = .nova
+        selectedPrivateChatPeer = threadPeerID
     }
 
     @MainActor
     var canSendMediaInCurrentContext: Bool {
         if let peer = selectedPrivateChatPeer {
-            if agents.contains(where: { $0.peerID == peer }) { return false }
+            // Agent threads route media through sendImage's own agent-vision
+            // branch, not the mesh/Nostr file-transfer path this flag guards.
+            if AgentThreadStore.shared.agentID(for: peer) != nil { return false }
             return !(peer.isGeoDM || peer.isGeoChat)
         }
         switch activeChannel {
@@ -178,18 +180,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
 
     private var pendingGPSShareConfirmation = false
 
-    // Pattern 1 peer request state — set when an incoming [REQUEST:] arrives from a remote peer.
-    struct PendingPeerRequestConfirmation {
-        let peerID: PeerID
-        let type: String
-        let requestID: String
-        let senderName: String
-    }
-    var pendingPeerRequestConfirmation: PendingPeerRequestConfirmation?
     // Continuations waiting for peer request responses, keyed by requestID.
     var pendingPeerRequests: [String: CheckedContinuation<String, Never>] = [:]
     var pendingAgentReplies: [String: CheckedContinuation<String, Never>] = [:]
-    var pendingToolApprovals: [String: CheckedContinuation<Bool, Never>] = [:]
 
     // MARK: - Service Delegates
 
@@ -461,6 +454,7 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         let reticulumIdentity = (try? ReticulumIdentity.loadOrCreate(keychain: keychain)) ??
             ReticulumIdentity.makeEphemeral()
         let reticulumTransport = ReticulumTransport(identity: reticulumIdentity, keychain: keychain)
+        MeshAgentRegistry.shared.toolRouter?.accountabilityLog = AgentAccountability.log
         self.init(
             keychain: keychain,
             idBridge: idBridge,
@@ -1072,14 +1066,9 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
             return
         }
 
-        if pendingPeerRequestConfirmation != nil {
-            handlePeerRequestConfirmation(trimmed)
-            return
-        }
-            
         // Route agent mentions (@nova, future agents) to on-device inference; never sent to the mesh.
-        // Follow-up turns without the prefix are handled by NovaConversationView.sendToNova
-        // in the Nova tab, not here — this composer only ever sees explicit mentions.
+        // Follow-up turns without the prefix go through the selectedPrivateChatPeer
+        // branch below, which routes to sendPrivateMessage's own agent-thread guard.
         let lower = trimmed.lowercased()
         let threadStore = AgentThreadStore.shared
         for agent in agents {
@@ -1499,31 +1488,55 @@ final class ChatViewModel: ObservableObject, SafeGuardianDelegate, CommandContex
         }
     }
 
+    /// Surfaces an incoming structured request (Pattern 1) from a remote peer's agent as
+    /// a real Allow/Deny card — the same PendingApprovals/ApprovalMessageView UI Nova's
+    /// own tool calls use — rather than the old "type y or n into chat" text flow. The
+    /// card's promptTitle names the actual requester, since this is their ask, not Nova's.
     @MainActor
-    private func handlePeerRequestConfirmation(_ input: String) {
-        guard let pending = pendingPeerRequestConfirmation else { return }
-        switch input.lowercased() {
-        case "y":
-            pendingPeerRequestConfirmation = nil
-            if pending.type == "location" {
-                if let loc = LocationStateManager.shared.currentLocation {
-                    let lat = loc.coordinate.latitude
-                    let lon = loc.coordinate.longitude
-                    let accuracy = Int(loc.horizontalAccuracy.rounded())
-                    let result = String(format: "%.4f,%.4f accuracy:%dm", lat, lon, accuracy)
-                    sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: result), to: pending.peerID)
-                    addLocalMessage("location shared with \(pending.senderName)")
-                } else {
-                    sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: "unavailable"), to: pending.peerID)
-                    addLocalMessage("location not available — sent unavailable to \(pending.senderName)")
-                }
-            }
-        case "n":
-            pendingPeerRequestConfirmation = nil
-            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: pending.requestID, result: "denied"), to: pending.peerID)
-            addLocalMessage("declined")
-        default:
-            addLocalMessage("type y to approve or n to decline")
+    func handleIncomingPeerRequest(type: String, requestID: String, from peerID: PeerID, senderName: String) async {
+        let token = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased())
+        let approved = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            PendingApprovals.shared.register(
+                token: token, toolName: "share_\(type)", argumentSummary: "requested by \(senderName)",
+                promptTitle: "\(senderName) wants your \(type)", continuation: continuation
+            )
+            addResponse(sender: "Nova", content: ApprovalRequestMessage.content(for: token), privatePeerID: peerID)
+        }
+        guard approved else {
+            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: requestID, result: "denied"), to: peerID)
+            return
+        }
+        if type == "location" {
+            await shareLocation(requestID: requestID, peerID: peerID, senderName: senderName)
+        }
+    }
+
+    /// Fulfills an approved location-request from a peer's agent. Handles all three
+    /// CoreLocation permission states rather than just checking a possibly-stale or
+    /// never-populated `currentLocation` — a device that has never used the location
+    /// channels feature has no cached fix at all, and previously that meant an approved
+    /// share silently replied "unavailable" with no attempt to actually get one.
+    @MainActor
+    private func shareLocation(requestID: String, peerID: PeerID, senderName: String) async {
+        switch LocationStateManager.shared.permissionState {
+        case .denied, .restricted:
+            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: requestID, result: "unavailable"), to: peerID)
+            addLocalMessage("location permission is off — enable it in Settings to share location")
+            return
+        case .notDetermined, .authorized:
+            break
+        }
+        addLocalMessage("getting your location…")
+        if let loc = await LocationStateManager.shared.requestLocationOnDemand() {
+            let lat = loc.coordinate.latitude
+            let lon = loc.coordinate.longitude
+            let accuracy = Int(loc.horizontalAccuracy.rounded())
+            let result = String(format: "%.4f,%.4f accuracy:%dm", lat, lon, accuracy)
+            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: requestID, result: result), to: peerID)
+            addLocalMessage("location shared with \(senderName)")
+        } else {
+            sendPrivateMessage(AgentMeshRouting.formatRequestResponse(requestID: requestID, result: "unavailable"), to: peerID)
+            addLocalMessage("location not available — sent unavailable to \(senderName)")
         }
     }
 

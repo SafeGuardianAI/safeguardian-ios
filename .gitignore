@@ -5,6 +5,12 @@
 ## implementation plans
 plans/
 
+## Bundled on-device model weights — provisioned locally onto disk, never
+## committed (multi-GB). Xcode copies this folder into the app bundle as a
+## Resources folder reference; see MLXVLMBackend.bundledModelDirectories()
+## in /Applications/BitAgent for the pattern this mirrors.
+/Models/
+
 ## AI
 CLAUDE.md
 AGENTS.md

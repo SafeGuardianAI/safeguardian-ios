@@ -72,7 +72,6 @@ private struct AnyCodable: Codable {
 // MARK: - MCPSession
 
 /// HTTP client for a single MCP server. One session per server URL.
-/// Mirrors RemoteInferenceService's URLSession pattern for consistency.
 final class MCPSession: Sendable {
     let serverURL: URL
     let serverName: String

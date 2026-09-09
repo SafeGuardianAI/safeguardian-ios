@@ -24,7 +24,21 @@ extension ChatViewModel {
     @MainActor
     func sendPrivateMessage(_ content: String, to peerID: PeerID) {
         guard !content.isEmpty else { return }
-        
+
+        // Agent threads never touch mesh/Nostr transport — route straight to
+        // on-device inference, mirroring the @mention branch in sendMessage(_:).
+        if let agentID = AgentThreadStore.shared.agentID(for: peerID),
+           let agent = agents.first(where: { $0.agentID == agentID }) {
+            let userTurn = SafeGuardianMessage(sender: nickname, content: content, timestamp: Date(), isRelay: false)
+            if privateChats[peerID] == nil { privateChats[peerID] = [] }
+            privateChats[peerID]?.append(userTurn)
+            if let t = AgentThreadStore.shared.activeThread(for: agentID), t.title == "New conversation" {
+                AgentThreadStore.shared.updateTitle(content, threadID: t.id, agentID: agentID)
+            }
+            agent.handle(prompt: content, context: self, threadPeerID: peerID, replyTo: nil)
+            return
+        }
+
         // Check if blocked
         if unifiedPeerService.isBlocked(peerID) {
             let nickname = meshService.peerNickname(peerID: peerID) ?? "user"
@@ -399,6 +413,13 @@ extension ChatViewModel {
 
     @MainActor
     func sendImage(from sourceURL: URL, cleanup: (() -> Void)? = nil) {
+        if let peerID = selectedPrivateChatPeer,
+           let agentID = AgentThreadStore.shared.agentID(for: peerID),
+           let agent = agents.first(where: { $0.agentID == agentID }) {
+            sendImageToAgent(from: sourceURL, peerID: peerID, agentID: agentID, agent: agent, cleanup: cleanup)
+            return
+        }
+
         guard canSendMediaInCurrentContext else {
             SecureLogger.info("Image send blocked outside mesh/private context", category: .session)
             cleanup?()
@@ -448,6 +469,43 @@ extension ChatViewModel {
                 }
                 if let url = processedURL {
                     try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+    }
+
+    /// Agent threads never go through mesh file transfer — the image is read
+    /// straight to Data and handed to the agent's own vision path, the same
+    /// way the retired NovaConversationView.sendToNova attached pendingImage.
+    @MainActor
+    private func sendImageToAgent(
+        from sourceURL: URL,
+        peerID: PeerID,
+        agentID: String,
+        agent: any AgentProcessor,
+        cleanup: (() -> Void)?
+    ) {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            do {
+                let outputURL = try ImageUtils.processImage(at: sourceURL)
+                let data = try Data(contentsOf: outputURL)
+                try? FileManager.default.removeItem(at: outputURL)
+                await MainActor.run {
+                    cleanup?()
+                    let userTurn = SafeGuardianMessage(sender: self.nickname, content: "[image]", timestamp: Date(), isRelay: false)
+                    if self.privateChats[peerID] == nil { self.privateChats[peerID] = [] }
+                    self.privateChats[peerID]?.append(userTurn)
+                    if let t = AgentThreadStore.shared.activeThread(for: agentID), t.title == "New conversation" {
+                        AgentThreadStore.shared.updateTitle("[image]", threadID: t.id, agentID: agentID)
+                    }
+                    agent.handle(prompt: "", image: data, context: self, threadPeerID: peerID, replyTo: nil)
+                }
+            } catch {
+                SecureLogger.error("Agent image send preparation failed: \(error)", category: .session)
+                await MainActor.run {
+                    cleanup?()
+                    self.addSystemMessage("Failed to prepare image for sending.")
                 }
             }
         }
@@ -747,16 +805,15 @@ extension ChatViewModel {
         }
 
         // Pattern 1 — incoming structured request from a remote peer's agent.
-        // Show a consent prompt in the main feed; user y/n is intercepted in sendMessage.
+        // Surfaces a real Allow/Deny card (see handleIncomingPeerRequest) rather than
+        // requiring the human to type y/n into chat.
         if let request = AgentMeshRouting.parseRequest(message.content) {
             let senderName = meshService.peerNickname(peerID: peerID) ?? String(peerID.id.prefix(6))
-            pendingPeerRequestConfirmation = PendingPeerRequestConfirmation(
-                peerID: peerID,
-                type: request.type,
-                requestID: request.requestID,
-                senderName: senderName
-            )
-            addLocalMessage("\(senderName) is requesting your \(request.type). type y to share or n to decline")
+            Task { @MainActor in
+                await self.handleIncomingPeerRequest(
+                    type: request.type, requestID: request.requestID, from: peerID, senderName: senderName
+                )
+            }
             return
         }
 

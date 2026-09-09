@@ -1,5 +1,5 @@
 import SafeGuardianMesh
-import AgentInfra
+import AgentRuntime
 import Foundation
 
 enum NovaConfig {
@@ -17,6 +17,13 @@ enum NovaConfig {
         let minStorageMB: Int       // approximate download size
 
         static let catalog: [ModelDescriptor] = [
+            // Ships inside the app bundle under Resources/Models — see
+            // MLXInferenceService.bundledModelDirectory(). No download, no
+            // network dependency; minStorageMB is 0 because the weights are
+            // already on disk the moment the app is installed.
+            ModelDescriptor(id: NovaConfig.bundledModelID,
+                            displayName: "Qwen 3.5 2B (bundled)", parametersBillions: 2.0,
+                            minRAMMB: 4_000, minStorageMB: 0),
             ModelDescriptor(id: "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
                             displayName: "Qwen 2.5 0.5B (4-bit)", parametersBillions: 0.5,
                             minRAMMB: 2_000, minStorageMB: 400),
@@ -51,22 +58,21 @@ enum NovaConfig {
         }
     }
 
-    static let defaultModelID = "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
-    static let temperature: Float = 0.7
+    /// Synthetic ID for the model bundled in Resources/Models — not a HuggingFace
+    /// repo path. MLXInferenceService.model matches this against
+    /// bundledModelDirectory() to load from the app bundle instead of the Hub cache.
+    static let bundledModelID = "bundled/Qwen3.5-2B-MLX-4bit"
+    static let defaultModelID = bundledModelID
     static let generationTimeoutSeconds: UInt64 = 300
     static let historyWindowSize = 10
     /// Estimated-token threshold at which conversation history gets compacted,
     /// both for the initial seed AgentConversationEngine builds and for a
-    /// persistent-session provider's own live transcript (see ModelBackend/
-    /// MLXInferenceService.sessionFor and FoundationModelProvider.sessionFor).
+    /// persistent-session provider's own live transcript (see
+    /// ModelBackend/MLXInferenceService.sessionFor).
     static let contextCompactionThreshold = 2_000
     /// Maximum number of tool dispatch calls per generation session.
     /// When reached the dispatch returns a terminal error so the model stops looping.
     static let maxToolIterations = 8
-    static let idleTimeoutSeconds: Double = 300
-    /// Battery floor below which Nova skips mesh queries entirely to preserve power.
-    /// Local (@nova) queries are always served regardless of battery level.
-    static let meshQueryMinBatteryPct: Float = 0.10
 
     // Base system prompt — developer-controlled, not user editable.
     // Device state is injected as a prefix on the user message so this string

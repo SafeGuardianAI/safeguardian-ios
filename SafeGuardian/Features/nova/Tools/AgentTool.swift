@@ -4,7 +4,7 @@ import SafeGuardianMesh
 //
 // This is free and unencumbered software released into the public domain.
 
-import AgentInfra
+import AgentRuntime
 import BitFoundation
 import Foundation
 
@@ -67,13 +67,15 @@ final class AgentContextProxy: @unchecked Sendable {
     private let _sendRequest: @MainActor (String, String, PeerID) -> Void
     private let _registerPeerContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
     private let _registerAgentContinuation: @MainActor (String, CheckedContinuation<String, Never>) -> Void
-    private let _registerApprovalContinuation: @MainActor (String, CheckedContinuation<Bool, Never>) -> Void
+    private let _registerApprovalContinuation: @MainActor (String, String, String, PeerID, CheckedContinuation<Bool, Never>) -> Void
     private let _cancelAgentRequest: @MainActor (String) -> Void
     private let _cancelPeerRequest: @MainActor (String) -> Void
     private let _sendRaw: @MainActor (String, PeerID) -> Void
+    let peerID: PeerID
 
     @MainActor
-    init(senderAgentID: String, context: some AgentContext) {
+    init(senderAgentID: String, peerID: PeerID, context: some AgentContext) {
+        self.peerID = peerID
         _meshPeerIDs       = { context.meshPeerIDs }
         _tick              = { context.deviceTick }
         _meshPacketRate    = { context.meshPacketRate }
@@ -95,8 +97,8 @@ final class AgentContextProxy: @unchecked Sendable {
         _registerAgentContinuation = { requestID, continuation in
             context.registerAgentReplyContinuation(requestID, continuation)
         }
-        _registerApprovalContinuation = { token, continuation in
-            context.registerToolApprovalContinuation(token, continuation)
+        _registerApprovalContinuation = { toolName, argumentSummary, token, requestPeerID, continuation in
+            context.registerToolApprovalContinuation(toolName, argumentSummary, token, requestPeerID, continuation)
         }
         _cancelAgentRequest = { requestID in
             context.cancelAgentRequest(requestID)
@@ -169,15 +171,46 @@ final class AgentContextProxy: @unchecked Sendable {
     }
 
     /// Suspends until the host context approves or denies execution of the named tool.
-    /// Safe from any isolation context — uses CheckedContinuation, does not block.
-    func requestApproval(for toolName: String) async -> Bool {
+    /// `argumentSummary` is shown verbatim in the approval card so the human approves
+    /// the concrete action (these arguments, this call) rather than a blanket grant of
+    /// the tool category. Safe from any isolation context — uses CheckedContinuation,
+    /// does not block.
+    func requestApproval(for toolName: String, argumentSummary: String) async -> Bool {
         let token = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8).lowercased())
         return await withCheckedContinuation { continuation in
             Task { @MainActor in
-                self._registerApprovalContinuation(token, continuation)
+                self._registerApprovalContinuation(toolName, argumentSummary, token, self.peerID, continuation)
             }
         }
     }
+}
+
+// MARK: - ApprovalDedup
+
+/// Caches an approval decision and its executed result by a content-derived key
+/// (tool name + argument summary) so a retried call within the same generation
+/// session — the AgentStuckGuard/DispatchGuard case, a model re-issuing the same
+/// tool_call — reuses the earlier decision and result instead of re-prompting the
+/// human or re-executing a side effect like a send. There is no real tool-call ID
+/// from the model layer to key on (ToolCall carries only name+arguments), so
+/// identical arguments is the practical stand-in; this is scoped to one
+/// AgentToolRegistry (one inference call, matching DispatchGuard/AgentStuckGuard's
+/// own lifetime), not persisted across turns, so a deliberate repeat of the same
+/// call in a later turn is unaffected. Mutation is safe unsynchronized because
+/// dispatch calls are sequential (see DispatchGuard's own comment).
+final class ApprovalDedup: @unchecked Sendable {
+    private nonisolated(unsafe) var decisions: [String: Bool] = [:]
+    private nonisolated(unsafe) var results: [String: String] = [:]
+
+    static func key(name: String, argumentSummary: String) -> String {
+        "\(name)|\(argumentSummary)"
+    }
+
+    func decision(for key: String) -> Bool? { decisions[key] }
+    func recordDecision(_ approved: Bool, for key: String) { decisions[key] = approved }
+
+    func cachedResult(for key: String) -> String? { results[key] }
+    func recordResult(_ result: String, for key: String) { results[key] = result }
 }
 
 // MARK: - AgentToolRegistry
@@ -198,39 +231,100 @@ struct AgentToolRegistry: Sendable {
         }
     }
 
+    /// Renders a tool call's arguments as sorted-key JSON for display in the approval
+    /// card, so the human approves the concrete call rather than the tool by name alone.
+    static func argumentSummary(for arguments: [String: JSONValue]) -> String {
+        guard !arguments.isEmpty else { return "(no arguments)" }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(arguments),
+              let string = String(data: data, encoding: .utf8)
+        else { return "(unable to render arguments)" }
+        return string
+    }
+
     @MainActor
     static func build(
         agentID: String,
         context: some AgentContext,
+        peerID: PeerID,
         deviceTools: [AgentToolEntry],
         meshTools: [AgentToolEntry],
         onStatus: StatusCallback? = nil,
-        approvalCheck: (@Sendable (String) -> Bool)? = nil,
         maxIterations: Int = NovaConfig.maxToolIterations,
         mcpRouting: [(name: String, session: MCPSession, spec: ToolSpec)] = [],
-        taskRecord: AgentTaskRecord = AgentTaskRecord()
+        taskRecord: AgentTaskRecord = AgentTaskRecord(),
+        accountabilityLog: AccountabilityLog? = AgentAccountability.log
     ) -> AgentToolRegistry {
-        let proxy = AgentContextProxy(senderAgentID: agentID, context: context)
+        let proxy = AgentContextProxy(senderAgentID: agentID, peerID: peerID, context: context)
         let guard_ = DispatchGuard(max: maxIterations)
         let stuck = AgentStuckGuard()
+        let dedup = ApprovalDedup()
         let record = taskRecord
         let allTools = deviceTools + meshTools
         let lookup = Dictionary(uniqueKeysWithValues: allTools.map { ($0.name, $0) })
         let mcpLookup = Dictionary(uniqueKeysWithValues: mcpRouting.map { ($0.name, $0.session) })
         let specs: [ToolSpec] = allTools.map { $0.spec } + mcpRouting.map { $0.spec }
 
+        // A tool call that originates from local model inference has no remote
+        // sender: the same on-device agent both decided to call the tool
+        // (associated with the Infer activity upstream) and executes it, so
+        // requestedBy and executedBy name the same SoftwareAgent here. This
+        // differs from LXMFToolRouter's accountability record, where the caller
+        // is a distinct, remotely-authenticated identity.
+        let novaRef = ProvenanceAgentRef(kind: .softwareAgent, id: agentID)
+        // A plain @Sendable closure rather than a local func: `build` itself is
+        // @MainActor, which would otherwise isolate a local func to the main
+        // actor, but `dispatch` below runs off-actor, so this must be callable
+        // from there without hopping.
+        let recordAccountability: @Sendable (
+            _ action: String, _ policy: String, _ decision: String, _ result: String?
+        ) -> Void = { action, policy, decision, result in
+            guard let accountabilityLog else { return }
+            let entry = AccountabilityRecord(
+                activity: .execute, requestedBy: novaRef, executedBy: novaRef,
+                action: action, resource: action, policy: policy, decision: decision, result: result
+            )
+            Task { await accountabilityLog.record(entry) }
+        }
+
         let dispatch: @Sendable (ToolCall) async throws -> String = { toolCall in
             let name = toolCall.function.name
 
             // Hard cap — returns a terminal message the model reads as a stop signal.
             guard guard_.next() else {
+                recordAccountability(name, "iteration_limit", "deny", nil)
                 return #"{"error":"iteration_limit","message":"Stop calling tools. Provide a final answer with what you know so far."}"#
             }
 
-            // Approval gate — suspends until the host context resumes the continuation.
-            if approvalCheck?(name) == true {
-                let approved = await proxy.requestApproval(for: name)
+            // Policy lives on the tool itself (AgentToolEntry.requiresConfirmation) rather
+            // than a name-keyed switch elsewhere, so a new consequential tool can't be
+            // added without its author deciding this. MCP-routed tools have no
+            // AgentToolEntry and never require confirmation.
+            let requiresApproval = lookup[name]?.requiresConfirmation ?? false
+            let dedupKey = requiresApproval
+                ? ApprovalDedup.key(name: name, argumentSummary: Self.argumentSummary(for: toolCall.function.arguments))
+                : nil
+
+            // A retried call with identical arguments (AgentStuckGuard's territory)
+            // returns the cached result rather than re-executing a side effect.
+            if let dedupKey, let cachedResult = dedup.cachedResult(for: dedupKey) {
+                return cachedResult
+            }
+
+            // Approval gate — suspends until the host context resumes the continuation,
+            // unless this exact call was already decided earlier in this session.
+            if requiresApproval, let dedupKey {
+                let approved: Bool
+                if let cached = dedup.decision(for: dedupKey) {
+                    approved = cached
+                } else {
+                    let summary = Self.argumentSummary(for: toolCall.function.arguments)
+                    approved = await proxy.requestApproval(for: name, argumentSummary: summary)
+                    dedup.recordDecision(approved, for: dedupKey)
+                }
                 guard approved else {
+                    recordAccountability(name, "user denied", "deny", nil)
                     return #"{"error":"denied","message":"User denied this tool call."}"#
                 }
             }
@@ -241,7 +335,9 @@ struct AgentToolRegistry: Sendable {
             // MCP-sourced tools route to their originating session.
             if let mcpSession = mcpLookup[name] {
                 let args = toolCall.function.arguments.mapValues { $0.anyValue }
-                return try await mcpSession.callTool(name: name, arguments: args)
+                let result = try await mcpSession.callTool(name: name, arguments: args)
+                recordAccountability(name, requiresApproval ? "approved by user" : "no approval required", "permit", result)
+                return result
             }
 
             guard let entry = lookup[name] else {
@@ -249,6 +345,8 @@ struct AgentToolRegistry: Sendable {
             }
 
             let result = try await entry.handler(toolCall.function.arguments, proxy)
+            if let dedupKey { dedup.recordResult(result, for: dedupKey) }
+            recordAccountability(name, requiresApproval ? "approved by user" : "no approval required", "permit", result)
             stuck.record(name, result: result)
             if let nudge = stuck.nudge(for: name) {
                 return result + "\n" + nudge
@@ -267,14 +365,19 @@ struct AgentToolEntry: Sendable {
     let name: String
     let spec: ToolSpec
     let handler: @Sendable ([String: JSONValue], AgentContextProxy) async throws -> String
+    /// Declared at the tool's own definition site rather than in a separate name-keyed
+    /// list elsewhere, so a new consequential tool can't be added without its author
+    /// deciding whether it needs human approval before it executes.
+    let requiresConfirmation: Bool
 
     static func make(
         name: String,
         description: String,
         parameters: [ToolParameter],
+        requiresConfirmation: Bool = false,
         handler: @escaping @Sendable ([String: JSONValue], AgentContextProxy) async throws -> String
     ) -> AgentToolEntry {
         let spec = makeToolSpec(name: name, description: description, parameters: parameters)
-        return AgentToolEntry(name: name, spec: spec, handler: handler)
+        return AgentToolEntry(name: name, spec: spec, handler: handler, requiresConfirmation: requiresConfirmation)
     }
 }

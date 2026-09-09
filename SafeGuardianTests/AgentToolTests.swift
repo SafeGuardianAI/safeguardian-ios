@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import AgentInfra
+import AgentRuntime
 @testable import SafeGuardian
 @testable import SafeGuardianMesh
 

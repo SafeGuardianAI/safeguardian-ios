@@ -10,7 +10,7 @@ import SafeGuardianMesh
 
 import Foundation
 import Tor
-import WhisperInfra
+import AgentRuntime
 
 extension ChatViewModel {
 

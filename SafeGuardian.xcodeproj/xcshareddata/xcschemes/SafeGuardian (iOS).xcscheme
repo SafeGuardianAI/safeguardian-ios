@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2620"
+   LastUpgradeVersion = "2660"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -48,7 +48,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AF077EA0474EDEDE2C72716C"
             BuildableName = "SafeGuardian.app"
-               BlueprintName = "SafeGuardian_iOS"
+            BlueprintName = "SafeGuardian_iOS"
             ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -57,7 +57,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AF077EA0474EDEDE2C72716C"
             BuildableName = "SafeGuardian.app"
-               BlueprintName = "SafeGuardian_iOS"
+            BlueprintName = "SafeGuardian_iOS"
             ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </CodeCoverageTargets>
@@ -92,7 +92,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AF077EA0474EDEDE2C72716C"
             BuildableName = "SafeGuardian.app"
-               BlueprintName = "SafeGuardian_iOS"
+            BlueprintName = "SafeGuardian_iOS"
             ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -116,7 +116,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AF077EA0474EDEDE2C72716C"
             BuildableName = "SafeGuardian.app"
-               BlueprintName = "SafeGuardian_iOS"
+            BlueprintName = "SafeGuardian_iOS"
             ReferencedContainer = "container:SafeGuardian.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

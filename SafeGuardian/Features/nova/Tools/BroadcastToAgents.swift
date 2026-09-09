@@ -1,7 +1,7 @@
 import SafeGuardianMesh
 import BitFoundation
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     static func broadcastToAgents(senderAgentID: String) -> AgentToolEntry {
@@ -11,7 +11,8 @@ extension AgentToolEntry {
             parameters: [
                 .required("agent_id", type: .string, description: "Target agent identifier on each peer, e.g. 'nova'."),
                 .required("content", type: .string, description: "The message to broadcast.")
-            ]
+            ],
+            requiresConfirmation: true
         ) { args, proxy in
             guard case .string(let agentID) = args["agent_id"],
                   case .string(let content) = args["content"] else {

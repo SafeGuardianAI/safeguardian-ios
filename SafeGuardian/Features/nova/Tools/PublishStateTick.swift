@@ -1,6 +1,6 @@
 import SafeGuardianMesh
 import Foundation
-import AgentInfra
+import AgentRuntime
 
 extension AgentToolEntry {
     // Publishes the latest StateTick immediately, then briefly requests the

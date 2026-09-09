@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import AgentInfra
+import AgentRuntime
 import AnyLanguageModelKit
 @testable import SafeGuardian
 
@@ -70,24 +70,5 @@ struct AnyLanguageModelRuntimeTests {
         )
         #expect(sentinel.calledTool == "get_beacon_code")
         #expect(response.content.contains("ZULU-7") || response.content.lowercased().contains("zulu"))
-    }
-}
-
-// Runtime probe for the Apple Intelligence path. Skips (with a recorded
-// comment) on machines where the system model is unavailable, since that
-// depends on OS version and the Apple Intelligence opt-in.
-@Suite("FoundationModelRuntime")
-@MainActor
-struct FoundationModelRuntimeTests {
-    @available(macOS 26, *)
-    @Test func systemModelRespondsIfAvailable() async throws {
-        guard FoundationModelProvider.isAvailable() else {
-            withKnownIssue("Apple Intelligence unavailable on this machine — path not exercised") {
-                #expect(Bool(false))
-            }
-            return
-        }
-        let corrected = try await FoundationModelProvider.cleanUpTranscript("teh quick brwon fox")
-        #expect(!corrected.isEmpty)
     }
 }

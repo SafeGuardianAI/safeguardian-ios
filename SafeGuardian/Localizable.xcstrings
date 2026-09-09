@@ -1,193 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "· %@" : {
-
-    },
-    "#%@" : {
-
-    },
-    "%@" : {
-      "comment" : "Non-localizable symbol used in code",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ne" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "%@ active" : {
       "comment" : "A label at the bottom of the people list sheet showing the number of active users.",
       "localizations" : {
@@ -370,23 +183,10 @@
     "%@ here" : {
 
     },
-    "%@ peer%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ peer%2$@"
-          }
-        }
-      }
-    },
     "%@ wants to share their location with you" : {
 
     },
     "Accept" : {
-
-    },
-    "any openai-compatible endpoint — ollama, lm studio, vllm, openai, etc." : {
 
     },
     "app_info.app_name" : {
@@ -6295,6 +6095,9 @@
           }
         }
       }
+    },
+    "cap response length" : {
+
     },
     "Choose an image" : {
       "comment" : "A label displayed above a button that allows the user to choose an image to send.",
@@ -19300,16 +19103,6 @@
     "Download Now" : {
 
     },
-    "Downloading %@ %@%%" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Downloading %1$@ %2$@%%"
-          }
-        }
-      }
-    },
     "encryption.accessibility.establishing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22890,6 +22683,9 @@
         }
       }
     },
+    "generation settings" : {
+
+    },
     "geohash_people.action.block" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -23963,9 +23759,6 @@
           }
         }
       }
-    },
-    "Loading %@..." : {
-
     },
     "local model (on-device)" : {
 
@@ -31182,6 +30975,9 @@
         }
       }
     },
+    "lower is more predictable and consistent; higher allows more varied phrasing" : {
+
+    },
     "mesh_peers.tooltip.new_messages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31361,12 +31157,6 @@
         }
       }
     },
-    "Model weights load on first use." : {
-
-    },
-    "no mesh peers" : {
-
-    },
     "Not enough free storage for the model right now. You can download it later from Nova." : {
 
     },
@@ -31384,9 +31174,6 @@
       }
     },
     "Nova works offline" : {
-
-    },
-    "on-device" : {
 
     },
     "personalization (%@/%@)" : {
@@ -31578,9 +31365,6 @@
         }
       }
     },
-    "remote" : {
-
-    },
     "reset nova session" : {
 
     },
@@ -31765,6 +31549,9 @@
           }
         }
       }
+    },
+    "saved models" : {
+
     },
     "system.chat.blocked" : {
       "extractionState" : "manual",
@@ -34451,8 +34238,18 @@
         }
       }
     },
-    "tool calling" : {
+    "temperature: %.2f" : {
 
+    },
+    "tools (%@/%@ enabled)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "tools (%1$@/%2$@ enabled)"
+          }
+        }
+      }
     },
     "type @nova <message> in the chat composer. responses are private and never sent to the mesh." : {
 
